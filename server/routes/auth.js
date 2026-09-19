@@ -4,9 +4,12 @@ import { config, smtpConfigured } from '../lib/config.js';
 import { q, now } from '../lib/db.js';
 import {
   hashPassword, verifyPassword, createSession, destroySession, destroyAllSessions,
-  normEmail, validEmail, passwordProblem, newToken, hashToken,
+  normEmail, validEmail, passwordProblem, newToken, hashToken, verifyTokenExpired, DUMMY_HASH,
 } from '../lib/auth.js';
-import { setSessionCookies, clearSessionCookies, rateLimit, requireAuth, requireUser, freshCsrf, clientIp } from '../lib/http.js';
+import {
+  setSessionCookies, clearSessionCookies, rateLimit, requireAuth, requireUser,
+  freshCsrf, clientIp, trustedOrigin,
+} from '../lib/http.js';
 import { sendVerifyMail, sendResetMail, sendEmailChangedMail, sendAccountDeletedMail } from '../lib/mailer.js';
 import { exportPersonalData } from '../lib/personal-data.js';
 
@@ -23,7 +26,20 @@ const publicUser = u => ({
   privacyVersion: u.privacy_version ?? null,
 });
 
-const baseUrl = req => config.baseUrl || `${req.protocol}://${req.get('host')}`;
+/*
+ * L'indirizzo su cui si costruiscono i link delle email non può venire dalla
+ * richiesta: `Host` lo scrive chi chiama. Senza VORTICE_BASE_URL (o
+ * VORTICE_ALLOWED_HOSTS) restano validi solo i nomi locali; su un dominio
+ * pubblico non configurato non si spedisce nulla, invece di spedire un link
+ * che porta il token a casa di qualcun altro.
+ */
+function linkOrigin(req){
+  const origin = trustedOrigin(req);
+  if (!origin)
+    console.error('[sicurezza] nessuna origine fidata per i link delle email:' +
+      ' imposta VORTICE_BASE_URL (o VORTICE_ALLOWED_HOSTS). Nessuna email inviata.');
+  return origin;
+}
 
 /* Il limite per indirizzo email va accanto a quello per IP: senza, chi cambia
    IP prova all'infinito su un singolo account. */
@@ -59,7 +75,14 @@ authRouter.post('/register',
       return res.status(409).json({ error: 'Esiste già un account con questa email. Accedi, oppure reimposta la password.', field: 'email' });
 
     const verifyNeeded = config.requireVerification || smtpConfigured();
-    const token = verifyNeeded ? newToken() : null;
+    const origin = verifyNeeded ? linkOrigin(req) : null;
+    /* Con la conferma obbligatoria e nessun indirizzo su cui costruire il link,
+       l'account nascerebbe inattivo e inattivabile: meglio non aprirlo. */
+    if (config.requireVerification && !origin)
+      return res.status(503).json({
+        error: 'Configurazione incompleta: il server non può inviare il link di conferma. Riprova più tardi.' });
+
+    const token = verifyNeeded && origin ? newToken() : null;
     const t = now();
 
     let user;
@@ -79,7 +102,7 @@ authRouter.post('/register',
       throw err;
     }
 
-    if (token) sendVerifyMail(email, `${baseUrl(req)}/api/auth/verify?token=${token}`).catch(() => {});
+    if (token) sendVerifyMail(email, `${origin}/api/auth/verify?token=${token}`).catch(() => {});
 
     if (config.requireVerification)
       return res.status(201).json({ user: publicUser(user), needsVerification: true,
@@ -102,7 +125,7 @@ authRouter.post('/login',
     /* Confronto anche senza utente: il tempo di risposta non deve rivelare
        quali indirizzi sono registrati. */
     const ok = await verifyPassword(typeof password === 'string' ? password : '',
-      user ? user.pass_hash : '$scrypt$32768$8$1$AAAA$AAAA');
+      user ? user.pass_hash : DUMMY_HASH);
 
     if (!user || !ok)
       return res.status(401).json({ error: 'Email o password non corretti' });
@@ -146,6 +169,11 @@ authRouter.post('/logout-all', requireUser, (req, res) => {
 authRouter.get('/verify', (req, res) => {
   const user = req.query.token ? q.userByVerify.get(hashToken(String(req.query.token))) : null;
   if (!user) return res.redirect('/accedi.html?verify=nonvalido');
+  if (verifyTokenExpired(user)){
+    /* scaduto: si brucia subito, così non resta in giro un token inutile */
+    q.setVerifyToken.run(null, user.verify_sent_at, user.id);
+    return res.redirect('/accedi.html?verify=scaduto');
+  }
   if (!user.verified_at) q.markVerified.run(now(), user.id);
   else q.setVerifyToken.run(null, user.verify_sent_at, user.id);
   res.redirect('/accedi.html?verify=ok');
@@ -156,9 +184,11 @@ authRouter.post('/resend-verification', requireUser,
   async (req, res) => {
     if (req.user.verified_at) return res.json({ ok: true, alreadyVerified: true });
     if (!smtpConfigured()) return res.status(503).json({ error: 'Invio email non configurato su questa installazione.' });
+    const origin = linkOrigin(req);
+    if (!origin) return res.status(503).json({ error: 'Invio email non disponibile su questa installazione.' });
     const token = newToken();
     q.setVerifyToken.run(hashToken(token), now(), req.user.id);
-    await sendVerifyMail(req.user.email, `${baseUrl(req)}/api/auth/verify?token=${token}`);
+    await sendVerifyMail(req.user.email, `${origin}/api/auth/verify?token=${token}`);
     res.json({ ok: true });
   });
 
@@ -169,10 +199,14 @@ authRouter.post('/forgot',
   async (req, res) => {
     const email = normEmail(req.body?.email);
     const user = validEmail(email) ? q.userByEmail.get(email) : null;
-    if (user){
+    const origin = user ? linkOrigin(req) : null;
+    if (user && origin){
       const token = newToken();
       q.setResetToken.run(hashToken(token), now() + 3600_000, user.id);
-      await sendResetMail(email, `${baseUrl(req)}/reimposta.html?token=${token}`);
+      /* L'invio non viene atteso: aspettarlo farebbe durare la risposta più a
+         lungo quando l'indirizzo esiste, e il tempo direbbe da solo cio' che il
+         messaggio qui sotto si impegna a non dire. */
+      sendResetMail(email, `${origin}/reimposta.html?token=${token}`).catch(() => {});
     }
     /* risposta identica in ogni caso: non riveliamo quali email sono registrate */
     res.json({ ok: true, smtp: smtpConfigured(),
@@ -254,7 +288,11 @@ authRouter.post('/change-email', requireUser,
       return res.status(409).json({ error: 'Esiste già un account con questa email.', field: 'email' });
 
     const verifyNeeded = config.requireVerification || smtpConfigured();
-    const token = verifyNeeded ? newToken() : null;
+    const origin = verifyNeeded ? linkOrigin(req) : null;
+    if (config.requireVerification && !origin)
+      return res.status(503).json({
+        error: 'Configurazione incompleta: il server non può inviare il link di conferma. Riprova più tardi.' });
+    const token = verifyNeeded && origin ? newToken() : null;
     const t = now();
     try{
       q.setEmail.run(email, verifyNeeded ? null : req.user.verified_at,
@@ -266,7 +304,7 @@ authRouter.post('/change-email', requireUser,
     }
 
     const previous = req.user.email;
-    if (token) sendVerifyMail(email, `${baseUrl(req)}/api/auth/verify?token=${token}`).catch(() => {});
+    if (token) sendVerifyMail(email, `${origin}/api/auth/verify?token=${token}`).catch(() => {});
     sendEmailChangedMail(previous, email).catch(() => {});
 
     res.json({ user: publicUser(q.userById.get(req.user.id)),

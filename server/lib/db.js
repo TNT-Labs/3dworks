@@ -1,16 +1,25 @@
 /* Database SQLite: schema, migrazioni e query preparate.
    Un solo file su disco, nessun servizio esterno da gestire. */
 import Database from 'better-sqlite3';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, chmodSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { config } from './config.js';
 
-mkdirSync(dirname(config.dbFile), { recursive: true });
+/* Nel file ci sono gli indirizzi email e gli hash delle password: non è roba
+   che debba poter leggere ogni utente della macchina. I permessi si stringono
+   alla creazione, e per le installazioni già esistenti si riprova a ogni
+   avvio — senza far fallire il server se il file è di un altro utente. */
+mkdirSync(dirname(config.dbFile), { recursive: true, mode: 0o700 });
 
 export const db = new Database(config.dbFile);
+const restrict = path => { try{ chmodSync(path, 0o600); }catch{ /* non siamo il proprietario */ } };
+/* prima il file principale, poi i pragma: SQLite crea -wal e -shm copiando i
+   permessi del database, quindi nascono già stretti */
+restrict(config.dbFile);
 db.pragma('journal_mode = WAL');   // letture concorrenti mentre si scrive
 db.pragma('foreign_keys = ON');
 db.pragma('busy_timeout = 5000');
+for (const suffix of ['-wal', '-shm']) restrict(config.dbFile + suffix);
 
 /* Migrazioni progressive: ogni voce è applicata una volta sola, in ordine.
    user_version tiene il conto, così l'aggiornamento di un'installazione

@@ -69,6 +69,7 @@ if (legal){
     accountDormienti: 'Account senza accessi',
     sessioni: 'Sessioni e cookie di sessione',
     tokenReimpostazione: 'Token di reimpostazione password',
+    tokenConferma: 'Token di conferma dell\'indirizzo email',
     indirizziIp: 'Indirizzi IP (limite ai tentativi)',
     creazioni: 'Creazioni, pubblicazioni e anteprime',
   };

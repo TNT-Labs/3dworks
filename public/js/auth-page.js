@@ -11,8 +11,10 @@ let registrationOpen = true;
 const params = new URLSearchParams(location.search);
 const next = (() => {
   const raw = params.get('next');
-  /* solo percorsi interni: un "next" assoluto porterebbe l'utente altrove */
-  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/studio.html';
+  /* Solo percorsi interni: un "next" assoluto porterebbe l'utente altrove.
+     La barra rovesciata conta come una barra per il browser, quindi "/\altro"
+     diventerebbe "//altro", cioè un altro sito. */
+  return /^\/(?![/\\])/.test(raw ?? '') ? raw : '/studio.html';
 })();
 
 function setMode(m){
@@ -133,7 +135,8 @@ $('forgotBtn').addEventListener('click', async () => {
 /* messaggi che arrivano dal link di conferma email */
 const verify = params.get('verify');
 if (verify === 'ok') showOk('Indirizzo confermato. Ora puoi accedere.');
-else if (verify === 'nonvalido') showError(new ApiError('Link di conferma scaduto o già usato.'));
+else if (verify === 'scaduto') showError(new ApiError('Link di conferma scaduto: accedi e chiedine uno nuovo.'));
+else if (verify === 'nonvalido') showError(new ApiError('Link di conferma non valido o già usato.'));
 
 /* chi è già dentro non deve vedere il modulo di accesso */
 api.auth.me().then(({ user, registrationOpen: open }) => {

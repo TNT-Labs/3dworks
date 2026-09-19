@@ -31,7 +31,10 @@ export function assertAssets(){
 export function createApp(){
   const app = express();
   app.disable('x-powered-by');
-  if (config.trustProxy) app.set('trust proxy', 1);
+  /* il valore va passato com'è: con due proxy davanti, `1` farebbe leggere
+     come indirizzo del visitatore quello del primo proxy — e il limite sui
+     tentativi tornerebbe a essere collettivo */
+  if (config.trustProxy !== false) app.set('trust proxy', config.trustProxy);
 
   /* ---------------------------- sicurezza ---------------------------- */
   app.use((req, res, next) => {
@@ -40,6 +43,9 @@ export function createApp(){
       'Referrer-Policy': 'same-origin',
       'X-Frame-Options': 'DENY',
       'Cross-Origin-Opener-Policy': 'same-origin',
+      /* nessuna risorsa del sito è incorporabile altrove: le anteprime dei
+         pezzi pubblicati fanno eccezione e lo dichiarano da sé */
+      'Cross-Origin-Resource-Policy': 'same-origin',
       'Permissions-Policy': 'geolocation=(), camera=(), microphone=(self)',
       /* Nessuno script inline: gli import di Three.js sono risolti in locale,
          quindi non serve né importmap né 'unsafe-inline'.

@@ -97,6 +97,28 @@ test('senza Cloudflare lo stesso tunnel torna a essere un solo contatore', async
   assert.ok(blocked, 'il limite per indirizzo esiste e funziona');
 });
 
+test('un CF-Connecting-IP che non è un indirizzo non vale come identità', async () => {
+  /* Se il valore venisse usato così com'è, basterebbe cambiarlo a ogni
+     richiesta per avere ogni volta un contatore nuovo: il limite sui tentativi
+     sparirebbe del tutto, senza che nulla lo dia a vedere. */
+  let blocked = false;
+  for (let i = 0; i < 40 && !blocked; i++){
+    const r = await viaCloudflare('/api/auth/login', `non-un-indirizzo-${i}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        /* la catena dei proxy resta quella vera: l'unico valore inventato è
+           quello che il limitatore userebbe come identità */
+        'X-Forwarded-For': '203.0.113.200',
+        ...csrf('tok-falso'),
+      },
+      body: JSON.stringify({ email: `f${i}@esempio.it`, password: 'sbagliata-xx' }),
+    });
+    blocked = r.status === 429;
+  }
+  assert.ok(blocked, 'con un valore inventato si deve ricadere sull\'indirizzo vero della connessione');
+});
+
 test("l'indirizzo dichiarato da Cloudflare non è accettato senza proxy fidato", async () => {
   /* qui il proxy è fidato (TRUST_PROXY=1) e l'intestazione viene letta: è il
      motivo per cui la porta dell'applicazione non va esposta fuori da Docker */
