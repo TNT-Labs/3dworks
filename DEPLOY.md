@@ -136,8 +136,18 @@ dipendenze.
 
 ```bash
 docker compose ps          # vortice deve risultare "healthy"
-docker compose logs -f     # log di entrambi i container
+docker compose logs -f     # log dei container
 ```
+
+Se l'avvio si ferma con `service "tunnel-check" didn't complete successfully`,
+è il controllo del token: `docker compose up -d` non ne mostra il motivo, che
+si legge con
+
+```bash
+docker compose logs tunnel-check
+```
+
+Corretto il `.env`, `docker compose run --rm tunnel-check` lo riprova subito.
 
 Poi apri **https://shopbeautylab.it**.
 
@@ -249,7 +259,7 @@ docker compose down -v       # ATTENZIONE: cancella anche il database
 | **Error 502** da Cloudflare | Il container non è ancora `healthy`, oppure nel Public Hostname hai messo `localhost:3000` invece di `vortice:3000`: dentro `cloudflared`, `localhost` è `cloudflared` stesso. |
 | **Error 1033** | Il tunnel non è connesso: `docker compose logs cloudflared`. Di solito è il `TUNNEL_TOKEN` copiato male. |
 | **`Provided Tunnel token is not valid`** e `vortice-tunnel` che riparte in continuazione | Il token è stato rifiutato da Cloudflare. Il controllo all'avvio (`vortice-tunnel-check`) intercetta i casi di copia-incolla: se invece l'ha lasciato passare, il formato è giusto ma il token non vale più — il tunnel è stato cancellato o qualcuno ha premuto *Refresh token*. Rigenera il token dal pannello (§3), aggiorna il `.env` e `docker compose up -d`. |
-| **`dependency failed to start: container vortice-tunnel-check exited`** | Non è un guasto: è il controllo del token che ha fermato l'avvio del tunnel. Il motivo preciso è nelle righe sopra, o con `docker compose logs tunnel-check`. Il sito resta comunque servito da `vortice`, semplicemente non è raggiungibile da fuori. |
+| **`service "tunnel-check" didn't complete successfully: exit 1`** | Non è un guasto: è il controllo del token che ha fermato l'avvio del tunnel. Con `up -d` il motivo non compare a schermo — leggilo con **`docker compose logs tunnel-check`**. Corretto il `.env`, `docker compose run --rm tunnel-check` lo riprova in un istante senza avviare nulla. Il sito intanto gira: manca solo l'accesso da fuori. |
 | L'accesso riesce ma **torna subito alla pagina di login** | I cookie sono `Secure` e il sito è stato raggiunto in HTTP. Accendi *Always Use HTTPS*. |
 | **«Nucleo geometrico non caricato»** nello studio | Rocket Loader acceso (§5). |
 | **«Impossibile caricare la libreria 3D»** | La cartella `public/vendor` non è finita nell'immagine: ricostruisci con `docker compose build --no-cache`. |
