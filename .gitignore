@@ -1,0 +1,11 @@
+node_modules/
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+public/vendor/
+.env
+*.log
+
+# configurazione locale del deploy
+docker-compose.override.yml

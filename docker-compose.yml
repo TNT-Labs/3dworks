@@ -1,0 +1,77 @@
+# =====================================================================
+# VORTICE su Raspberry Pi 5 dietro un tunnel Cloudflare.
+#
+#   docker compose up -d --build
+#
+# Il tunnel esce dal Pi verso Cloudflare: non serve aprire porte sul
+# router né avere un indirizzo IP fisso. Di conseguenza la porta
+# dell'applicazione NON viene pubblicata: è raggiungibile solo dalla rete
+# interna di Docker, cioè solo da cloudflared. È anche ciò che rende
+# affidabile la lettura di CF-Connecting-IP per il limite sui tentativi
+# di accesso: nessuno può raggiungere il container scavalcando Cloudflare.
+# =====================================================================
+
+services:
+
+  vortice:
+    build: .
+    image: vortice:latest
+    container_name: vortice
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      VORTICE_BASE_URL: https://shopbeautylab.it
+
+      # Dietro il tunnel c'è un solo hop fidato. Senza questo, req.secure
+      # resta falso e ogni visitatore sembra arrivare dallo stesso indirizzo.
+      TRUST_PROXY: "1"
+      # Legge CF-Connecting-IP: il limite sui tentativi torna per persona
+      # invece che per tunnel.
+      CLOUDFLARE: "1"
+      # Il browser parla HTTPS con Cloudflare: il cookie deve dirlo.
+      COOKIE_SECURE: "1"
+
+      VORTICE_DB: /data/vortice.db
+      SESSION_DAYS: "30"
+
+      # Metti a 0 quando hai registrato le persone che devono poter creare:
+      # la parte pubblica continua a funzionare per tutti.
+      ALLOW_REGISTRATION: "1"
+      REQUIRE_EMAIL_VERIFICATION: "0"
+
+      # Invio email: facoltativo. Da una linea domestica la posta in uscita
+      # è quasi sempre bloccata, quindi conviene un servizio transazionale.
+      # SMTP_HOST: smtp.esempio.it
+      # SMTP_PORT: "587"
+      # SMTP_USER: vortice@shopbeautylab.it
+      # SMTP_PASS: ${SMTP_PASS}
+      # SMTP_FROM: VORTICE <no-reply@shopbeautylab.it>
+    volumes:
+      # Il database vive qui. Su un Pi conviene che questa cartella stia su
+      # un SSD USB e non sulla microSD: SQLite scrive spesso e le schede si
+      # consumano. Vedi DEPLOY.md.
+      - vortice-data:/data
+    networks: [interna]
+    # Nessun `ports:`: di proposito. Per raggiungerlo dalla LAN durante le
+    # prove usa il file docker-compose.lan.yml (vedi DEPLOY.md).
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: vortice-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      # Token del tunnel creato nel pannello Cloudflare (Zero Trust →
+      # Networks → Tunnels). Sta nel file .env accanto a questo compose.
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?manca TUNNEL_TOKEN nel file .env}
+    depends_on:
+      vortice:
+        condition: service_healthy
+    networks: [interna]
+
+volumes:
+  vortice-data:
+
+networks:
+  interna:
+    driver: bridge

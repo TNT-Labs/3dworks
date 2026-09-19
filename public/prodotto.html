@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f0e0c">
+<title>Prodotto · VORTICE</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/viewer.css">
+</head>
+<body class="viewer-body">
+
+<header class="topbar">
+  <a class="brand" href="/">VORTICE <span>SCHEDA PRODOTTO</span></a>
+  <div class="spacer"></div>
+  <nav>
+    <a class="btn btn--ghost btn--small" href="/">Cerca un altro codice</a>
+  </nav>
+</header>
+
+<div id="loading" class="viewer-state">
+  <p class="kicker">Caricamento</p>
+  <p class="lead">Ricostruzione del modello dal codice…</p>
+</div>
+
+<div id="missing" class="viewer-state" hidden>
+  <p class="kicker">Codice non trovato</p>
+  <h2 id="missingTitle">Nessun prodotto con questo codice</h2>
+  <p class="lead" id="missingMsg"></p>
+  <a class="btn" href="/">Prova un altro codice</a>
+</div>
+
+<main id="app" class="viewer" hidden>
+
+  <aside class="viewer-panel">
+    <header>
+      <p class="kicker">Codice di produzione</p>
+      <p class="code code--big" id="pCode">—</p>
+      <h1 id="pName">—</h1>
+      <div class="rule"></div>
+      <p class="lead" id="pKind">—</p>
+    </header>
+
+    <!-- Sola lettura: qui non esiste un solo comando che modifichi il pezzo. -->
+    <p class="readonly-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Visualizzazione · questo modello non è modificabile
+    </p>
+
+    <section>
+      <h2 class="sec">Scheda del pezzo</h2>
+      <div class="rows">
+        <div class="row"><span class="k">Ingombro</span><span class="dots"></span><span class="v" id="mSize">—</span></div>
+        <div class="row"><span class="k">Capacità</span><span class="dots"></span><span class="v" id="mCap">—</span></div>
+        <div class="row"><span class="k">Profondità interna</span><span class="dots"></span><span class="v" id="mDepth">—</span></div>
+        <div class="row"><span class="k">Passaggio interno</span><span class="dots"></span><span class="v" id="mPass">—</span></div>
+        <div class="row"><span class="k">Overhang pareti</span><span class="dots"></span><span class="v" id="mTilt">—</span></div>
+        <div class="row"><span class="k">Tenuta fondo</span><span class="dots"></span><span class="v" id="mSeal">—</span></div>
+        <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v" id="mVol">—</span></div>
+        <div class="row"><span class="k">Filamento PLA</span><span class="dots"></span><span class="v" id="mFil">—</span></div>
+        <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="mTime">—</span></div>
+      </div>
+    </section>
+
+    <section id="secNeck">
+      <h2 class="sec">Collo a vite · norma GPI</h2>
+      <div class="rows">
+        <div class="row"><span class="k">Standard</span><span class="dots"></span><span class="v" id="nStd">—</span></div>
+        <div class="row"><span class="k">Ø creste filetto</span><span class="dots"></span><span class="v" id="nD">—</span></div>
+        <div class="row"><span class="k">Passo</span><span class="dots"></span><span class="v" id="nP">—</span></div>
+        <div class="row"><span class="k">Giri filetto</span><span class="dots"></span><span class="v" id="nG">—</span></div>
+      </div>
+      <p class="fine">Filetto esterno destro: la pompa commerciale porta la vite interna
+      e si avvita sopra il collo, come su una bottiglia.</p>
+    </section>
+
+    <section>
+      <h2 class="sec">Forma</h2>
+      <div class="rows">
+        <div class="row"><span class="k">Profilo in quota</span><span class="dots"></span><span class="v" id="fProf">—</span></div>
+        <div class="row"><span class="k">Scanalature</span><span class="dots"></span><span class="v" id="fPet">—</span></div>
+        <div class="row"><span class="k">Torsione</span><span class="dots"></span><span class="v" id="fTw">—</span></div>
+        <div class="row"><span class="k">Affilatura</span><span class="dots"></span><span class="v" id="fSh">—</span></div>
+        <div class="row"><span class="k">Parete del guscio</span><span class="dots"></span><span class="v" id="fW">—</span></div>
+        <div class="row" id="rowSig" hidden><span class="k">Segnale personale</span><span class="dots"></span><span class="v" id="fSig">—</span></div>
+      </div>
+    </section>
+
+    <section id="secEngrave">
+      <h2 class="sec">Inciso sul fondo</h2>
+      <p class="engraved" id="eText">—</p>
+      <p class="fine" id="eNote">—</p>
+    </section>
+
+    <section>
+      <h2 class="sec">Ricetta di stampa · PLA</h2>
+      <div class="rows">
+        <div class="row"><span class="k">Ugello · layer</span><span class="dots"></span><span class="v">0.4 · 0.20 mm</span></div>
+        <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v">4 perimetri (tenuta)</span></div>
+        <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6%</span></div>
+        <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
+      </div>
+    </section>
+
+    <footer>
+      <p class="fine" id="pWhen">—</p>
+      <button class="btn btn--ghost btn--block" id="shareBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10.5a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg>
+        Copia il link di questa scheda
+      </button>
+    </footer>
+  </aside>
+
+  <div id="stage" class="viewer-stage">
+    <div class="vignette"></div>
+    <div class="stage-caption" id="caption">—</div>
+    <div class="stage-tools">
+      <button id="tSpin" class="tool on" type="button" title="Rotazione automatica" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(-25 12 12)"/><circle cx="12" cy="12" r="2.8"/></svg>
+      </button>
+      <button id="tView" class="tool" type="button" title="Riporta la vista">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>
+      </button>
+      <button id="tCut" class="tool" type="button" title="Vista in sezione" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9"/><path d="M14.5 14.5 20 20"/><path d="M8.1 8.1 12 12"/></svg>
+      </button>
+      <button id="tFlat" class="tool" type="button" title="Sfaccettato / superfici lisce" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2.5 19.5h19L12 3z"/><path d="M12 3v16.5"/></svg>
+      </button>
+    </div>
+    <p class="stage-hint">Trascina per orbitare · rotella per avvicinarti · orbita sotto il pezzo per leggere l'incisione</p>
+  </div>
+
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="fatal"><div class="box"><b>Errore</b><span id="fatalMsg">—</span></div></div>
+
+<script src="/js/vcore.js"></script>
+<script type="module" src="/js/viewer.js"></script>
+</body>
+</html>

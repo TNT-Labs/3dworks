@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f0e0c">
+<title>Studio · VORTICE</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/studio.css">
+</head>
+<body class="studio-body">
+
+<div id="gate" class="viewer-state">
+  <p class="kicker">Studio</p>
+  <p class="lead">Verifica dell'accesso…</p>
+</div>
+
+<div id="shell" hidden>
+
+<header class="topbar">
+  <a class="brand" href="/">VORTICE <span>STUDIO</span></a>
+  <div class="doc">
+    <input id="docName" maxlength="60" spellcheck="false" autocomplete="off"
+           aria-label="Nome della creazione" placeholder="Senza titolo">
+    <span class="doc-state" id="docState">non salvato</span>
+  </div>
+  <div class="spacer"></div>
+  <nav>
+    <button class="btn btn--ghost btn--small" id="libBtn" type="button" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h6v14H4zM14 5h6v14h-6z"/></svg>
+      Le mie creazioni
+    </button>
+    <button class="btn btn--small" id="saveBtn" type="button">Salva</button>
+    <span class="who" id="who"></span>
+    <button class="btn btn--ghost btn--small" id="outBtn" type="button">Esci</button>
+  </nav>
+</header>
+
+<main class="studio">
+
+<aside id="panel">
+  <header>
+    <p class="kicker">Dispenser su misura · 220 × 220 × 250</p>
+    <h1>VORTICE</h1>
+    <div class="rule"></div>
+    <p class="lead" id="lead"></p>
+  </header>
+
+  <!-- ====================== pubblicazione ====================== -->
+  <section id="secPublish">
+    <h2 class="sec">Codice di produzione</h2>
+    <div class="pubbox" id="pubBox">
+      <p class="pub-empty" id="pubEmpty">Non ancora pubblicato. Pubblicando ottieni un codice
+      univoco: chiunque lo digiti sul sito rivede questo pezzo, senza poterlo modificare.</p>
+      <div class="pub-live" id="pubLive" hidden>
+        <p class="code code--big" id="pubCode">—</p>
+        <p class="fine" id="pubWhen">—</p>
+        <div class="pub-links">
+          <a class="btn btn--ghost btn--small" id="pubOpen" target="_blank" rel="noopener">Apri la scheda pubblica</a>
+          <button class="btn btn--ghost btn--small" id="pubCopy" type="button">Copia il link</button>
+        </div>
+        <p class="notice notice--bad" id="pubStale" hidden>Il progetto è stato modificato dopo la
+        pubblicazione: la scheda pubblica mostra ancora la versione stampata.</p>
+      </div>
+    </div>
+    <button class="btn btn--block" id="pubBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V6"/><path d="m6 11 6-6 6 6"/></svg>
+      <span>Pubblica e ottieni il codice</span>
+    </button>
+    <button class="btn btn--ghost btn--block btn--danger" id="unpubBtn" type="button" hidden>Ritira dalla vista pubblica</button>
+    <p class="fine">il codice viene inciso sul fondo al posto dell'impronta ·
+    pubblicare congela la forma: il pezzo che stampi resta quello che il codice mostra</p>
+  </section>
+
+  <!-- ====================== pezzo ====================== -->
+  <section>
+    <h2 class="sec">Pezzo del set</h2>
+    <div class="seg" id="segPiece" style="margin-bottom:6px">
+      <button data-p="disp" class="active" type="button">Dispenser</button>
+      <button data-p="tooth" type="button">Portaspazzolino</button>
+      <button data-p="plate" type="button">Set sul piatto</button>
+    </div>
+    <div id="plateBox" hidden>
+      <div class="rows" style="margin-top:12px">
+        <div class="row"><span class="k">Disposizione</span><span class="dots"></span><span class="v" id="plLay">—</span></div>
+        <div class="row"><span class="k">Ingombro sul piatto</span><span class="dots"></span>
+          <span class="v"><i class="dot ok" id="plDot"></i><span id="plSize">—</span></span></div>
+        <div class="row"><span class="k">Altezza massima</span><span class="dots"></span><span class="v" id="plH">—</span></div>
+        <div class="row"><span class="k">Materiale totale</span><span class="dots"></span><span class="v" id="plMat">—</span></div>
+        <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="plTime">—</span></div>
+      </div>
+    </div>
+    <p class="fine" style="margin-bottom:18px">stesso codice, stesso DNA: profilo, costole,
+    torsione e segnale sono condivisi · le misure e l'inclinazione dell'elica derivano dal pezzo</p>
+
+    <h2 class="sec">Preset</h2>
+    <div class="presets">
+      <button class="preset" data-p="aureo" type="button"><b>Aureo</b><span>clessidra · 6 costole</span></button>
+      <button class="preset" data-p="tempesta" type="button"><b>Maelström</b><span>vortice · 5 costole</span></button>
+      <button class="preset" data-p="fiamma" type="button"><b>Fiamma</b><span>snella · 7 costole</span></button>
+      <button class="preset" data-p="marea" type="button"><b>Marea</b><span>panciuta · 9 costole</span></button>
+    </div>
+  </section>
+
+  <!-- ====================== vaso ====================== -->
+  <section>
+    <h2 class="sec">Vaso</h2>
+    <div class="ctl"><div class="lr"><label for="sH">Altezza corpo</label><output id="vH"></output></div>
+      <input type="range" id="sH"></div>
+    <div class="ctl"><div class="lr"><label for="sR">Raggio base</label><output id="vR"></output></div>
+      <input type="range" id="sR"></div>
+    <div class="ctl"><div class="lr"><label for="sP">Scanalature</label><output id="vP"></output></div>
+      <input type="range" id="sP"></div>
+    <div class="ctl"><div class="lr"><label for="sT">Torsione</label><output id="vT"></output></div>
+      <input type="range" id="sT"></div>
+    <div class="ctl"><div class="lr"><label for="sS">Affilatura</label><output id="vS"></output></div>
+      <input type="range" id="sS"></div>
+    <div class="ctl"><div class="lr"><label for="sW">Parete del guscio</label><output id="vW"></output></div>
+      <input type="range" id="sW"></div>
+    <div class="ctl" style="margin-top:14px">
+      <div class="lr"><label>Profilo in quota</label></div>
+      <div class="seg" id="segProfile">
+        <button data-prof="clessidra" class="active" type="button">Clessidra</button>
+        <button data-prof="fiamma" type="button">Fiamma</button>
+        <button data-prof="tornado" type="button">Tornado</button>
+        <button data-prof="bulbo" type="button">Bulbo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== segnale ====================== -->
+  <section>
+    <h2 class="sec">Segnale personale</h2>
+    <div class="seg" id="segSig" style="margin-bottom:12px">
+      <button data-g="off" class="active" type="button">Nessuno</button>
+      <button data-g="gpx" type="button">Traccia GPX</button>
+      <button data-g="voce" type="button">Voce</button>
+    </div>
+    <div id="sigGpx" hidden>
+      <button id="gpxBtn" class="btn btn--ghost btn--block" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="m6 9 6-6 6 6"/><path d="M4 21h16"/></svg>
+        <span>Carica un file .gpx</span>
+      </button>
+      <input type="file" id="gpxFile" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
+    </div>
+    <div id="sigVoce" hidden>
+      <div class="pair">
+        <button id="recBtn" class="btn btn--ghost" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+          <span>Registra · max 10 s</span>
+        </button>
+        <button id="audBtn" class="btn btn--ghost btn--small" type="button">Carica audio</button>
+      </div>
+      <input type="file" id="audFile" accept="audio/*" hidden>
+    </div>
+    <div id="sigBody" hidden>
+      <p class="sigmeta" id="sigMeta">—</p>
+      <svg id="sigPlot" viewBox="0 0 300 64" preserveAspectRatio="none" role="img"
+           aria-label="Segnale originale e forma stampata lungo l'altezza">
+        <line id="plotZ" x1="0" y1="32" x2="300" y2="32"/>
+        <path id="plotI" d=""/><path id="plotR" d=""/>
+      </svg>
+      <div class="legend"><span><i class="d"></i>dato originale</span><span><i></i>forma stampata</span><span id="sigAxis">fondo → 80% altezza</span></div>
+      <div class="ctl"><div class="lr"><label for="sA">Intensità</label><output id="vA"></output></div>
+        <input type="range" id="sA"></div>
+      <div class="ctl"><div class="lr"><label for="sL" id="vLlab">Levigatura minima</label><output id="vL"></output></div>
+        <input type="range" id="sL"></div>
+      <div class="ctl"><div class="seg" id="segRev">
+        <button data-r="0" class="active" type="button">Inizio in basso</button>
+        <button data-r="1" type="button">Inizio in alto</button>
+      </div></div>
+      <div class="ctl"><div class="seg" id="segInv">
+        <button data-i="0" class="active" type="button">Picchi in fuori</button>
+        <button data-i="1" type="button">Picchi in dentro</button>
+      </div></div>
+      <div class="rows" style="margin-top:4px">
+        <div class="row"><span class="k">Adattamento ai 44°</span><span class="dots"></span>
+          <span class="v"><i class="dot ok" id="adaptDot"></i><span id="mAdapt">—</span></span></div>
+        <div class="row"><span class="k">Fedeltà al dato</span><span class="dots"></span>
+          <span class="v"><i class="dot ok" id="fidDot"></i><span id="mFid">—</span></span></div>
+      </div>
+      <p class="sighint" id="sigHint" hidden></p>
+    </div>
+    <p class="fine">GPX: la quota lungo il percorso diventa la silhouette, dal fondo all'80%
+    dell'altezza · voce: il volume della frase corre attorno al vaso come un rilievo ·
+    64 punti · base bloccata · il dato viene adattato ai 44° prima di modellare il vaso ·
+    tutto avviene nel browser: della registrazione resta solo la curva</p>
+  </section>
+
+  <!-- ====================== collo ====================== -->
+  <section id="secNeck">
+    <h2 class="sec">Collo a vite · norma GPI (lato bottiglia)</h2>
+    <div class="seg" id="segThread" style="margin-bottom:13px">
+      <button data-t="24/410" type="button">24/410</button>
+      <button data-t="24/415" type="button">24/415</button>
+      <button data-t="28/410" class="active" type="button">28/410</button>
+      <button data-t="free" type="button">Personali</button>
+    </div>
+    <div class="ctl"><div class="lr"><label for="sD">Ø creste filetto (T)</label><output id="vD"></output></div>
+      <input type="range" id="sD"></div>
+    <div class="ctl"><div class="lr"><label for="sP2">Passo</label><output id="vP2"></output></div>
+      <input type="range" id="sP2"></div>
+    <div class="ctl"><div class="lr"><label for="sG">Giri filetto</label><output id="vG"></output></div>
+      <input type="range" id="sG"></div>
+    <button id="dlTest" class="btn btn--ghost btn--block" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v6.5L5.6 17a2.6 2.6 0 0 0 2.3 4h8.2a2.6 2.6 0 0 0 2.3-4L14 9.5V3"/><path d="M7.5 14h9"/></svg>
+      <span>Spool di prova · STL (~10 min)</span>
+    </button>
+    <p class="fine">filetto esterno destro · la pompa commerciale ha la vite interna e si avvita
+    SOPRA il collo · T = Ø creste · E = Ø fondo ≈ T − 2,1 · se avvita stretto, scendi
+    di 0,2–0,3 mm il Ø T (Personali) · lo spool di prova è il verdetto</p>
+  </section>
+
+  <!-- ====================== incisione ====================== -->
+  <section>
+    <h2 class="sec">Fondo · incisione</h2>
+    <div class="seg" id="segLogo" style="margin-bottom:12px">
+      <button data-l="on" class="active" type="button">Inciso</button>
+      <button data-l="off" type="button">Liscio</button>
+    </div>
+    <input id="logoTxt" maxlength="30" spellcheck="false" autocomplete="off" aria-label="Testo inciso sul fondo">
+    <div class="ctl" style="margin-top:12px">
+      <div class="lr"><label for="sLS">Corpo testo</label><output id="vLS"></output></div>
+      <input type="range" id="sLS"></div>
+    <div class="ctl">
+      <div class="lr"><label for="sLD">Profondità incisione</label><output id="vLD"></output></div>
+      <input type="range" id="sLD"></div>
+    <div class="ctl">
+      <div class="lr"><label>Disposizione</label></div>
+      <div class="seg" id="segArc">
+        <button data-a="arc" class="active" type="button">Arco</button>
+        <button data-a="line" type="button">Dritto</button>
+      </div></div>
+    <div class="ctl">
+      <div class="lr"><label for="sLR">Rotazione</label><output id="vLR"></output></div>
+      <input type="range" id="sLR"></div>
+    <div class="ctl">
+      <div class="lr"><label>Codice inciso</label><output id="vSN">—</output></div>
+      <div class="seg" id="segSN">
+        <button data-s="on" class="active" type="button">Inciso</button>
+        <button data-s="off" type="button">Nessuno</button>
+      </div></div>
+    <p class="fine">incisione ≤ 1,2 mm nella faccia esterna: sotto le lettere restano sempre
+    ≥ 1,8 mm di pieno · il pavimento della cavità non viene mai toccato · orbita SOTTO il
+    pezzo per leggerlo · finché non pubblichi viene inciso l'impronta dei parametri,
+    poi il codice di produzione</p>
+  </section>
+
+  <!-- ====================== scheda ====================== -->
+  <section>
+    <h2 class="sec">Scheda pezzo</h2>
+    <div class="rows">
+      <div class="row"><span class="k">Ingombro</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="fitDot"></i><span id="mSize">—</span></span></div>
+      <div class="row"><span class="k">Capacità</span><span class="dots"></span><span class="v" id="mCap">—</span></div>
+      <div class="row"><span class="k">Profondità interna</span><span class="dots"></span><span class="v" id="mDepth">—</span></div>
+      <div class="row"><span class="k">Passaggio interno</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="passDot"></i><span id="mPass">—</span></span></div>
+      <div class="row"><span class="k">Overhang pareti</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="tiltDot"></i><span id="mTilt">—</span></span></div>
+      <div class="row"><span class="k">Tenuta fondo</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="sealDot"></i><span id="mSeal">—</span></span></div>
+      <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v" id="mVol">—</span></div>
+      <div class="row"><span class="k">Filamento PLA</span><span class="dots"></span><span class="v" id="mFil">—</span></div>
+      <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="mTime">—</span></div>
+      <div class="row"><span class="k">Mesh esportata</span><span class="dots"></span><span class="v" id="mTri">—</span></div>
+    </div>
+    <p class="note">Overhang = massimo tra crescita esterna e restringimento della cavità,
+    elica delle costole e inviluppo della spalla inclusi. «Tenuta fondo» = pieno minimo
+    tra il fondo delle lettere e il serbatoio. La tenuta al liquido la fanno i <b>perimetri</b>
+    (4), non l'infill. «Tempo stimato» e «Filamento» sono tarati su 8 design affettati con
+    PrusaSlicer (0,2 mm, 4 perimetri, gyroid 6%): errore medio 8%, massimo 14% sul tempo e
+    2% sul materiale. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
+    della cavità: con la pompa avvitata, taglia la cannuccia 2–3 mm più corta.</span></p>
+  </section>
+
+  <!-- ====================== ricerca ====================== -->
+  <section>
+    <h2 class="sec">Progettazione inversa</h2>
+    <p class="fine" style="margin-bottom:12px">imposta i limiti e scegli cosa massimizzare:
+    l'app cerca fra migliaia di combinazioni di profilo, raggio, altezza, scanalature,
+    torsione e affilatura, poi riverifica i finalisti alla risoluzione dell'export</p>
+    <div class="seg" id="segGoal" style="margin-bottom:12px">
+      <button data-g="fid" class="active" type="button">Fedeltà al dato</button>
+      <button data-g="cap" type="button">Capacità</button>
+      <button data-g="time" type="button">Tempo minimo</button>
+    </div>
+    <div class="cons">
+      <label>Capacità minima <span><input id="cMin" type="number" min="0" max="3000" step="50" placeholder="—"> ml</span></label>
+      <label>Altezza massima <span><input id="cH" type="number" min="60" max="250" step="5" placeholder="—"> mm</span></label>
+      <label>Tempo massimo <span><input id="cT" type="number" min="1" max="40" step="1" placeholder="—"> h</span></label>
+      <label>Materiale massimo <span><input id="cG" type="number" min="20" max="900" step="10" placeholder="—"> g</span></label>
+    </div>
+    <div class="seg" id="segScope" style="margin:12px 0">
+      <button data-x="0" class="active" type="button">Solo il pezzo scelto</button>
+      <button data-x="1" type="button">Entrambi in una stampa</button>
+    </div>
+    <button id="findBtn" class="btn btn--ghost btn--block" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span>Cerca il design</span>
+    </button>
+    <div id="findRes" class="find-res"></div>
+  </section>
+
+  <!-- ====================== export ====================== -->
+  <footer>
+    <div class="seg" id="segFmt" style="margin-bottom:10px">
+      <button data-f="stl" class="active" type="button">STL</button>
+      <button data-f="3mf" type="button">3MF · con ricetta</button>
+    </div>
+    <button id="dl" class="btn btn--block">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
+      <span>Scarica STL del dispenser</span>
+    </button>
+    <p class="fine" style="text-align:center;margin-top:10px">
+      <span id="fmtNote" hidden>3MF: geometria + ricetta di stampa incorporata, letta da PrusaSlicer
+      e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
+      STL binario watertight · vaso cavo + collo filettato + firma e codice incisi<br>
+      Z-up · base a 0 mm · elaborato nel browser</p>
+  </footer>
+</aside>
+
+<div id="stage" class="viewer-stage">
+  <div class="vignette"></div>
+  <div class="stage-caption" id="caption"><span class="ic" id="capIc"></span><span id="capTxt">—</span></div>
+  <div class="stage-tools">
+    <button id="tSpin" class="tool on" type="button" title="Rotazione automatica" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(-25 12 12)"/><circle cx="12" cy="12" r="2.8"/></svg></button>
+    <button id="tView" class="tool" type="button" title="Riporta la vista">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg></button>
+    <button id="tCut" class="tool" type="button" title="Vista in sezione" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9"/><path d="M14.5 14.5 20 20"/><path d="M8.1 8.1 12 12"/></svg></button>
+    <button id="tFlat" class="tool" type="button" title="Sfaccettato / superfici lisce" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2.5 19.5h19L12 3z"/><path d="M12 3v16.5"/></svg></button>
+    <button id="tLink" class="tool" type="button" title="Copia il link di questo design">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10.5a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg></button>
+    <button id="tShot" class="tool" type="button" title="Salva uno screenshot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3.5L9.5 5h5L16.5 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button>
+  </div>
+  <div id="flash"></div>
+</div>
+
+</main>
+</div>
+
+<!-- ====================== libreria ====================== -->
+<div id="library" class="drawer" hidden>
+  <div class="drawer-backdrop" data-close></div>
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="libTitle">
+    <header>
+      <h2 id="libTitle">Le mie creazioni</h2>
+      <button class="tool" id="libClose" type="button" title="Chiudi" data-close>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="drawer-actions">
+      <button class="btn btn--ghost btn--small" id="newBtn" type="button">Nuova creazione</button>
+      <button class="btn btn--ghost btn--small" id="dupBtn" type="button">Duplica quella aperta</button>
+    </div>
+    <div class="lib-list" id="libList"></div>
+  </div>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="fatal"><div class="box"><b>Errore di avvio</b><span id="fatalMsg">—</span></div></div>
+
+<script src="/js/vcore.js"></script>
+<script type="module" src="/js/studio.js"></script>
+</body>
+</html>
