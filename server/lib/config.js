@@ -26,6 +26,13 @@ function trustProxyValue(){
 const dbPath = str('VORTICE_DB', join(ROOT, 'data', 'vortice.db'));
 const isProd = str('NODE_ENV') === 'production';
 
+/* Nomi con cui il sito accetta di essere chiamato quando VORTICE_BASE_URL non
+   è impostato. L'intestazione Host arriva dal client e non è una prova di
+   nulla: se finisse dentro un link di reimpostazione password, chiunque
+   potrebbe farsi recapitare quel link su un proprio dominio. */
+const allowedHosts = str('VORTICE_ALLOWED_HOSTS')
+  .split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+
 export const config = {
   isProd,
   port: num('PORT', 3000),
@@ -34,6 +41,9 @@ export const config = {
 
   /* indirizzo pubblico del sito: serve nei link delle email e nei link condivisi */
   baseUrl: str('VORTICE_BASE_URL', '').replace(/\/+$/, ''),
+  /* nomi ammessi quando baseUrl non c'è: oltre a questi restano sempre validi
+     i nomi locali e privati (localhost, 127.x, 10.x, 192.168.x, *.local) */
+  allowedHosts,
 
   /* Il cookie di sessione viaggia solo su HTTPS quando il sito è servito in HTTPS.
      Dietro un reverse proxy o un tunnel Cloudflare TRUST_PROXY va impostato,
@@ -85,6 +95,9 @@ export const config = {
     unverifiedDays: num('UNVERIFIED_ACCOUNT_DAYS', 30),
     /* account dormienti: 0 disattiva la cancellazione automatica (default) */
     inactiveDays:   num('INACTIVE_ACCOUNT_DAYS', 0),
+    /* Il link di conferma dell'indirizzo è una credenziale: come quello di
+       reimpostazione deve scadere. 0 disattiva la scadenza. */
+    verifyTokenDays: num('VERIFY_TOKEN_DAYS', 7),
   },
 
   /* I link di conferma e reimpostazione nel log del server sono comodi in

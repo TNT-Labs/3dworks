@@ -1,6 +1,7 @@
 /* Utilità HTTP condivise: indirizzo del client, cookie, CSRF, rate limit,
    guardie di accesso. */
 import { timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
 import { extname } from 'node:path';
 import { config } from './config.js';
 import { SESSION_COOKIE, CSRF_COOKIE, CSRF_HEADER, readSession, newToken } from './auth.js';
@@ -20,10 +21,49 @@ import { SESSION_COOKIE, CSRF_COOKIE, CSRF_HEADER, readSession, newToken } from 
  */
 export function clientIp(req){
   if (config.trustProxy !== false && config.cloudflare){
-    const cf = req.get('cf-connecting-ip');
-    if (cf && cf.length <= 45) return cf.trim();
+    const cf = String(req.get('cf-connecting-ip') ?? '').trim();
+    /* Deve essere un indirizzo, non una stringa qualsiasi: un valore libero
+       sarebbe una chiave nuova del limitatore a ogni richiesta — cioè nessun
+       limite — e riempirebbe la mappa dei tentativi con dati arbitrari. */
+    if (isIP(cf)) return cf;
   }
   return req.ip;
+}
+
+/* --------------------------- origine del sito --------------------------- */
+/*
+ * L'intestazione Host la scrive il client. Se finisse dentro il link di
+ * reimpostazione password, basterebbe una richiesta con `Host: esempio.invalid`
+ * per far recapitare alla vittima un link che porta il suo token altrove:
+ * account preso senza sapere nulla della password.
+ *
+ * Quindi: l'indirizzo pubblico è quello configurato. Senza configurazione si
+ * accettano solo i nomi dichiarati in VORTICE_ALLOWED_HOSTS e quelli locali o
+ * privati, dove non c'è un terzo a cui il link possa arrivare.
+ */
+const PRIVATE_HOST = /^(?:localhost|[^.]+\.local|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|\[::1\]|::1)$/i;
+
+/** Nome dichiarato dalla richiesta, in minuscole e senza porta. Null se assurdo. */
+function requestHost(req){
+  const host = String(req.get('host') ?? '').trim().toLowerCase();
+  if (!host || host.length > 253 || !/^[a-z0-9._:\[\]-]+$/.test(host)) return null;
+  return host;
+}
+
+const hostAllowed = host => !!host && (
+  config.allowedHosts.includes(host) ||
+  config.allowedHosts.includes(host.replace(/:\d+$/, '')) ||
+  PRIVATE_HOST.test(host.replace(/:\d+$/, ''))
+);
+
+/**
+ * Origine su cui è lecito costruire un link che finirà in un'email.
+ * @returns {string|null} null quando non c'è nulla di fidato da usare.
+ */
+export function trustedOrigin(req){
+  if (config.baseUrl) return config.baseUrl;
+  const host = requestHost(req);
+  return hostAllowed(host) ? `${req.protocol}://${host}` : null;
 }
 
 /* ------------------------------ cookie ------------------------------ */
@@ -97,10 +137,40 @@ function safeEqual(a, b){
   return timingSafeEqual(x, y);
 }
 
+/*
+ * Seconda serratura accanto al double-submit: quando la richiesta dichiara la
+ * propria origine, deve essere la nostra. Il double-submit da solo cade se
+ * qualcuno riesce a scrivere un cookie sul dominio (un sottodominio perso, un
+ * altro servizio sulla stessa casa), perché a quel punto cookie e
+ * intestazione li sceglie l'attaccante: l'origine no, la mette il browser.
+ *
+ * Origin assente = client che non è un browser (curl, uno script): non porta
+ * i cookie di nessun altro, e chiedergliela lo escluderebbe e basta.
+ */
+function originAllowed(req){
+  const raw = req.get('origin');
+  if (!raw) return true;
+  if (raw === 'null') return false;            // sandbox o redirect cross-site
+  let origin;
+  try{ origin = new URL(raw); }catch{ return false; }
+  const from = origin.host.toLowerCase();
+  /* Il confronto è con il Host della richiesta: è il browser a scriverlo
+     dall'indirizzo della pagina, quindi un sito terzo non può farli
+     combaciare. Lo schema non entra nel confronto: dietro un proxy mal
+     configurato req.protocol direbbe http mentre il browser parla https. */
+  if (from === requestHost(req)) return true;
+  if (config.baseUrl){
+    try{ if (from === new URL(config.baseUrl).host.toLowerCase()) return true; }catch{ /* baseUrl malformato */ }
+  }
+  return config.allowedHosts.includes(from);
+}
+
 /* Double-submit: l'header deve combaciare col cookie CSRF. Un sito terzo può
    far partire la richiesta ma non può leggere il cookie per replicarlo. */
 export function requireCsrf(req, res, next){
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  if (!originAllowed(req))
+    return res.status(403).json({ error: 'Richiesta proveniente da un altro sito.', code: 'bad_origin' });
   if (!safeEqual(req.get(CSRF_HEADER), req.cookies?.[CSRF_COOKIE]))
     return res.status(403).json({ error: 'Sessione non valida o scaduta. Ricarica la pagina.' });
   next();

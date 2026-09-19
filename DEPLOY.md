@@ -62,6 +62,19 @@ cp .env.docker.example .env
 Il `docker-compose.yml` è già impostato per `shopbeautylab.it`. Resta da mettere il
 token del tunnel nel `.env`, che ottieni al passo seguente.
 
+### L'indirizzo del sito va dichiarato, non dedotto
+
+`VORTICE_BASE_URL` nel `docker-compose.yml` è il dominio vero del sito ed è su
+quello che vengono costruiti i link dentro le email. Se lo cambi, cambialo lì:
+l'unica altra fonte sarebbe l'intestazione `Host`, che la scrive chi chiama, e
+una richiesta di reimpostazione password con un `Host` altrui farebbe arrivare
+alla vittima un link che porta il suo token su un altro dominio.
+
+Per questo, quando `VORTICE_BASE_URL` è vuoto, l'applicazione costruisce link
+solo per i nomi locali (`localhost`, `127.x`, `10.x`, `192.168.x`, `*.local`) e
+per quelli elencati in `VORTICE_ALLOWED_HOSTS`: su qualunque altro nome l'email
+non parte e il log dice perché.
+
 ### Il titolare del trattamento va dichiarato
 
 Nello stesso `.env` vanno i recapiti che compaiono nell'informativa privacy del sito:
@@ -162,6 +175,9 @@ docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d vortice
 
 Quel file è **solo per le prove**: con la porta esposta chiunque sia sulla rete locale
 può dichiarare un `CF-Connecting-IP` falso ed eludere il limite sui tentativi di accesso.
+(Il valore viene accettato solo se è davvero un indirizzo IP, quindi non serve più a
+moltiplicare i contatori all'infinito — ma resta il modo di presentarsi come un altro
+visitatore, e per questo la porta in esercizio non va pubblicata.)
 
 ---
 

@@ -17,6 +17,15 @@ export async function hashPassword(password){
   return `scrypt$${N}$${R}$${P}$${salt.toString('base64')}$${key.toString('base64')}`;
 }
 
+/*
+ * Hash finto con cui confrontare la password quando l'account non esiste.
+ * Deve avere la forma di un hash vero, altrimenti verifyPassword esce subito e
+ * la risposta torna in un millisecondo invece che in cento: la differenza si
+ * misura da fuori e dice quali indirizzi sono registrati. La chiave è lunga
+ * 64 byte come quelle vere, così il lavoro svolto è lo stesso.
+ */
+export const DUMMY_HASH = `scrypt$${N}$${R}$${P}$AAAAAAAAAAAAAAAAAAAAAA==$${'A'.repeat(86)}==`;
+
 export async function verifyPassword(password, stored){
   try{
     const [scheme, n, r, p, salt, hash] = String(stored).split('$');
@@ -41,6 +50,15 @@ export const newToken = (bytes = 32) => randomBytes(bytes).toString('base64url')
    sono credenziali temporanee: nel database ne sta solo l'impronta, come per
    le sessioni. Una copia del database non permette di prendere un account. */
 export const hashToken = t => sha256(String(t));
+
+/* Il link di conferma dell'indirizzo vale quanto una credenziale: come quello
+   di reimpostazione ha una scadenza, misurata da quando è stato spedito. */
+export function verifyTokenExpired(user, t = now()){
+  const days = config.retention.verifyTokenDays;
+  if (!(days > 0)) return false;
+  if (!user?.verify_sent_at) return false;
+  return user.verify_sent_at + days * 86400_000 < t;
+}
 
 export function createSession(userId){
   const token = newToken();
@@ -120,11 +138,19 @@ export function allocateCode(){
    Ogni cancellazione è configurabile e viene annunciata nel log con il solo
    numero di righe: nel log non finisce nessun indirizzo. */
 export function purgeExpiredData(t = now()){
-  const out = { sessions: 0, resetTokens: 0, unverified: 0, inactive: 0 };
+  const out = { sessions: 0, resetTokens: 0, verifyTokens: 0, unverified: 0, inactive: 0 };
   out.sessions = q.purgeSessions.run(t).changes;
   out.resetTokens = db
     .prepare('UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE reset_expires < ?')
     .run(t).changes;
+
+  /* stesso trattamento per i token di conferma scaduti: un token che non vale
+     più non ha motivo di restare scritto da nessuna parte */
+  const verifyDays = config.retention.verifyTokenDays;
+  if (verifyDays > 0)
+    out.verifyTokens = db
+      .prepare('UPDATE users SET verify_token = NULL WHERE verify_token IS NOT NULL AND verify_sent_at < ?')
+      .run(t - verifyDays * 86400_000).changes;
 
   /* Account mai confermati: senza conferma non sono nemmeno utilizzabili,
      quindi conservarli non ha alcuna finalità. */

@@ -98,6 +98,9 @@ legalRouter.get('/', (req, res) => {
         : 'Nessuna cancellazione automatica per inattività.',
       sessioni: `${config.sessionDays} giorni dall\'accesso; le sessioni scadute vengono eliminate ogni ora.`,
       tokenReimpostazione: 'Un\'ora, poi eliminati dalla pulizia periodica.',
+      tokenConferma: config.retention.verifyTokenDays > 0
+        ? `${config.retention.verifyTokenDays} giorni, poi eliminati dalla pulizia periodica.`
+        : 'Validi finché l\'indirizzo non viene confermato.',
       indirizziIp: 'Tenuti in memoria per il solo conteggio dei tentativi di accesso, al massimo un\'ora. Mai scritti nel database.',
       creazioni: 'Finché esiste l\'account; le singole creazioni sono eliminabili in qualsiasi momento.',
     },
