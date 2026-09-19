@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f0e0c">
+<title>VORTICE · dispenser e portaspazzolino generativi</title>
+<meta name="description" content="Inserisci il codice di produzione inciso sul fondo del pezzo per vederlo in 3D, oppure entra nello studio per disegnarne uno tuo.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/home.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="/">VORTICE <span>STUDIO GENERATIVO</span></a>
+  <div class="spacer"></div>
+  <nav id="nav">
+    <a class="btn btn--ghost btn--small" href="/accedi.html">Accedi</a>
+    <a class="btn btn--small" href="/accedi.html?modo=registrazione">Crea un account</a>
+  </nav>
+</header>
+
+<main class="home">
+
+  <section class="hero">
+    <p class="kicker">Dispenser su misura · Elegoo Neptune 3 Pro · 220 × 220 × 250</p>
+    <h1>Un oggetto,<br>un codice.</h1>
+    <div class="rule"></div>
+    <p class="lead">Vasi a guscio sottile con <b>collo filettato esterno a norma GPI</b> e
+    <b>firma incisa sul fondo</b>. Ogni pezzo pubblicato riceve un codice di produzione:
+    chi lo ha in mano lo digita qui e rivede esattamente il modello da cui è nato.</p>
+  </section>
+
+  <section class="lookup" aria-labelledby="lookup-title">
+    <h2 class="sec" id="lookup-title">Hai un pezzo in mano?</h2>
+    <form id="codeForm" novalidate>
+      <div class="lookup-row">
+        <input id="codeIn" name="codice" maxlength="24" autocomplete="off" spellcheck="false"
+               placeholder="VRT-7K3QX" aria-label="Codice di produzione inciso sul fondo"
+               aria-describedby="codeHelp">
+        <button class="btn" type="submit" id="codeGo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          Vedi il prodotto
+        </button>
+      </div>
+      <p class="notice notice--bad" id="codeErr" hidden role="alert"></p>
+      <p class="fine" id="codeHelp">Il codice è inciso sul fondo del pezzo, sotto la firma.
+      Maiuscole e minuscole non contano; se leggi <b>O</b> o <b>I</b> scrivi pure così,
+      li interpretiamo come 0 e 1.</p>
+    </form>
+  </section>
+
+  <section class="three-up">
+    <article>
+      <h3>Solo visualizzazione</h3>
+      <p>Col codice vedi il pezzo in 3D, lo giri, lo sezioni e leggi la sua scheda tecnica.
+      Nulla è modificabile e non serve alcun account.</p>
+    </article>
+    <article>
+      <h3>Lo studio è tuo</h3>
+      <p>Con un account salvi i tuoi design sul server: li ritrovi da qualsiasi
+      dispositivo, li modifichi e li riscarichi quando vuoi.</p>
+    </article>
+    <article>
+      <h3>Stampabile senza supporti</h3>
+      <p>Ogni parete è vincolata a circa 44°: profilo, costole e spalla vengono
+      corretti automaticamente prima che la geometria venga generata.</p>
+    </article>
+  </section>
+
+  <footer class="home-foot">
+    <p class="fine">Geometria elaborata interamente nel browser · STL binario watertight e 3MF con
+    ricetta di stampa · Z-up, base a 0 mm</p>
+  </footer>
+
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/js/home.js"></script>
+</body>
+</html>

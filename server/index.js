@@ -18,5 +18,14 @@ const server = app.listen(config.port, config.host, () => {
     console.log('  nota: COOKIE_SECURE non attivo — impostalo a 1 dietro HTTPS in produzione');
 });
 
+server.on('error', err => {
+  /* il caso di gran lunga più frequente merita una frase, non uno stack */
+  if (err.code === 'EADDRINUSE')
+    console.error(`\nLa porta ${config.port} è già occupata.\n` +
+      `Chiudi l'altro processo oppure avvia con un'altra porta:  PORT=3001 npm start\n`);
+  else console.error('\nAvvio non riuscito:', err.message, '\n');
+  process.exit(1);
+});
+
 for (const sig of ['SIGINT', 'SIGTERM'])
   process.on(sig, () => server.close(() => process.exit(0)));

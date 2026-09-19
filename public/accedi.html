@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f0e0c">
+<title>Accedi · VORTICE</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="centered">
+
+<main class="card">
+  <a class="brand-mark" href="/">VORTICE</a>
+  <p class="kicker" id="kicker">Accesso allo studio</p>
+  <h1 id="title">Bentornato</h1>
+  <div class="rule"></div>
+  <p class="lead" id="blurb">Entra per ritrovare le tue creazioni: restano sul server, non solo su questo browser.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" id="tabLogin"    role="tab" aria-selected="true"  type="button">Accedi</button>
+    <button class="tab"        id="tabRegister" role="tab" aria-selected="false" type="button">Crea un account</button>
+  </div>
+
+  <p class="notice notice--bad" id="formErr" hidden role="alert"></p>
+  <p class="notice notice--ok"  id="formOk"  hidden role="status"></p>
+
+  <form id="authForm" novalidate>
+    <div class="field">
+      <label for="email">Indirizzo email</label>
+      <input id="email" name="email" type="email" autocomplete="email" required
+             inputmode="email" placeholder="tu@esempio.it">
+      <p class="err" id="emailErr" hidden></p>
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required
+             autocomplete="current-password" placeholder="••••••••••">
+      <p class="hint" id="pwHint" hidden>Almeno 10 caratteri. Scegli una frase che ricordi, non una parola sola.</p>
+      <p class="err" id="passwordErr" hidden></p>
+    </div>
+
+    <button class="btn btn--block" type="submit" id="submitBtn">Accedi</button>
+  </form>
+
+  <div class="card-foot">
+    <button class="linklike" id="forgotBtn" type="button">Password dimenticata?</button>
+    <a href="/">Torna all'inizio</a>
+  </div>
+
+  <p class="fine" id="closedNote" hidden>Le registrazioni sono chiuse su questa installazione.</p>
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/js/auth-page.js"></script>
+</body>
+</html>

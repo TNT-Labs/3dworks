@@ -1,0 +1,203 @@
+/* =====================================================================
+   STUDIO · pannello dei controlli e scena.
+   Riprende gli stili della V3 single-file; ciò che è condiviso con le
+   altre pagine (bottoni, righe di misura, toast) vive in base.css.
+   ===================================================================== */
+@import url('/css/viewer.css');
+
+.studio-body{overflow:hidden;display:flex;flex-direction:column;height:100%}
+#shell{flex:1;display:flex;flex-direction:column;min-height:0}
+.studio{flex:1;display:flex;min-height:0}
+
+/* ---------------------------- barra superiore ---------------------------- */
+.topbar .doc{display:flex;align-items:center;gap:10px;min-width:0}
+.topbar .doc input{
+  background:transparent;border:1px solid transparent;border-radius:6px;
+  padding:6px 9px;font-size:13.5px;font-weight:500;width:min(30vw,260px);
+  transition:border-color .15s,background .15s;
+}
+.topbar .doc input:hover{border-color:var(--line)}
+.topbar .doc input:focus{background:var(--panel2);border-color:rgba(255,106,43,.5);outline:none}
+.doc-state{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim);
+  text-transform:uppercase;white-space:nowrap;
+}
+.doc-state.dirty{color:var(--warn)}
+.doc-state.saved{color:var(--ok)}
+
+/* ---------------------------- pannello ---------------------------- */
+#panel{
+  width:352px;min-width:352px;height:100%;overflow-y:auto;
+  background:var(--panel);border-right:1px solid var(--line);
+  padding:26px 24px 28px;display:flex;flex-direction:column;gap:22px;
+}
+#panel::-webkit-scrollbar{width:9px}
+#panel::-webkit-scrollbar-thumb{background:#26231e;border-radius:9px;border:2px solid var(--panel)}
+#panel h1{font-size:40px;margin-top:9px}
+#panel .lead{font-size:12.5px}
+#panel footer{margin-top:auto}
+
+/* ---------------------------- preset ---------------------------- */
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.preset{
+  text-align:left;background:var(--panel2);border:1px solid var(--line);
+  padding:9px 11px;border-radius:6px;color:var(--ink);
+  transition:border-color .15s,background .15s;
+}
+.preset b{display:block;font-size:13px;font-weight:600}
+.preset span{display:block;font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:3px}
+.preset:hover{border-color:#3b352c}
+.preset.active{border-color:rgba(255,106,43,.55);background:var(--acc-soft)}
+.preset.active span{color:#c9804f}
+
+/* ---------------------------- controlli ---------------------------- */
+.ctl{margin-bottom:12px}
+.lr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.lr label{font-size:12.5px;color:var(--mut)}
+.lr output{font-family:var(--mono);font-size:12px;color:var(--ink)}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:2px;border-radius:1px;
+  background:linear-gradient(90deg,var(--acc) 50%,#2c2822 50%);outline-offset:4px;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:11px;height:20px;border-radius:3px;
+  background:#efe6d6;border:1px solid #0d0c0a;box-shadow:0 1px 4px rgba(0,0,0,.5);
+  transition:background .12s;
+}
+input[type=range]::-webkit-slider-thumb:hover{background:var(--acc)}
+input[type=range]::-moz-range-thumb{
+  width:11px;height:20px;border-radius:3px;background:#efe6d6;border:1px solid #0d0c0a;
+}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{
+  flex:1;background:transparent;border:0;border-right:1px solid var(--line);
+  color:var(--mut);font-size:11px;padding:8px 4px;transition:color .15s,background .15s;
+}
+.seg button:last-child{border-right:0}
+.seg button:hover{color:var(--ink)}
+.seg button.active{background:var(--acc-soft);color:var(--acc)}
+
+#logoTxt{
+  width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+  color:var(--ink);font-family:var(--mono);font-size:12px;padding:9px 11px;letter-spacing:.05em;
+}
+#logoTxt:focus{border-color:rgba(255,106,43,.5);outline:none}
+
+.pair{display:flex;gap:8px}
+.pair .btn{flex:1}
+
+.note{
+  font-size:11.5px;line-height:1.6;color:var(--mut);border-left:2px solid var(--acc);
+  padding-left:10px;margin-top:13px;
+}
+.note b{color:var(--ink);font-weight:500}
+
+/* ---------------------------- pubblicazione ---------------------------- */
+.pubbox{
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px;margin-bottom:10px;
+}
+.pub-empty{font-size:12px;line-height:1.6;color:var(--mut)}
+.pub-live .code--big{font-size:20px;margin-bottom:4px}
+.pub-links{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+.pub-links .btn{flex:1;white-space:nowrap}
+.pub-live .notice{margin:12px 0 0;font-size:11.5px}
+
+/* ---------------------------- segnale ---------------------------- */
+.sigmeta{font-size:11.5px;line-height:1.55;color:var(--mut);margin:12px 0 10px}
+.sigmeta span{color:var(--dim)}
+#sigPlot{width:100%;height:64px;display:block;background:var(--panel2);border-radius:6px;border:1px solid var(--line)}
+#plotZ{stroke:#37322a;stroke-width:1;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+#plotI{fill:none;stroke:var(--dim);stroke-width:1.2;vector-effect:non-scaling-stroke}
+#plotR{fill:none;stroke:var(--acc);stroke-width:1.6;vector-effect:non-scaling-stroke}
+.legend{
+  display:flex;gap:12px;flex-wrap:wrap;margin:7px 0 12px;
+  font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.04em;
+}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:9px;height:2px;background:var(--acc);border-radius:1px}
+.legend i.d{background:var(--dim)}
+.legend span:last-child{margin-left:auto}
+.sighint{
+  font-size:11.5px;line-height:1.55;color:var(--mut);
+  border-left:2px solid var(--warn);padding-left:10px;margin-top:10px;
+}
+.sighint b{color:var(--ink);font-weight:500}
+#recBtn.rec{color:var(--bad);border-color:rgba(255,93,82,.45)}
+
+/* ---------------------------- ricerca inversa ---------------------------- */
+.cons{display:grid;gap:8px}
+.cons label{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--mut)}
+.cons span{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.cons input{
+  width:74px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;
+  color:var(--ink);font-family:var(--mono);font-size:11.5px;padding:6px 8px;text-align:right;
+}
+.cons input:focus{border-color:rgba(255,106,43,.5);outline:none}
+.find-res{display:flex;flex-direction:column;gap:7px;margin-top:11px}
+.find-res button{
+  text-align:left;background:var(--panel2);border:1px solid var(--line);
+  border-radius:6px;padding:9px 11px;color:var(--ink);transition:border-color .15s;
+}
+.find-res button:hover{border-color:rgba(255,106,43,.5)}
+.find-res button.ko{opacity:.62}
+.find-res b{font-size:11.5px;font-weight:600}
+.find-res i{font-family:var(--mono);font-size:9.5px;color:var(--dim);font-style:normal;line-height:1.7}
+.find-res .empty,.lib-list .empty{font-size:12px;color:var(--dim);padding:6px 0}
+
+/* ---------------------------- scena ---------------------------- */
+.stage-caption{display:flex;align-items:center;gap:8px}
+.stage-caption .ic{width:13px;height:13px;flex:0 0 auto;display:none}
+.stage-caption.ok .ic,.stage-caption.bad .ic{display:block}
+.stage-caption.ok{color:var(--mut)}
+.stage-caption.bad{color:#f2b9b4;border-color:rgba(255,93,82,.4)}
+.stage-caption.ok .ic{color:var(--ok)}
+.stage-caption.bad .ic{color:var(--bad)}
+
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#flash.go{animation:flash .34s ease-out}
+@keyframes flash{0%{opacity:.5}100%{opacity:0}}
+
+/* ---------------------------- libreria ---------------------------- */
+.drawer{position:fixed;inset:0;z-index:80;display:flex;justify-content:flex-end}
+.drawer-backdrop{position:absolute;inset:0;background:rgba(6,5,4,.62);backdrop-filter:blur(2px)}
+.drawer-panel{
+  position:relative;width:min(440px,100%);height:100%;overflow-y:auto;
+  background:var(--panel);border-left:1px solid var(--line);
+  padding:22px 22px 28px;display:flex;flex-direction:column;gap:16px;
+  box-shadow:var(--shadow);
+}
+.drawer-panel header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.drawer-actions{display:flex;gap:8px;flex-wrap:wrap}
+.drawer-actions .btn{flex:1}
+
+.lib-list{display:flex;flex-direction:column;gap:9px}
+.lib-item{
+  display:flex;gap:12px;align-items:flex-start;text-align:left;
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:11px 12px;
+  transition:border-color .15s;width:100%;
+}
+.lib-item:hover{border-color:#3b352c}
+.lib-item.current{border-color:rgba(255,106,43,.55);background:var(--acc-soft)}
+.lib-item .body{flex:1;min-width:0}
+.lib-item .name{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-item .meta{display:block;font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:4px;line-height:1.6}
+.lib-item .meta .pub{color:var(--acc)}
+.lib-item .meta .stale{color:var(--warn)}
+.lib-item .kill{
+  flex:0 0 auto;width:28px;height:28px;display:grid;place-items:center;
+  border-radius:6px;color:var(--dim);transition:color .15s,background .15s;
+}
+.lib-item .kill svg{width:15px;height:15px}
+.lib-item .kill:hover{color:var(--bad);background:rgba(255,93,82,.1)}
+
+@media (max-width:900px){
+  .studio-body{overflow:auto;height:auto}
+  .studio{flex-direction:column-reverse}
+  #panel{width:100%;min-width:0;height:auto;border-right:0;border-top:1px solid var(--line)}
+  .viewer-stage{height:56vh;min-height:320px;flex:0 0 auto}
+  .topbar{flex-wrap:wrap}
+  .topbar .doc input{width:100%}
+}

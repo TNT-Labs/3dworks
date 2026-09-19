@@ -1,0 +1,77 @@
+/* Visualizzatore pubblico: stessa scena dello studio, pannello di sola lettura. */
+.viewer-body{overflow:hidden;display:flex;flex-direction:column}
+
+.viewer-state{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;text-align:center;padding:40px 24px;
+}
+.viewer-state .lead{max-width:44ch}
+
+.viewer{flex:1;display:flex;min-height:0}
+
+.viewer-panel{
+  width:352px;min-width:352px;height:100%;overflow-y:auto;
+  background:var(--panel);border-right:1px solid var(--line);
+  padding:26px 24px 28px;display:flex;flex-direction:column;gap:22px;
+}
+.viewer-panel::-webkit-scrollbar{width:9px}
+.viewer-panel::-webkit-scrollbar-thumb{background:#26231e;border-radius:9px;border:2px solid var(--panel)}
+.viewer-panel h1{font-size:26px;margin-top:6px}
+.viewer-panel footer{margin-top:auto;display:flex;flex-direction:column;gap:12px}
+
+.code--big{font-size:22px;letter-spacing:.2em;margin-top:6px}
+
+.readonly-badge{
+  display:flex;align-items:center;gap:9px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px 12px;font-size:12px;color:var(--mut);line-height:1.45;
+}
+.readonly-badge svg{width:15px;height:15px;flex:0 0 auto;color:var(--acc)}
+
+.engraved{
+  font-family:var(--mono);font-size:13px;color:var(--ink);background:var(--panel2);
+  border:1px solid var(--line);border-radius:var(--radius);padding:12px 13px;
+  line-height:1.6;word-break:break-word;
+}
+#secEngrave .fine{margin-top:9px}
+
+/* ---------------------------- scena ---------------------------- */
+.viewer-stage{flex:1;position:relative;min-width:0;min-height:0}
+.viewer-stage canvas{position:absolute;inset:0;display:block}
+.vignette{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(115% 85% at 50% 40%, transparent 54%, rgba(4,3,2,.5) 100%);
+}
+
+.stage-caption{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  background:rgba(15,13,11,.78);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:99px;padding:7px 15px;
+  font-family:var(--mono);font-size:11px;color:var(--mut);letter-spacing:.02em;
+  pointer-events:none;max-width:calc(100% - 132px);text-align:center;line-height:1.45;
+}
+
+.stage-tools{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:7px}
+.tool{
+  width:36px;height:36px;display:grid;place-items:center;
+  background:rgba(15,13,11,.78);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:9px;color:var(--mut);
+  transition:color .15s,border-color .15s;
+}
+.tool svg{width:17px;height:17px}
+.tool:hover{color:var(--ink)}
+.tool.on{color:var(--acc);border-color:rgba(255,106,43,.45)}
+
+.stage-hint{
+  position:absolute;left:0;right:0;bottom:12px;text-align:center;
+  font-family:var(--mono);font-size:10px;color:var(--dim);
+  letter-spacing:.03em;pointer-events:none;padding:0 16px;line-height:1.6;
+}
+
+@media (max-width:860px){
+  .viewer-body{overflow:auto}
+  .viewer{flex-direction:column-reverse}
+  .viewer-panel{width:100%;min-width:0;height:auto;border-right:0;border-top:1px solid var(--line)}
+  .viewer-stage{height:62vh;min-height:340px;flex:0 0 auto}
+  .stage-hint{display:none}
+}
