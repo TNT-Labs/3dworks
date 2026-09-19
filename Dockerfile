@@ -53,7 +53,7 @@ RUN rm -rf node_modules/three
 COPY package.json ./
 COPY server ./server
 COPY public ./public
-COPY scripts/backup.js ./scripts/
+COPY scripts/backup.js scripts/check-tunnel-token.js ./scripts/
 
 # I file vendorizzati arrivano dopo i sorgenti, così nessun ordine di COPY può
 # sovrascriverli per sbaglio.

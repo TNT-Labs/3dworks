@@ -94,6 +94,16 @@ Nel pannello **Cloudflare → Zero Trust → Networks → Tunnels**:
    TUNNEL_TOKEN=eyJhIjoi…
    ```
 
+   Va incollato **solo il valore**: niente `--token` davanti, niente virgolette,
+   nessuna andata a capo in mezzo (è una sola riga lunga qualche centinaio di
+   caratteri). All'avvio il token viene controllato prima che il tunnel parta: se
+   è copiato male, `docker compose up` si ferma dicendo esattamente cosa manca
+   invece di riprovare all'infinito.
+
+   Se il tunnel esisteva già, il token si recupera aprendolo e scegliendo
+   **Configure**; `Refresh token` ne genera uno nuovo e **invalida il precedente**,
+   quindi dopo averlo premuto va aggiornato anche il `.env`.
+
 3. Scheda **Public Hostnames** → **Add a public hostname**:
 
    | campo | valore |
@@ -238,6 +248,8 @@ docker compose down -v       # ATTENZIONE: cancella anche il database
 |---|---|
 | **Error 502** da Cloudflare | Il container non è ancora `healthy`, oppure nel Public Hostname hai messo `localhost:3000` invece di `vortice:3000`: dentro `cloudflared`, `localhost` è `cloudflared` stesso. |
 | **Error 1033** | Il tunnel non è connesso: `docker compose logs cloudflared`. Di solito è il `TUNNEL_TOKEN` copiato male. |
+| **`Provided Tunnel token is not valid`** e `vortice-tunnel` che riparte in continuazione | Il token è stato rifiutato da Cloudflare. Il controllo all'avvio (`vortice-tunnel-check`) intercetta i casi di copia-incolla: se invece l'ha lasciato passare, il formato è giusto ma il token non vale più — il tunnel è stato cancellato o qualcuno ha premuto *Refresh token*. Rigenera il token dal pannello (§3), aggiorna il `.env` e `docker compose up -d`. |
+| **`dependency failed to start: container vortice-tunnel-check exited`** | Non è un guasto: è il controllo del token che ha fermato l'avvio del tunnel. Il motivo preciso è nelle righe sopra, o con `docker compose logs tunnel-check`. Il sito resta comunque servito da `vortice`, semplicemente non è raggiungibile da fuori. |
 | L'accesso riesce ma **torna subito alla pagina di login** | I cookie sono `Secure` e il sito è stato raggiunto in HTTP. Accendi *Always Use HTTPS*. |
 | **«Nucleo geometrico non caricato»** nello studio | Rocket Loader acceso (§5). |
 | **«Impossibile caricare la libreria 3D»** | La cartella `public/vendor` non è finita nell'immagine: ricostruisci con `docker compose build --no-cache`. |
