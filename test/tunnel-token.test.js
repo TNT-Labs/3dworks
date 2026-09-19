@@ -87,9 +87,29 @@ test('riconosce il segnaposto della documentazione', () => {
   assert.match(esito.testo, /caratteri che un token non può avere/);
 });
 
-test('riconosce un token troncato', () => {
+test('riconosce un token troncato e ne dice la lunghezza', () => {
   const esito = controlla(tokenFinto().slice(0, 30));
   assert.equal(esito.ok, false);
+  assert.match(esito.testo, /comincia bene ma è rovinato/);
+  assert.match(esito.testo, /lungo 30 caratteri/);
+});
+
+test('riconosce l\'identificativo del tunnel al posto del token', () => {
+  const esito = controlla('7b1e4f2a-1111-4222-8333-444455556666');
+  assert.equal(esito.ok, false);
+  assert.match(esito.testo, /identificativo del tunnel, non il suo token/);
+});
+
+test('riconosce un token API di Cloudflare', () => {
+  const esito = controlla('AbCdEf1234567890_gHiJkLmNoPqRsTuVwXyZ0123');
+  assert.equal(esito.ok, false);
+  assert.match(esito.testo, /token API di Cloudflare/);
+});
+
+test('una stringa corta qualsiasi non viene scambiata per un token API', () => {
+  const esito = controlla('pippo');
+  assert.equal(esito.ok, false);
+  assert.match(esito.testo, /non comincia per «eyJ»/);
 });
 
 test('riconosce un token a cui mancano dei campi', () => {

@@ -77,6 +77,41 @@ if (!/^[A-Za-z0-9+/_=-]+$/.test(token)) {
   );
 }
 
+// Da qui in poi la stringa ha l'aspetto giusto ma potrebbe essere tutt'altra
+// cosa. Sono pochi i valori che si finisce per incollare al posto del token,
+// e si riconoscono: dirlo per nome risparmia mezz'ora di tentativi.
+
+// La lunghezza non è un segreto e distingue subito un troncamento da uno
+// scambio di valore.
+const lungo = `È lungo ${token.length} caratteri, quelli veri circa 180-250.`;
+
+if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
+  errore(
+    'è l\'identificativo del tunnel, non il suo token.',
+    'L\'UUID che il pannello mostra sotto il nome del tunnel serve ad altro.',
+    'Il token è la stringa lunga che compare dopo --token in «Configure».'
+  );
+}
+
+// Un token API di Cloudflare (Profile → API Tokens) passa i controlli di
+// forma ma non ha nulla a che vedere con il tunnel: è l'equivoco più comune.
+if (token.length >= 30 && token.length <= 60 && !token.startsWith('eyJ')) {
+  errore(
+    'sembra un token API di Cloudflare, non quello del tunnel.',
+    'Sono due cose diverse: quello del tunnel comincia sempre per «eyJ» e sta',
+    'in Zero Trust → Networks → Tunnels, non nel profilo dell\'account.',
+    lungo
+  );
+}
+
+if (!token.startsWith('eyJ')) {
+  errore(
+    'non comincia per «eyJ».',
+    'Ogni token di tunnel comincia così: quello nel .env è un\'altra stringa.',
+    lungo
+  );
+}
+
 // Il token è JSON codificato in base64: {"a":account,"t":tunnel,"s":segreto}.
 let dati;
 try {
@@ -86,9 +121,11 @@ try {
   dati = JSON.parse(testo);
 } catch {
   errore(
-    'non è la stringa che Cloudflare ha generato.',
-    'Un token valido comincia per «eyJ» ed è lungo un paio di centinaia di',
-    'caratteri. Controlla di non averne copiato solo una parte.'
+    'comincia bene ma è rovinato.',
+    'Quasi certamente è stato copiato a metà: il pannello lo mostra su più',
+    'righe e la selezione col mouse ne lascia spesso fuori un pezzo. Usa il',
+    'bottone che copia il comando negli appunti.',
+    lungo
   );
 }
 
