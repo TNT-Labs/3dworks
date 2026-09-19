@@ -79,11 +79,16 @@ services:
   # stampa solo «Provided Tunnel token is not valid» riavviandosi all'infinito.
   # Questo passaggio dura un istante, non contatta nessuno e dice invece *cosa*
   # c'è che non va; se fallisce, cloudflared non parte affatto.
+  #
+  # Con `up -d` il motivo non compare a schermo: compose stampa solo che il
+  # servizio è fallito. Per leggerlo:  docker compose logs tunnel-check
+  # oppure, per rifarlo al volo dopo aver corretto il .env:
+  #   docker compose run --rm tunnel-check
+  # (niente container_name proprio perché `run` non lo accetta).
   tunnel-check:
     build: .
     image: vortice:latest
     pull_policy: build
-    container_name: vortice-tunnel-check
     restart: "no"
     network_mode: none
     environment:
