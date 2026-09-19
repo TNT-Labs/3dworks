@@ -67,7 +67,7 @@ const freshEmail = () => `u${++seq}.${Date.now()}@esempio.it`;
 async function registered(){
   const c = client();
   const email = freshEmail();
-  const r = await c.post('/api/auth/register', { email, password: 'password-lunga-1' });
+  const r = await c.post('/api/auth/register', { email, password: 'password-lunga-1', acceptPrivacy: true });
   assert.equal(r.status, 201, JSON.stringify(r.data));
   return { c, email };
 }
@@ -85,16 +85,16 @@ test('registrazione, sessione persistente e uscita', async () => {
 test("l'email viene normalizzata e i duplicati rifiutati", async () => {
   const c = client();
   const email = freshEmail();
-  assert.equal((await c.post('/api/auth/register', { email: '  ' + email.toUpperCase() + ' ', password: 'password-lunga-1' })).status, 201);
+  assert.equal((await c.post('/api/auth/register', { email: '  ' + email.toUpperCase() + ' ', password: 'password-lunga-1', acceptPrivacy: true })).status, 201);
   assert.equal((await c.get('/api/auth/me')).data.user.email, email);
-  const dup = await client().post('/api/auth/register', { email, password: 'altra-password-1' });
+  const dup = await client().post('/api/auth/register', { email, password: 'altra-password-1', acceptPrivacy: true });
   assert.equal(dup.status, 409);
 });
 
 test('password troppo corta ed email non valida vengono respinte', async () => {
   const c = client();
-  assert.equal((await c.post('/api/auth/register', { email: freshEmail(), password: 'corta' })).status, 400);
-  assert.equal((await c.post('/api/auth/register', { email: 'non-una-email', password: 'password-lunga-1' })).status, 400);
+  assert.equal((await c.post('/api/auth/register', { email: freshEmail(), password: 'corta', acceptPrivacy: true })).status, 400);
+  assert.equal((await c.post('/api/auth/register', { email: 'non-una-email', password: 'password-lunga-1', acceptPrivacy: true })).status, 400);
 });
 
 test('accesso con password sbagliata: stesso messaggio di un utente inesistente', async () => {

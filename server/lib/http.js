@@ -117,6 +117,9 @@ export function requireCsrf(req, res, next){
  */
 function needsCsrfCookie(req){
   if (req.path.startsWith('/api/public/')) return false;
+  /* l'informativa è in sola lettura e uguale per tutti: un cookie qui la
+     renderebbe non cacheabile senza servire a nulla */
+  if (req.path.startsWith('/api/legal')) return false;
   if (req.path.startsWith('/api/')) return true;
   const ext = extname(req.path);
   return ext === '' || ext === '.html';
@@ -126,6 +129,17 @@ export function requireAuth(req, res, next){
   if (!req.user) return res.status(401).json({ error: 'Accesso richiesto', code: 'auth_required' });
   if (config.requireVerification && !req.user.verified_at)
     return res.status(403).json({ error: 'Devi confermare la tua email prima di creare', code: 'unverified' });
+  next();
+}
+
+/* Come requireAuth, ma senza pretendere l'indirizzo confermato.
+   I diritti dell'interessato — scaricare i propri dati, correggere
+   l'indirizzo, cancellare l'account — non possono dipendere da una conferma
+   che magari non arriva proprio perché l'indirizzo è sbagliato: sarebbe una
+   persona chiusa fuori dai propri dati. Per creare serve comunque la
+   conferma, e quella guardia resta dov'era. */
+export function requireUser(req, res, next){
+  if (!req.user) return res.status(401).json({ error: 'Accesso richiesto', code: 'auth_required' });
   next();
 }
 

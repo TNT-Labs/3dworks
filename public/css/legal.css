@@ -1,0 +1,73 @@
+/* Informativa privacy, cookie e pagina account: testo lungo da leggere, non
+   un'interfaccia. Misura di riga corta, gerarchia sobria, stessa palette. */
+.doc-page{max-width:760px;margin:0 auto;padding:40px 20px 72px}
+.doc-page header.doc-head{margin-bottom:28px}
+.doc-page h1{font-size:clamp(26px,4vw,36px)}
+.doc-page h2{margin:36px 0 12px;font-size:17px;letter-spacing:-.01em}
+.doc-page h3{margin:22px 0 8px;font-size:14px;font-weight:600;color:var(--ink)}
+.doc-page p,.doc-page li{font-size:14px;line-height:1.75;color:var(--mut)}
+.doc-page p{margin:10px 0}
+.doc-page b,.doc-page strong{color:var(--ink);font-weight:600}
+.doc-page ul,.doc-page ol{margin:10px 0 10px 20px;display:flex;flex-direction:column;gap:7px}
+.doc-page section{padding-top:4px}
+.doc-page .stamp{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+
+/* riquadro dei recapiti del titolare */
+.box{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:18px 20px;margin:16px 0;
+}
+.box .row{margin:0}
+.box dl{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:13.5px}
+.box dt{color:var(--dim);font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;padding-top:3px}
+.box dd{color:var(--ink);word-break:break-word}
+
+/* tabelle di cookie e destinatari: su schermo stretto diventano schede */
+.tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+.tbl th,.tbl td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line);color:var(--mut)}
+.tbl th{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.tbl td b{color:var(--ink)}
+@media (max-width:640px){
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl thead{display:none}
+  .tbl tr{border:1px solid var(--line);border-radius:8px;margin-bottom:12px;padding:6px 4px}
+  .tbl td{border:0;padding:6px 12px}
+  .tbl td::before{content:attr(data-th) ' · ';font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+}
+
+/* piè di pagina comune: i link che devono esserci su ogni pagina */
+.site-foot{
+  border-top:1px solid var(--line);margin-top:48px;padding:20px;
+  display:flex;gap:8px 18px;flex-wrap:wrap;justify-content:center;align-items:center;
+}
+.site-foot a,.site-foot span{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim)}
+.site-foot a:hover{color:var(--acc)}
+
+/* pagina account: blocchi di azione, uno per diritto */
+.acct{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.acct-block{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px;
+}
+.acct-block.danger{border-color:rgba(255,93,82,.35)}
+.acct-block h2{margin:0 0 6px;font-size:15px}
+.acct-block p{margin:0 0 14px;font-size:13px}
+.acct-block form{margin-top:12px}
+.acct-actions{display:flex;gap:10px;flex-wrap:wrap}
+.acct-kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px;margin-bottom:4px}
+.acct-kv dt{color:var(--dim);font-family:var(--mono);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;padding-top:3px}
+.acct-kv dd{color:var(--ink);word-break:break-word}
+
+/* consenso all'informativa nel modulo di registrazione */
+.check{display:flex;gap:10px;align-items:flex-start;margin:4px 0 18px}
+.check input{width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--acc)}
+.check label{font-size:12.5px;line-height:1.6;color:var(--mut)}
+
+/* Le pagine a scheda centrata (accesso, reimpostazione, account) ora hanno un
+   piè di pagina: senza questa riga finirebbe di fianco alla scheda invece che
+   sotto, perché .centered è un flex in riga. */
+body.centered{flex-direction:column;gap:20px}
+body.centered .site-foot{border:0;margin:0;padding:0}

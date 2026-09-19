@@ -59,13 +59,31 @@ if (fromUrl && fromUrl !== 'nonvalido'){
   showError('Quel link contiene un codice in un formato che non riconosciamo.');
 }
 
+/* conferma della cancellazione dell'account: la pagina che l'ha chiesta non
+   esiste più per quell'utente, quindi la buona notizia va data qui */
+const params = new URLSearchParams(location.search);
+if (params.get('eliminato') === '1'){
+  const n = Number(params.get('creazioni'));
+  const p = document.createElement('p');
+  p.className = 'notice notice--ok';
+  p.setAttribute('role', 'status');
+  p.textContent = 'Account eliminato. Sono state cancellate anche '
+    + (Number.isFinite(n) && n >= 0 ? (n === 1 ? 'la tua creazione' : `le tue ${n} creazioni`) : 'le tue creazioni')
+    + ', le pubblicazioni e tutte le sessioni: di te non resta nulla sul server.';
+  document.querySelector('.hero').after(p);
+  history.replaceState(null, '', location.pathname);
+}
+
 /* la barra cambia se si è già dentro: evita di proporre "Accedi" a chi è entrato */
 api.auth.me().then(({ user }) => {
   if (!user) return;
-  $('nav').innerHTML = '';
-  const studio = document.createElement('a');
-  studio.className = 'btn btn--small';
-  studio.href = '/studio.html';
-  studio.textContent = 'Apri lo studio';
-  $('nav').append(studio);
+  $('nav').replaceChildren();
+  for (const [href, label, cls] of [['/studio.html', 'Apri lo studio', 'btn btn--small'],
+                                    ['/account.html', 'Account', 'btn btn--ghost btn--small']]){
+    const a = document.createElement('a');
+    a.className = cls;
+    a.href = href;
+    a.textContent = label;
+    $('nav').append(a);
+  }
 }).catch(() => {});

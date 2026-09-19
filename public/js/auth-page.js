@@ -31,12 +31,16 @@ function setMode(m){
   $('password').setAttribute('autocomplete', reg ? 'new-password' : 'current-password');
   $('pwHint').hidden = !reg;
   $('forgotBtn').hidden = reg;
+  /* la presa visione dell'informativa riguarda solo chi sta aprendo un
+     account: a chi rientra non si richiede di riaccettare nulla */
+  $('privacyCheck').hidden = !reg;
+  if (!reg) $('acceptPrivacy').checked = false;
   clearErrors();
   history.replaceState(null, '', reg ? '?modo=registrazione' : location.pathname);
 }
 
 function clearErrors(){
-  for (const id of ['formErr', 'formOk', 'emailErr', 'passwordErr']) $(id).hidden = true;
+  for (const id of ['formErr', 'formOk', 'emailErr', 'passwordErr', 'privacyErr']) $(id).hidden = true;
   for (const id of ['email', 'password']) $(id).removeAttribute('aria-invalid');
 }
 
@@ -46,8 +50,10 @@ function showError(err){
   if (field && $(field + 'Err')){
     $(field + 'Err').textContent = msg;
     $(field + 'Err').hidden = false;
-    $(field).setAttribute('aria-invalid', 'true');
-    $(field).focus();
+    /* «privacy» è una casella con un id diverso dal nome del campo: il
+       messaggio ha comunque il suo posto, l'evidenziazione no */
+    const input = $(field);
+    if (input){ input.setAttribute('aria-invalid', 'true'); input.focus(); }
   } else {
     $('formErr').textContent = msg;
     $('formErr').hidden = false;
@@ -73,6 +79,12 @@ form.addEventListener('submit', async ev => {
 
   if (!email){ showError(new ApiError('Inserisci il tuo indirizzo email', { field:'email' })); return; }
   if (!password){ showError(new ApiError('Inserisci la password', { field:'password' })); return; }
+  if (mode === 'register' && !$('acceptPrivacy').checked){
+    showError(new ApiError('Per creare l\'account devi prendere visione dell\'informativa privacy.',
+      { field:'privacy' }));
+    $('acceptPrivacy').focus();
+    return;
+  }
 
   const btn = $('submitBtn');
   btn.classList.add('busy');
@@ -82,7 +94,7 @@ form.addEventListener('submit', async ev => {
 
   try{
     const r = mode === 'register'
-      ? await api.auth.register(email, password)
+      ? await api.auth.register(email, password, $('acceptPrivacy').checked)
       : await api.auth.login(email, password);
 
     if (r.needsVerification){

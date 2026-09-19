@@ -62,6 +62,23 @@ cp .env.docker.example .env
 Il `docker-compose.yml` è già impostato per `shopbeautylab.it`. Resta da mettere il
 token del tunnel nel `.env`, che ottieni al passo seguente.
 
+### Il titolare del trattamento va dichiarato
+
+Nello stesso `.env` vanno i recapiti che compaiono nell'informativa privacy del sito:
+
+```dotenv
+PRIVACY_CONTROLLER=Nome o ragione sociale di chi gestisce il sito
+PRIVACY_CONTACT_EMAIL=privacy@shopbeautylab.it
+PRIVACY_CONTROLLER_ADDRESS=Via …, Città
+PRIVACY_CONTROLLER_VAT=IT01234567890
+PRIVACY_HOSTING=Raspberry Pi presso la sede del titolare
+```
+
+Finché restano vuoti, `/privacy.html` mostra un avviso che dichiara l'informativa
+incompleta — ed è voluto: un sito pubblico senza titolare indicato non è a norma.
+La lista completa di ciò che deve fare chi installa è in
+[PRIVACY.md](PRIVACY.md).
+
 ---
 
 ## 3 · Creare il tunnel Cloudflare
@@ -143,6 +160,11 @@ JavaScript nelle pagine — se noti comportamenti strani nello studio, prova a s
 **Auto Minify** (se la tua zona lo mostra ancora) va spento: il codice è già compatto e
 la minificazione automatica ha una lunga storia di script rotti.
 
+Cloudflare vede l'indirizzo IP di ogni visitatore, quindi con `CLOUDFLARE=1`
+diventa un **responsabile del trattamento** (art. 28): va nominato con un accordo —
+Cloudflare ne pubblica uno standard — e l'informativa del sito lo elenca da sola
+fra i destinatari.
+
 La cache non va configurata: le risposte portano già le intestazioni giuste.
 Gli asset e la scheda pubblica sono cacheabili al bordo — è ciò che tiene basso il
 carico sul Pi — mentre tutto ciò che riguarda la sessione è `no-store`.
@@ -184,6 +206,13 @@ Ogni notte alle 3, con `crontab -e` sul Pi:
 ```
 
 Portale anche fuori dal Pi: un disco che muore si porta via anche i backup che ci stanno sopra.
+
+Il backup **contiene tutti i dati personali** — indirizzi email, hash delle password,
+creazioni — quindi va custodito come il database originale: cifrato se lascia la
+macchina, con gli stessi tempi di conservazione, e cancellato davvero quando scade.
+Se lo copi su un servizio di terzi, quel servizio diventa un responsabile del
+trattamento da nominare e da indicare nell'informativa (`PRIVACY_HOSTING` o una voce
+aggiunta a mano in `/privacy.html`).
 
 ### Aggiornare
 

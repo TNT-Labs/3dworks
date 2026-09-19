@@ -22,10 +22,11 @@ WORKDIR /app
 # Prima le sole dipendenze: finché package-lock.json non cambia, Docker riusa
 # questo strato e non ricompila nulla (su un Pi è la differenza fra minuti e secondi).
 COPY package.json package-lock.json ./
-COPY scripts/vendor-three.js ./scripts/
+COPY scripts/vendor-three.js scripts/vendor-fonts.js ./scripts/
 
 # `npm ci` esegue anche il postinstall, che copia Three.js in public/vendor
-# risolvendone gli import in locale.
+# risolvendone gli import in locale e scarica i caratteri del sito, che da
+# quel momento vengono serviti dal nostro dominio e non da Google.
 RUN npm ci --omit=dev --no-audit --no-fund
 
 # ------------------------------ esecuzione ------------------------------

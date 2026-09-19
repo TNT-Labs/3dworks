@@ -37,6 +37,11 @@ export const CSRF_HEADER = 'x-csrf-token';
 const sha256 = s => createHash('sha256').update(s).digest('hex');
 export const newToken = (bytes = 32) => randomBytes(bytes).toString('base64url');
 
+/* I token che arrivano per email (conferma indirizzo, reimpostazione password)
+   sono credenziali temporanee: nel database ne sta solo l'impronta, come per
+   le sessioni. Una copia del database non permette di prendere un account. */
+export const hashToken = t => sha256(String(t));
+
 export function createSession(userId){
   const token = newToken();
   const t = now();
@@ -50,8 +55,13 @@ export function readSession(token){
   const row = q.sessionByToken.get(sha256(token));
   if (!row) return null;
   if (row.expires_at < now()){ q.deleteSession.run(row.token); return null; }
-  /* last_seen aggiornato al massimo una volta all'ora: evita una scrittura per richiesta */
-  if (now() - row.last_seen > 3600_000) q.touchSession.run(now(), row.token);
+  /* last_seen aggiornato al massimo una volta all'ora: evita una scrittura per
+     richiesta. La stessa scrittura aggiorna l'ultima attività dell'account, che
+     è ciò su cui si misura la dormienza quando la scadenza è attiva. */
+  if (now() - row.last_seen > 3600_000){
+    q.touchSession.run(now(), row.token);
+    q.touchUser.run(now(), row.user_id);
+  }
   const user = q.userById.get(row.user_id);
   return user ? { user, token: row.token } : null;
 }
@@ -64,6 +74,16 @@ export const destroyAllSessions = userId => q.deleteUserSessions.run(userId);
 /* Normalizzazione conservativa: solo trim e minuscole. Niente rimozione dei
    punti in stile Gmail — cambierebbe l'indirizzo di altri provider. */
 export const normEmail = e => String(e ?? '').trim().toLowerCase();
+
+/* Un indirizzo email è un dato personale anche dentro un log: quando serve
+   scriverlo (diagnostica SMTP) se ne scrive solo la forma mascherata. */
+export function maskEmail(e){
+  const [user = '', domain = ''] = String(e ?? '').split('@');
+  const keep = user.slice(0, 1);
+  const dot = domain.lastIndexOf('.');
+  const tld = dot > 0 ? domain.slice(dot) : '';
+  return `${keep || '?'}${'*'.repeat(Math.max(1, user.length - 1))}@${domain.slice(0, 1) || '?'}***${tld}`;
+}
 
 /* Validazione pragmatica: la prova vera è che l'email arrivi. */
 const EMAIL_RE = /^[^\s@,;:<>"'()\[\]\\]+@[^\s@.,;:<>"'()\[\]\\]+(\.[^\s@.,;:<>"'()\[\]\\]+)+$/;
@@ -95,12 +115,38 @@ export function allocateCode(){
   throw new Error('Impossibile assegnare un codice di produzione libero');
 }
 
-/* Pulizia periodica: sessioni scadute e token di reset consumati. */
+/* Pulizia periodica: sessioni scadute, token di reset consumati e — è la parte
+   che riguarda il GDPR — i dati che non hanno più motivo di restare.
+   Ogni cancellazione è configurabile e viene annunciata nel log con il solo
+   numero di righe: nel log non finisce nessun indirizzo. */
+export function purgeExpiredData(t = now()){
+  const out = { sessions: 0, resetTokens: 0, unverified: 0, inactive: 0 };
+  out.sessions = q.purgeSessions.run(t).changes;
+  out.resetTokens = db
+    .prepare('UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE reset_expires < ?')
+    .run(t).changes;
+
+  /* Account mai confermati: senza conferma non sono nemmeno utilizzabili,
+     quindi conservarli non ha alcuna finalità. */
+  const unverifiedDays = config.retention.unverifiedDays;
+  if (unverifiedDays > 0 && config.requireVerification)
+    out.unverified = q.purgeUnverified.run(t - unverifiedDays * 86400_000).changes;
+
+  /* Account dormienti: disattivato di default (0), perché cancellare le
+     creazioni di qualcuno che non entra da un po' è una scelta del titolare. */
+  const inactiveDays = config.retention.inactiveDays;
+  if (inactiveDays > 0)
+    out.inactive = q.purgeInactive.run(t - inactiveDays * 86400_000).changes;
+
+  return out;
+}
+
 export function startJanitor(intervalMs = 3600_000){
   const tick = () => {
     try{
-      q.purgeSessions.run(now());
-      db.prepare('UPDATE users SET reset_token = NULL, reset_expires = NULL WHERE reset_expires < ?').run(now());
+      const r = purgeExpiredData();
+      if (r.unverified || r.inactive)
+        console.info(`[janitor] account cancellati per scadenza: ${r.unverified} non confermati, ${r.inactive} dormienti`);
     }catch(err){ console.error('[janitor]', err.message); }
   };
   tick();
