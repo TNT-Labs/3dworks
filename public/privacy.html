@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f0e0c">
+<title>Informativa privacy · VORTICE</title>
+<meta name="description" content="Quali dati personali tratta VORTICE, perché, per quanto tempo e come esercitare i propri diritti.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<!-- Caratteri serviti da questo dominio (scripts/vendor-fonts.js): nessuna
+     richiesta a Google, quindi nessun indirizzo IP comunicato a terzi. -->
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/legal.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="/">VORTICE <span>STUDIO GENERATIVO</span></a>
+  <div class="spacer"></div>
+  <nav>
+    <a class="btn btn--ghost btn--small" href="/cookie.html">Cookie</a>
+    <a class="btn btn--ghost btn--small" href="/account.html">Il tuo account</a>
+  </nav>
+</header>
+
+<main class="doc-page">
+
+  <header class="doc-head">
+    <p class="kicker">Informativa ai sensi degli articoli 13 e 14 del Regolamento (UE) 2016/679</p>
+    <h1>Informativa privacy</h1>
+    <div class="rule"></div>
+    <p class="stamp">Versione <span data-legal="informativa.versione">—</span></p>
+    <p class="lead">Questa applicazione tratta pochi dati e li tiene tutti sul proprio server.
+    Non ci sono strumenti di analisi, non ci sono pulsanti social, non ci sono risorse caricate
+    da altri siti — nemmeno i caratteri tipografici. Questa pagina dice esattamente cosa resta
+    in memoria, per quanto tempo, e come farlo sparire.</p>
+  </header>
+
+  <p class="notice notice--bad" id="incomplete" hidden role="alert">
+    Su questa installazione il titolare del trattamento non è stato ancora indicato.
+    Chi la gestisce deve impostare <code>PRIVACY_CONTROLLER</code> e <code>PRIVACY_CONTACT_EMAIL</code>
+    nell'ambiente del server: senza recapiti, l'informativa non è completa.
+  </p>
+
+  <section>
+    <h2>1 · Chi tratta i dati</h2>
+    <div class="box">
+      <dl>
+        <dt>Titolare</dt>      <dd data-legal="titolare.nome">—</dd>
+        <dt>Indirizzo</dt>     <dd data-legal="titolare.indirizzo">—</dd>
+        <dt>P. IVA / C.F.</dt> <dd data-legal="titolare.partitaIva">—</dd>
+        <dt>Email</dt>         <dd data-legal="titolare.email" data-legal-mailto>—</dd>
+        <dt id="dpoLabel" hidden>Responsabile protezione dati</dt>
+        <dd id="dpoValue" hidden data-legal="dpo.email" data-legal-mailto>—</dd>
+      </dl>
+    </div>
+    <p>Per qualsiasi questione riguardante i tuoi dati puoi scrivere all'indirizzo qui sopra.
+    Rispondiamo entro un mese dalla richiesta, come prevede l'articolo 12 §3.</p>
+  </section>
+
+  <section>
+    <h2>2 · Quali dati e perché</h2>
+
+    <h3>Se apri un account</h3>
+    <ul>
+      <li><b>Indirizzo email.</b> È l'identificativo con cui accedi e l'unico recapito che abbiamo.
+      Serve a farti entrare, a reimpostare la password e ad avvisarti se qualcosa cambia sull'account.</li>
+      <li><b>Password.</b> Non è conservata: nel database c'è solo il suo hash <i>scrypt</i> con parametri
+      OWASP, dal quale la password non è ricavabile.</li>
+      <li><b>Le tue creazioni.</b> Nome, parametri geometrici, eventuali incisioni personali (compreso il
+      testo che scegli di incidere e il tracciato GPX o il segnale vocale se li usi), anteprime e prodotti
+      pubblicati. Sono contenuti tuoi, non profilazione.</li>
+      <li><b>Date.</b> Registrazione, ultimo accesso, apertura e scadenza delle sessioni.</li>
+      <li><b>Presa visione di questa informativa</b> con la sua versione e la data: è ciò che permette al
+      titolare di dimostrare di averla resa (articolo 5 §2).</li>
+    </ul>
+    <p><b>Base giuridica:</b> esecuzione del contratto di servizio che nasce aprendo l'account
+    (articolo 6 §1 lettera b). Senza email e password l'account non può esistere: sono dati necessari,
+    non facoltativi.</p>
+
+    <h3>Se usi soltanto l'area pubblica</h3>
+    <p>Digitare un codice di produzione e guardare un pezzo in 3D non richiede account e non crea
+    alcun profilo. Il server incrementa un contatore di visualizzazioni legato al prodotto — un numero,
+    senza chi l'ha guardato, senza data e senza indirizzo IP.</p>
+
+    <h3>In ogni caso</h3>
+    <ul>
+      <li><b>Indirizzo IP</b>, tenuto <b>solo in memoria</b> e al massimo un'ora, per contare i tentativi
+      di accesso e le ricerche di codice e fermare gli abusi. Non viene mai scritto nel database.
+      <b>Base giuridica:</b> legittimo interesse alla sicurezza del servizio (articolo 6 §1 lettera f,
+      considerando 49).</li>
+      <li><b>Log tecnici degli errori</b>, che registrano metodo e percorso della richiesta — mai le
+      stringhe di ricerca, mai i token ricevuti per email, mai il contenuto dei moduli.</li>
+    </ul>
+
+    <p>Non c'è profilazione, non c'è pubblicità, non ci sono decisioni automatizzate che ti riguardino
+    (articolo 22). I tuoi dati non sono venduti né ceduti a nessuno.</p>
+  </section>
+
+  <section>
+    <h2>3 · Cookie</h2>
+    <p>L'applicazione usa <b>due soli cookie, entrambi tecnici</b>: uno tiene aperta la sessione di chi
+    ha effettuato l'accesso, l'altro protegge i moduli dalle richieste falsificate. Nessuno dei due serve
+    a misurare o a seguire qualcuno, quindi non è richiesto alcun consenso e non troverai banner.
+    Il dettaglio è nella <a href="/cookie.html">pagina dedicata ai cookie</a>.</p>
+  </section>
+
+  <section>
+    <h2>4 · A chi vengono comunicati</h2>
+    <p id="noProcessors" hidden>Nessuno. I dati restano sul server che serve questo sito e non vengono
+    comunicati ad altri soggetti.</p>
+    <table class="tbl" id="processors" hidden>
+      <thead><tr><th>Soggetto</th><th>Ruolo</th><th>Attività</th><th>Dati</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p>Non usiamo servizi di statistica, reti pubblicitarie o CDN. I caratteri tipografici del sito sono
+    scaricati e serviti da questo stesso dominio proprio per evitare che il tuo indirizzo IP arrivi a un
+    fornitore terzo: <b id="transfers">non è previsto alcun trasferimento di dati verso paesi extra
+    UE/SEE</b>.</p>
+  </section>
+
+  <section>
+    <h2>5 · Per quanto tempo</h2>
+    <table class="tbl" id="retention">
+      <thead><tr><th>Dato</th><th>Conservazione</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p>La pulizia è automatica: un processo interno la esegue ogni ora, non serve che qualcuno se
+    ne ricordi.</p>
+  </section>
+
+  <section>
+    <h2>6 · I tuoi diritti</h2>
+    <p>Gli articoli da 15 a 22 ti riconoscono dei diritti: qui tre di questi si esercitano da soli, con un
+    bottone, senza dover scrivere a nessuno e senza attese.</p>
+    <table class="tbl" id="rights">
+      <thead><tr><th>Diritto</th><th>Come esercitarlo</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p>La pagina <a href="/account.html">Il tuo account</a> raccoglie tutto: scaricare i propri dati in un
+    file JSON, correggere l'indirizzo email, eliminare l'account. <b>L'eliminazione è immediata e
+    definitiva:</b> spariscono account, creazioni, pubblicazioni e sessioni, e i codici di produzione già
+    pubblicati smettono di rispondere.</p>
+    <p>Se ritieni che il trattamento violi il Regolamento puoi proporre reclamo all'autorità di controllo
+    — <b data-legal="autorita.nome">—</b>, <a id="authorityUrl" href="https://www.garanteprivacy.it"
+    rel="noopener">sito dell'autorità</a> — oppure ricorrere all'autorità giudiziaria (articoli 77 e 79).</p>
+  </section>
+
+  <section>
+    <h2>7 · Come sono protetti</h2>
+    <ul>
+      <li>Password con <b>scrypt</b> a parametri OWASP; della password in chiaro non resta traccia.</li>
+      <li>Delle sessioni e dei token ricevuti per email il database conserva <b>solo lo SHA-256</b>:
+      una copia del database non permette di entrare in nessun account.</li>
+      <li>Cookie di sessione <code>HttpOnly</code> e <code>SameSite=Lax</code>, <code>Secure</code>
+      quando il sito è servito in HTTPS; protezione CSRF su ogni richiesta che scrive.</li>
+      <li><b>Content-Security-Policy</b> senza codice inline e senza origini esterne: nessuna terza
+      parte può caricare nulla in queste pagine.</li>
+      <li>Limiti sui tentativi di accesso per indirizzo IP e per indirizzo email.</li>
+      <li>Cambiare password chiude tutte le altre sessioni aperte.</li>
+    </ul>
+    <p>In caso di violazione dei dati personali il titolare notifica l'autorità di controllo entro 72 ore
+    (articolo 33) e informa le persone interessate quando la violazione comporta un rischio elevato per i
+    loro diritti (articolo 34).</p>
+  </section>
+
+  <section>
+    <h2>8 · Modifiche</h2>
+    <p>Se questa informativa cambia in modo sostanziale, la versione indicata in alto cambia con lei e
+    la pagina del tuo account te lo segnala al primo accesso successivo.</p>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <a href="/">Home</a>
+  <a href="/privacy.html">Privacy</a>
+  <a href="/cookie.html">Cookie</a>
+  <a href="/account.html">Il tuo account</a>
+  <span>Nessun cookie di profilazione · nessuna risorsa esterna</span>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/js/legal-page.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /* Avvio del server. */
-import { createApp, assertAssets } from './app.js';
+import { createApp, assertAssets, fontsVendored } from './app.js';
 import { config, smtpConfigured } from './lib/config.js';
 import { startJanitor } from './lib/auth.js';
 import { db } from './lib/db.js';
@@ -16,6 +16,14 @@ const server = app.listen(config.port, config.host, () => {
     ` · SMTP: ${smtpConfigured() ? 'configurato' : 'assente (link di conferma nel log)'}`);
   if (!config.cookieSecure)
     console.log('  nota: COOKIE_SECURE non attivo — impostalo a 1 dietro HTTPS in produzione');
+  if (!fontsVendored())
+    console.log('  nota: caratteri non vendorizzati (`node scripts/vendor-fonts.js`) —' +
+      ' le pagine useranno i font di sistema, senza contattare nessuno');
+  /* Un sito pubblico senza titolare indicato non è a norma: l'informativa
+     lo dichiara da sé, ma chi avvia il server deve saperlo subito. */
+  if (!config.privacy.controller || !config.privacy.email)
+    console.log('  nota: titolare del trattamento non configurato — imposta PRIVACY_CONTROLLER' +
+      ' e PRIVACY_CONTACT_EMAIL, altrimenti /privacy.html si dichiara incompleta');
 });
 
 server.on('error', err => {

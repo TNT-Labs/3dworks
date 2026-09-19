@@ -34,11 +34,26 @@ before(async () => {
   page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
   page.on('pageerror', e => problems.push('pageerror: ' + e.message));
   page.on('console', m => {
-    /* i font Google sono l'unica risorsa esterna: in rete chiusa falliscono
-       e la pagina resta usabile, quindi non è un problema del codice */
     const t = m.text();
-    if (m.type() === 'error' && !/fonts\.(googleapis|gstatic)|ERR_CERT|Failed to load resource/.test(t))
+    /* il 404 lo racconta meglio il gestore delle risposte, con il percorso */
+    if (m.type() === 'error' && !/ERR_CERT|Failed to load resource/.test(t))
       problems.push('console: ' + t);
+  });
+  /* Una risorsa mancante è un errore anche quando la pagina sopravvive: un
+     foglio di stile o un carattere che non arriva non rompe niente, si vede
+     soltanto. Le API sono un'altra cosa: un codice inesistente *deve*
+     rispondere 404, ed è il test che glielo chiede. */
+  page.on('response', r => {
+    const { pathname } = new URL(r.url());
+    if (r.status() === 404 && !pathname.startsWith('/api/')) problems.push('404: ' + pathname);
+  });
+  /* Nessuna richiesta deve uscire da questo dominio: è la verifica che i
+     caratteri siano davvero serviti da qui e che non sia rientrata dalla
+     finestra qualche risorsa di terze parti. */
+  page.on('request', r => {
+    const u = new URL(r.url());
+    if (u.origin !== base && u.protocol !== 'data:' && u.protocol !== 'blob:')
+      problems.push('richiesta esterna: ' + r.url());
   });
   page.on('dialog', d => d.accept());
 });
@@ -89,6 +104,14 @@ test('registrazione e ingresso nello studio', async () => {
   await page.goto(base + '/accedi.html?modo=registrazione', { waitUntil: 'networkidle' });
   await page.fill('#email', email);
   await page.fill('#password', password);
+
+  /* senza la presa visione dell'informativa il modulo non parte nemmeno */
+  await page.click('#submitBtn');
+  await page.waitForSelector('#privacyErr:not([hidden])');
+  assert.match(await page.textContent('#privacyErr'), /informativa privacy/);
+  assert.equal(new URL(page.url()).pathname, '/accedi.html', 'resta sulla pagina di accesso');
+
+  await page.check('#acceptPrivacy');
   await Promise.all([
     page.waitForURL('**/studio.html*', { timeout: SLOW }),
     page.click('#submitBtn'),
@@ -191,6 +214,55 @@ test('senza accesso lo studio rimanda alla pagina di ingresso', async () => {
   await anon.goto(base + '/studio.html');
   await anon.waitForURL('**/accedi.html*', { timeout: SLOW });
   assert.match(anon.url(), /next=/, 'ricorda dove si voleva andare');
+  await anon.close();
+});
+
+test('l\'informativa si riempie con i dati del titolare', async () => {
+  const anon = await browser.newPage();
+  await anon.goto(base + '/privacy.html', { waitUntil: 'networkidle' });
+  /* i segnaposto vengono sostituiti dai valori di /api/legal */
+  await anon.waitForFunction(() =>
+    document.querySelector('[data-legal="informativa.versione"]').textContent.trim() !== '—');
+  assert.ok((await anon.textContent('#retention tbody')).includes('giorni'), 'i tempi di conservazione ci sono');
+
+  await anon.goto(base + '/cookie.html', { waitUntil: 'networkidle' });
+  await anon.waitForFunction(() => document.querySelectorAll('#cookies tbody tr').length > 0);
+  const cookies = await anon.textContent('#cookies tbody');
+  assert.ok(cookies.includes('vt_session') && cookies.includes('vt_csrf'));
+  await anon.close();
+});
+
+test('dalla pagina account si scaricano i propri dati e si elimina tutto', async () => {
+  await page.goto(base + '/account.html', { waitUntil: 'networkidle' });
+  await page.waitForSelector('#shell:not([hidden])');
+  assert.equal((await page.textContent('#vEmail')).trim(), email);
+  await page.waitForFunction(() => document.getElementById('vDesigns').textContent.includes('creazion'));
+
+  /* art. 15 e 20: il file esce davvero, e contiene le creazioni */
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: SLOW }),
+    page.click('#exportBtn'),
+  ]);
+  const dump = JSON.parse(await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'));
+  assert.equal(dump.account.email, email);
+  assert.ok(dump.creazioni.length >= 1);
+  assert.ok(dump.creazioni.some(d => d.codiceDiProduzione === code), 'il pezzo pubblicato è nell\'export');
+
+  /* art. 17: la conferma è doppia — password e parola scritta a mano */
+  await page.fill('#delPw', password);
+  await page.fill('#delWord', 'forse');
+  await page.click('#delBtn');
+  await page.waitForSelector('#err:not([hidden])');
+  assert.match(await page.textContent('#err'), /ELIMINA/);
+
+  await page.fill('#delWord', 'ELIMINA');
+  await Promise.all([page.waitForURL('**/?eliminato=1**', { timeout: SLOW }), page.click('#delBtn')]);
+  assert.match(await page.textContent('.notice--ok'), /Account eliminato/);
+
+  /* e il codice inciso non porta più a nulla */
+  const anon = await browser.newPage();
+  const r = await anon.goto(`${base}/api/public/design/${code}`);
+  assert.equal(r.status(), 404, 'il prodotto pubblicato è sparito con l\'account');
   await anon.close();
 });
 

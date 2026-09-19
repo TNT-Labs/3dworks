@@ -55,6 +55,20 @@ const MIGRATIONS = [
     );
     CREATE INDEX designs_user ON designs(user_id, updated_at DESC);
   `),
+
+  /* GDPR: prova dell'informativa accettata (art. 7 §1) e ultima attività, che
+     serve a far scadere gli account dormienti (art. 5 §1 lett. e).
+     Nella stessa migrazione i token di conferma e reimpostazione smettono di
+     stare in chiaro: da qui in poi il database ne conserva solo lo SHA-256,
+     quindi una copia rubata non permette né di confermare né di reimpostare.
+     I token già emessi vengono invalidati: valgono al massimo un'ora. */
+  () => db.exec(`
+    ALTER TABLE users ADD COLUMN privacy_accepted_at INTEGER;
+    ALTER TABLE users ADD COLUMN privacy_version     TEXT;
+    ALTER TABLE users ADD COLUMN last_seen_at        INTEGER;
+    UPDATE users SET last_seen_at = created_at,
+                     verify_token = NULL, reset_token = NULL, reset_expires = NULL;
+  `),
 ];
 
 const version = db.pragma('user_version', { simple: true });
@@ -74,8 +88,13 @@ export const q = {
   userById:       db.prepare('SELECT * FROM users WHERE id = ?'),
   userByVerify:   db.prepare('SELECT * FROM users WHERE verify_token = ?'),
   userByReset:    db.prepare('SELECT * FROM users WHERE reset_token = ?'),
-  insertUser:     db.prepare(`INSERT INTO users (email, pass_hash, created_at, verified_at, verify_token, verify_sent_at)
-                              VALUES (@email, @pass_hash, @created_at, @verified_at, @verify_token, @verify_sent_at)`),
+  insertUser:     db.prepare(`INSERT INTO users (email, pass_hash, created_at, verified_at, verify_token, verify_sent_at,
+                                                 privacy_accepted_at, privacy_version, last_seen_at)
+                              VALUES (@email, @pass_hash, @created_at, @verified_at, @verify_token, @verify_sent_at,
+                                      @privacy_accepted_at, @privacy_version, @created_at)`),
+  setEmail:       db.prepare('UPDATE users SET email = ?, verified_at = ?, verify_token = ?, verify_sent_at = ? WHERE id = ?'),
+  touchUser:      db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?'),
+  acceptPrivacy:  db.prepare('UPDATE users SET privacy_accepted_at = ?, privacy_version = ? WHERE id = ?'),
   markVerified:   db.prepare('UPDATE users SET verified_at = ?, verify_token = NULL WHERE id = ?'),
   setVerifyToken: db.prepare('UPDATE users SET verify_token = ?, verify_sent_at = ? WHERE id = ?'),
   setResetToken:  db.prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?'),
@@ -117,6 +136,20 @@ export const q = {
   unpublish:  db.prepare(`UPDATE designs SET published_at = NULL, published_state = NULL,
                           published_meta = NULL, preview = NULL WHERE id = ? AND user_id = ?`),
   setPreview: db.prepare('UPDATE designs SET preview = ? WHERE id = ? AND user_id = ?'),
+
+  /* portabilita e accesso (art. 15 e 20): tutto cio che appartiene a una persona */
+  exportDesigns: db.prepare(`
+    SELECT id, name, state, fingerprint, created_at, updated_at, code, published_at,
+           published_state, published_meta, views, preview
+    FROM designs WHERE user_id = ? ORDER BY created_at`),
+  exportSessions: db.prepare(`
+    SELECT created_at, expires_at, last_seen FROM sessions WHERE user_id = ? ORDER BY created_at`),
+
+  /* conservazione limitata: account mai confermati e account dormienti */
+  purgeUnverified: db.prepare(`
+    DELETE FROM users WHERE verified_at IS NULL AND created_at < ?`),
+  purgeInactive: db.prepare(`
+    DELETE FROM users WHERE COALESCE(last_seen_at, created_at) < ?`),
 
   /* vista pubblica */
   byCode: db.prepare(`

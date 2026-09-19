@@ -59,8 +59,8 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 45 test rapidi (spec, geometria, API)
-npm run test:e2e  # 13 test nel browser vero, lenti
+npm test          # 70 test rapidi (spec, geometria, API, GDPR)
+npm run test:e2e  # 15 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
 
@@ -114,10 +114,11 @@ server/
   index.js            avvio
   lib/config.js       configurazione da variabili d'ambiente
   lib/db.js           schema SQLite e query preparate
-  lib/auth.js         scrypt, sessioni, codici di produzione
+  lib/auth.js         scrypt, sessioni, codici di produzione, scadenze
   lib/http.js         cookie, CSRF, rate limit, guardie di accesso
   lib/mailer.js       invio email facoltativo
-  routes/             auth · designs · public
+  lib/personal-data.js  export dei dati di una persona (art. 15 e 20)
+  routes/             auth · designs · public · legal
 
 public/
   js/design-spec.js   ← limiti, serializzazione, impronta   (browser + server)
@@ -127,8 +128,10 @@ public/
   js/studio.js        interfaccia di creazione
   js/viewer.js        scheda pubblica in sola lettura
   index.html · prodotto.html · studio.html · accedi.html
+  account.html        dati dell'account e diritti: export, rettifica, cancellazione
+  privacy.html · cookie.html   informativa e cookie, riempite da /api/legal
 
-Dockerfile · docker-compose.yml · DEPLOY.md
+Dockerfile · docker-compose.yml · DEPLOY.md · PRIVACY.md
 ```
 
 Tre decisioni reggono tutto il resto.
@@ -168,13 +171,51 @@ modifica — e che permette di testare la geometria in Node, senza browser.
   `normalizeState` prima di toccare il database.
 - L'API pubblica non espone nulla dell'autore: né email, né identificativo.
 
+### Privacy e GDPR
+
+Il modo più solido di proteggere un dato è non averlo: l'applicazione raccoglie
+un indirizzo email, una password (di cui conserva solo l'hash) e ciò che si
+disegna. Nient'altro.
+
+- **Nessuna terza parte.** Niente analytics, niente CDN, nessun pulsante social.
+  I caratteri tipografici sono scaricati da `npm install` e serviti dal proprio
+  dominio: un `<link>` a `fonts.googleapis.com` comunicherebbe a Google
+  l'indirizzo IP di ogni visitatore, prima di qualsiasi consenso. La CSP è
+  `default-src 'self'` **senza alcuna origine esterna**, e un test fallisce se
+  una pagina ne reintroduce una.
+- **Due soli cookie, entrambi tecnici** (sessione e CSRF): rientrano
+  nell'esenzione dell'art. 122 del Codice privacy, quindi non c'è banner —
+  perché non c'è consenso da chiedere.
+- **I diritti sono bottoni.** Da `/account.html` si scaricano i propri dati in
+  JSON (art. 15 e 20), si corregge l'indirizzo email (art. 16) e si elimina
+  l'account (art. 17). La cancellazione è immediata e reale: spariscono
+  creazioni, pubblicazioni e sessioni, e i codici già pubblicati smettono di
+  rispondere.
+- **Presa visione registrata** alla registrazione, con la versione
+  dell'informativa: cambiando `PRIVACY_POLICY_VERSION` viene richiesta di nuovo.
+- **Informativa a misura dell'istanza.** `/privacy.html` e `/cookie.html` si
+  riempiono da `/api/legal`, che legge i recapiti del titolare dall'ambiente:
+  `PRIVACY_CONTROLLER` e `PRIVACY_CONTACT_EMAIL` sono da compilare prima di
+  aprire il sito al pubblico, altrimenti la pagina dichiara di essere incompleta.
+- **Scadenze.** Sessioni e token di reimpostazione vengono eliminati ogni ora;
+  gli account mai confermati dopo `UNVERIFIED_ACCOUNT_DAYS`; quelli dormienti
+  solo se si attiva `INACTIVE_ACCOUNT_DAYS`. Gli indirizzi IP servono al limite
+  sui tentativi di accesso, restano in memoria al massimo un'ora e nel database
+  non entrano mai.
+
+**[PRIVACY.md](PRIVACY.md)** ha il registro dei trattamenti da compilare
+(art. 30), la procedura in caso di violazione dei dati (art. 33) e la lista di
+ciò che deve fare chi installa.
+
 ### Three.js in locale
 
 `npm install` copia in `public/vendor/three` i tre file necessari e ne riscrive
-gli import in percorsi relativi. Lo studio funziona quindi anche senza CDN — rete
-aziendale, intranet, macchina isolata — e non serve alcun `<script type="importmap">`.
-L'unica risorsa esterna rimasta sono i font Google, del tutto facoltativi: senza,
-la pagina usa i font di sistema.
+gli import in percorsi relativi, e scarica in `public/vendor/fonts` i due
+caratteri del sito (Space Grotesk e IBM Plex Mono, SIL OFL). Lo studio funziona
+quindi anche senza CDN — rete aziendale, intranet, macchina isolata — e non serve
+alcun `<script type="importmap">`. **Non resta alcuna risorsa esterna**: se il
+download dei caratteri non riesce lo script non fallisce e la pagina usa quelli
+di sistema, ma nemmeno in quel caso il browser contatta qualcuno.
 
 ---
 

@@ -8,11 +8,12 @@
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Caratteri serviti da questo dominio (scripts/vendor-fonts.js): nessuna
+     richiesta a Google, quindi nessun indirizzo IP comunicato a terzi. -->
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/studio.css">
+<link rel="stylesheet" href="/css/legal.css">
 </head>
 <body class="studio-body">
 
@@ -38,6 +39,7 @@
     </button>
     <button class="btn btn--small" id="saveBtn" type="button">Salva</button>
     <span class="who" id="who"></span>
+    <a class="btn btn--ghost btn--small" href="/account.html">Account</a>
     <button class="btn btn--ghost btn--small" id="outBtn" type="button">Esci</button>
   </nav>
 </header>
@@ -81,13 +83,13 @@
   <!-- ====================== pezzo ====================== -->
   <section>
     <h2 class="sec">Pezzo del set</h2>
-    <div class="seg" id="segPiece" style="margin-bottom:6px">
+    <div class="seg mb-6" id="segPiece">
       <button data-p="disp" class="active" type="button">Dispenser</button>
       <button data-p="tooth" type="button">Portaspazzolino</button>
       <button data-p="plate" type="button">Set sul piatto</button>
     </div>
     <div id="plateBox" hidden>
-      <div class="rows" style="margin-top:12px">
+      <div class="rows mt-12">
         <div class="row"><span class="k">Disposizione</span><span class="dots"></span><span class="v" id="plLay">—</span></div>
         <div class="row"><span class="k">Ingombro sul piatto</span><span class="dots"></span>
           <span class="v"><i class="dot ok" id="plDot"></i><span id="plSize">—</span></span></div>
@@ -96,7 +98,7 @@
         <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="plTime">—</span></div>
       </div>
     </div>
-    <p class="fine" style="margin-bottom:18px">stesso codice, stesso DNA: profilo, costole,
+    <p class="fine mb-18">stesso codice, stesso DNA: profilo, costole,
     torsione e segnale sono condivisi · le misure e l'inclinazione dell'elica derivano dal pezzo</p>
 
     <h2 class="sec">Preset</h2>
@@ -123,7 +125,7 @@
       <input type="range" id="sS"></div>
     <div class="ctl"><div class="lr"><label for="sW">Parete del guscio</label><output id="vW"></output></div>
       <input type="range" id="sW"></div>
-    <div class="ctl" style="margin-top:14px">
+    <div class="ctl mt-14">
       <div class="lr"><label>Profilo in quota</label></div>
       <div class="seg" id="segProfile">
         <button data-prof="clessidra" class="active" type="button">Clessidra</button>
@@ -137,7 +139,7 @@
   <!-- ====================== segnale ====================== -->
   <section>
     <h2 class="sec">Segnale personale</h2>
-    <div class="seg" id="segSig" style="margin-bottom:12px">
+    <div class="seg mb-12" id="segSig">
       <button data-g="off" class="active" type="button">Nessuno</button>
       <button data-g="gpx" type="button">Traccia GPX</button>
       <button data-g="voce" type="button">Voce</button>
@@ -179,7 +181,7 @@
         <button data-i="0" class="active" type="button">Picchi in fuori</button>
         <button data-i="1" type="button">Picchi in dentro</button>
       </div></div>
-      <div class="rows" style="margin-top:4px">
+      <div class="rows mt-4">
         <div class="row"><span class="k">Adattamento ai 44°</span><span class="dots"></span>
           <span class="v"><i class="dot ok" id="adaptDot"></i><span id="mAdapt">—</span></span></div>
         <div class="row"><span class="k">Fedeltà al dato</span><span class="dots"></span>
@@ -196,7 +198,7 @@
   <!-- ====================== collo ====================== -->
   <section id="secNeck">
     <h2 class="sec">Collo a vite · norma GPI (lato bottiglia)</h2>
-    <div class="seg" id="segThread" style="margin-bottom:13px">
+    <div class="seg mb-13" id="segThread">
       <button data-t="24/410" type="button">24/410</button>
       <button data-t="24/415" type="button">24/415</button>
       <button data-t="28/410" class="active" type="button">28/410</button>
@@ -220,12 +222,12 @@
   <!-- ====================== incisione ====================== -->
   <section>
     <h2 class="sec">Fondo · incisione</h2>
-    <div class="seg" id="segLogo" style="margin-bottom:12px">
+    <div class="seg mb-12" id="segLogo">
       <button data-l="on" class="active" type="button">Inciso</button>
       <button data-l="off" type="button">Liscio</button>
     </div>
     <input id="logoTxt" maxlength="30" spellcheck="false" autocomplete="off" aria-label="Testo inciso sul fondo">
-    <div class="ctl" style="margin-top:12px">
+    <div class="ctl mt-12">
       <div class="lr"><label for="sLS">Corpo testo</label><output id="vLS"></output></div>
       <input type="range" id="sLS"></div>
     <div class="ctl">
@@ -283,10 +285,10 @@
   <!-- ====================== ricerca ====================== -->
   <section>
     <h2 class="sec">Progettazione inversa</h2>
-    <p class="fine" style="margin-bottom:12px">imposta i limiti e scegli cosa massimizzare:
+    <p class="fine mb-12">imposta i limiti e scegli cosa massimizzare:
     l'app cerca fra migliaia di combinazioni di profilo, raggio, altezza, scanalature,
     torsione e affilatura, poi riverifica i finalisti alla risoluzione dell'export</p>
-    <div class="seg" id="segGoal" style="margin-bottom:12px">
+    <div class="seg mb-12" id="segGoal">
       <button data-g="fid" class="active" type="button">Fedeltà al dato</button>
       <button data-g="cap" type="button">Capacità</button>
       <button data-g="time" type="button">Tempo minimo</button>
@@ -297,7 +299,7 @@
       <label>Tempo massimo <span><input id="cT" type="number" min="1" max="40" step="1" placeholder="—"> h</span></label>
       <label>Materiale massimo <span><input id="cG" type="number" min="20" max="900" step="10" placeholder="—"> g</span></label>
     </div>
-    <div class="seg" id="segScope" style="margin:12px 0">
+    <div class="seg my-12" id="segScope">
       <button data-x="0" class="active" type="button">Solo il pezzo scelto</button>
       <button data-x="1" type="button">Entrambi in una stampa</button>
     </div>
@@ -310,7 +312,7 @@
 
   <!-- ====================== export ====================== -->
   <footer>
-    <div class="seg" id="segFmt" style="margin-bottom:10px">
+    <div class="seg mb-10" id="segFmt">
       <button data-f="stl" class="active" type="button">STL</button>
       <button data-f="3mf" type="button">3MF · con ricetta</button>
     </div>
@@ -318,11 +320,14 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg>
       <span>Scarica STL del dispenser</span>
     </button>
-    <p class="fine" style="text-align:center;margin-top:10px">
+    <p class="fine center mt-10">
       <span id="fmtNote" hidden>3MF: geometria + ricetta di stampa incorporata, letta da PrusaSlicer
       e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
       STL binario watertight · vaso cavo + collo filettato + firma e codice incisi<br>
       Z-up · base a 0 mm · elaborato nel browser</p>
+    <p class="fine center mt-10">
+      <a href="/account.html">I tuoi dati</a> · <a href="/privacy.html">Privacy</a> ·
+      <a href="/cookie.html">Cookie</a></p>
   </footer>
 </aside>
 

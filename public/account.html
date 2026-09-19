@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f0e0c">
+<title>Il tuo account · VORTICE</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<!-- Caratteri serviti da questo dominio (scripts/vendor-fonts.js): nessuna
+     richiesta a Google, quindi nessun indirizzo IP comunicato a terzi. -->
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/auth.css">
+<link rel="stylesheet" href="/css/legal.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="/">VORTICE <span>ACCOUNT</span></a>
+  <div class="spacer"></div>
+  <nav>
+    <a class="btn btn--ghost btn--small" href="/studio.html">Torna allo studio</a>
+    <button class="btn btn--ghost btn--small" id="outBtn" type="button">Esci</button>
+  </nav>
+</header>
+
+<main class="doc-page" id="shell" hidden>
+
+  <header class="doc-head">
+    <p class="kicker">Dati personali e diritti</p>
+    <h1>Il tuo account</h1>
+    <div class="rule"></div>
+    <p class="lead">Tutto ciò che il server sa di te è in questa pagina, e da qui si scarica, si
+    corregge o si cancella. Nessuna richiesta da inoltrare, nessuna attesa: sono bottoni.</p>
+  </header>
+
+  <p class="notice notice--bad" id="err" hidden role="alert"></p>
+  <p class="notice notice--ok"  id="ok"  hidden role="status"></p>
+
+  <p class="notice" id="privacyUpdated" hidden>
+    L'informativa privacy è cambiata dall'ultima volta che l'hai letta — o non risulta ancora
+    che tu l'abbia letta.
+    <a href="/privacy.html" target="_blank" rel="noopener">Leggila</a>, poi conferma la presa visione.
+    <span class="acct-actions mt-10">
+      <button class="btn btn--small" id="acceptPrivacyBtn" type="button">Ho preso visione</button>
+    </span>
+  </p>
+
+  <div class="acct">
+
+    <section class="acct-block">
+      <h2>Dati dell'account</h2>
+      <dl class="acct-kv">
+        <dt>Email</dt>          <dd id="vEmail">—</dd>
+        <dt>Confermata</dt>     <dd id="vVerified">—</dd>
+        <dt>Registrato il</dt>  <dd id="vCreated">—</dd>
+        <dt>Creazioni</dt>      <dd id="vDesigns">—</dd>
+        <dt>Informativa</dt>    <dd id="vPrivacy">—</dd>
+      </dl>
+      <p class="fine">La password non compare da nessuna parte: nel database è conservato solo il
+      suo hash scrypt, dal quale non è ricavabile.</p>
+    </section>
+
+    <!-- art. 15 e 20 -->
+    <section class="acct-block">
+      <h2>Scarica i tuoi dati</h2>
+      <p>Un file JSON con account, sessioni aperte, tutte le creazioni con i loro parametri
+      riutilizzabili e le anteprime. È il diritto di accesso (art. 15) e di portabilità (art. 20):
+      il formato è leggibile da un altro programma, non solo da questo.</p>
+      <div class="acct-actions">
+        <a class="btn btn--small" id="exportBtn" href="/api/auth/export">Scarica tutto in JSON</a>
+      </div>
+    </section>
+
+    <!-- art. 16 -->
+    <section class="acct-block">
+      <h2>Cambia indirizzo email</h2>
+      <p>L'indirizzo è anche la credenziale di accesso: per cambiarlo serve la password. Il vecchio
+      indirizzo riceve un avviso, il nuovo una richiesta di conferma se la posta è configurata.</p>
+      <form id="emailForm" novalidate>
+        <div class="field">
+          <label for="newEmail">Nuovo indirizzo</label>
+          <input id="newEmail" type="email" autocomplete="email" inputmode="email" required placeholder="tu@esempio.it">
+        </div>
+        <div class="field">
+          <label for="emailPw">La tua password</label>
+          <input id="emailPw" type="password" autocomplete="current-password" required placeholder="••••••••••">
+        </div>
+        <button class="btn btn--small" type="submit">Cambia indirizzo</button>
+      </form>
+    </section>
+
+    <section class="acct-block">
+      <h2>Cambia password</h2>
+      <p>Cambiandola vengono chiuse tutte le altre sessioni aperte: questa resta valida.</p>
+      <form id="pwForm" novalidate>
+        <div class="field">
+          <label for="curPw">Password attuale</label>
+          <input id="curPw" type="password" autocomplete="current-password" required placeholder="••••••••••">
+        </div>
+        <div class="field">
+          <label for="newPw">Nuova password</label>
+          <input id="newPw" type="password" autocomplete="new-password" required placeholder="••••••••••">
+          <p class="hint">Almeno 10 caratteri.</p>
+        </div>
+        <button class="btn btn--small" type="submit">Cambia password</button>
+      </form>
+    </section>
+
+    <section class="acct-block">
+      <h2>Sessioni</h2>
+      <p>Se hai effettuato l'accesso da un dispositivo che non hai più, chiudi tutto: le sessioni
+      aperte vengono invalidate ovunque e dovrai rientrare.</p>
+      <div class="acct-actions">
+        <button class="btn btn--ghost btn--small" id="logoutAllBtn" type="button">Chiudi tutte le sessioni</button>
+      </div>
+    </section>
+
+    <!-- art. 17 -->
+    <section class="acct-block danger">
+      <h2>Elimina l'account</h2>
+      <p>Cancellazione immediata e definitiva, senza copie di sicurezza da cui tornare indietro:
+      spariscono l'account, <b id="vDesignsDel">le tue creazioni</b>, le pubblicazioni e tutte le
+      sessioni. <b>I codici di produzione già pubblicati smettono di rispondere</b>: chi ha in mano un
+      pezzo stampato non ne troverà più la scheda. Se vuoi conservare il tuo lavoro, scarica prima i
+      tuoi dati.</p>
+      <form id="delForm" novalidate>
+        <div class="field">
+          <label for="delPw">La tua password</label>
+          <input id="delPw" type="password" autocomplete="current-password" required placeholder="••••••••••">
+        </div>
+        <div class="field">
+          <label for="delWord">Scrivi <b>ELIMINA</b> per confermare</label>
+          <input id="delWord" type="text" autocomplete="off" spellcheck="false" required placeholder="ELIMINA">
+        </div>
+        <button class="btn btn--ghost btn--small btn--danger" type="submit" id="delBtn">Elimina definitivamente</button>
+      </form>
+    </section>
+
+  </div>
+
+</main>
+
+<div id="gate" class="card block-center" hidden>
+  <p class="kicker">Accesso richiesto</p>
+  <h1>Entra per vedere i tuoi dati</h1>
+  <div class="rule"></div>
+  <p class="lead">Questa pagina mostra i dati di un account: serve prima accedere.</p>
+  <div class="acct-actions mt-18">
+    <a class="btn btn--small" href="/accedi.html?next=/account.html">Accedi</a>
+  </div>
+</div>
+
+<footer class="site-foot">
+  <a href="/">Home</a>
+  <a href="/privacy.html">Privacy</a>
+  <a href="/cookie.html">Cookie</a>
+  <span>I tuoi dati restano su questo server</span>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/js/account-page.js"></script>
+</body>
+</html>

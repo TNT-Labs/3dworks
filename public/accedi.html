@@ -8,11 +8,12 @@
 <meta name="robots" content="noindex">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Caratteri serviti da questo dominio (scripts/vendor-fonts.js): nessuna
+     richiesta a Google, quindi nessun indirizzo IP comunicato a terzi. -->
+<link rel="stylesheet" href="/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/auth.css">
+<link rel="stylesheet" href="/css/legal.css">
 </head>
 <body class="centered">
 
@@ -47,6 +48,18 @@
       <p class="err" id="passwordErr" hidden></p>
     </div>
 
+    <!-- Presa visione dell'informativa: compare solo in registrazione, perché
+         è lì che nasce il trattamento. La casella non è preselezionata e la
+         data della presa visione viene conservata insieme alla versione. -->
+    <div class="check" id="privacyCheck" hidden>
+      <input id="acceptPrivacy" type="checkbox">
+      <label for="acceptPrivacy">Ho letto l'<a href="/privacy.html" target="_blank" rel="noopener">informativa
+      privacy</a> e i <a href="/cookie.html" target="_blank" rel="noopener">cookie</a> usati dal sito.
+      Per aprire l'account trattiamo solo il tuo indirizzo email e ciò che disegni; puoi scaricare i tuoi
+      dati o eliminare l'account in qualsiasi momento, da solo.</label>
+    </div>
+    <p class="err" id="privacyErr" hidden></p>
+
     <button class="btn btn--block" type="submit" id="submitBtn">Accedi</button>
   </form>
 
@@ -57,6 +70,12 @@
 
   <p class="fine" id="closedNote" hidden>Le registrazioni sono chiuse su questa installazione.</p>
 </main>
+
+<footer class="site-foot">
+  <a href="/privacy.html">Privacy</a>
+  <a href="/cookie.html">Cookie</a>
+  <span>Due soli cookie, entrambi tecnici</span>
+</footer>
 
 <div id="toast" role="status" aria-live="polite"></div>
 <script type="module" src="/js/auth-page.js"></script>

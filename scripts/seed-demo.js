@@ -21,7 +21,8 @@ async function call(method, path, body){
 }
 
 await call('GET', '/api/health');
-await call('POST', '/api/auth/register', { email, password })
+/* acceptPrivacy: il server non apre account senza presa visione dell'informativa */
+await call('POST', '/api/auth/register', { email, password, acceptPrivacy: true })
   .catch(() => call('POST', '/api/auth/login', { email, password }));
 
 const { encodeState, defaultState } = await import('../public/js/design-spec.js');
