@@ -16,6 +16,10 @@ services:
   vortice:
     build: .
     image: vortice:latest
+    # L'immagine è nostra e non sta su nessun registro: senza questo, `up`
+    # prova comunque a scaricarla e sporca il log con un «pull access denied»
+    # che non è un errore ma lo sembra.
+    pull_policy: build
     container_name: vortice
     restart: unless-stopped
     environment:
@@ -70,6 +74,22 @@ services:
     # Nessun `ports:`: di proposito. Per raggiungerlo dalla LAN durante le
     # prove usa il file docker-compose.lan.yml (vedi DEPLOY.md).
 
+  # Controlla il token prima che cloudflared ci provi. L'immagine di
+  # cloudflared è distroless — nessuna shell dentro — e a token sbagliato
+  # stampa solo «Provided Tunnel token is not valid» riavviandosi all'infinito.
+  # Questo passaggio dura un istante, non contatta nessuno e dice invece *cosa*
+  # c'è che non va; se fallisce, cloudflared non parte affatto.
+  tunnel-check:
+    build: .
+    image: vortice:latest
+    pull_policy: build
+    container_name: vortice-tunnel-check
+    restart: "no"
+    network_mode: none
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    command: ["node", "scripts/check-tunnel-token.js"]
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: vortice-tunnel
@@ -78,10 +98,12 @@ services:
     environment:
       # Token del tunnel creato nel pannello Cloudflare (Zero Trust →
       # Networks → Tunnels). Sta nel file .env accanto a questo compose.
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?manca TUNNEL_TOKEN nel file .env}
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
     depends_on:
       vortice:
         condition: service_healthy
+      tunnel-check:
+        condition: service_completed_successfully
     networks: [interna]
 
 volumes:
