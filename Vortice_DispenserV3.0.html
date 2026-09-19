@@ -1,0 +1,3280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f0e0c">
+<title>VORTICE · Dispenser generativo per Elegoo Neptune 3 Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0f0e0c; --panel:#161411; --panel2:#1b1815; --line:#282520;
+    --ink:#ece5d8; --mut:#9a8d7a; --dim:#6b6154;
+    --acc:#ff6a2b; --acc-soft:#2a1c11;
+    --ok:#8fc177; --bad:#ff5d52;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Space Grotesk',sans-serif;
+  }
+  html,body{height:100%}
+  body{display:flex;background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden}
+  ::selection{background:var(--acc);color:#1a0e05}
+  button{font-family:inherit;cursor:pointer}
+  button:focus-visible,input:focus-visible{outline:1px solid var(--acc);outline-offset:2px}
+
+  #panel{
+    width:352px;min-width:352px;height:100%;overflow-y:auto;
+    background:var(--panel);border-right:1px solid var(--line);
+    padding:26px 24px 28px;display:flex;flex-direction:column;gap:22px;
+  }
+  #panel::-webkit-scrollbar{width:9px}
+  #panel::-webkit-scrollbar-thumb{background:#26231e;border-radius:9px;border:2px solid var(--panel)}
+
+  .kicker{font-family:var(--mono);font-size:10px;letter-spacing:.22em;color:var(--acc)}
+  h1{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:9px}
+  .rule{width:34px;height:3px;background:var(--acc);margin:14px 0 12px}
+  .lead{font-size:12.5px;line-height:1.68;color:var(--mut)}
+  .lead b{color:var(--ink);font-weight:500}
+
+  .sec{font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.2em;
+    color:var(--dim);display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .sec::after{content:'';flex:1;height:1px;background:var(--line)}
+
+  .presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .preset{text-align:left;background:var(--panel2);border:1px solid var(--line);
+    padding:9px 11px;border-radius:6px;color:var(--ink);transition:border-color .15s,background .15s}
+  .preset b{display:block;font-size:13px;font-weight:600}
+  .preset span{display:block;font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:3px}
+  .preset:hover{border-color:#3b352c}
+  .preset.active{border-color:rgba(255,106,43,.55);background:var(--acc-soft)}
+  .preset.active span{color:#c9804f}
+
+  .ctl{margin-bottom:12px}
+  .lr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+  .lr label{font-size:12.5px;color:var(--mut)}
+  .lr output{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;border-radius:1px;
+    background:linear-gradient(90deg,var(--acc) 50%,#2c2822 50%);outline-offset:4px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:20px;border-radius:3px;
+    background:#efe6d6;border:1px solid #0d0c0a;box-shadow:0 1px 4px rgba(0,0,0,.5);transition:background .12s}
+  input[type=range]::-webkit-slider-thumb:hover{background:var(--acc)}
+  input[type=range]::-moz-range-thumb{width:11px;height:20px;border-radius:3px;background:#efe6d6;border:1px solid #0d0c0a}
+
+  .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .seg button{flex:1;background:transparent;border:0;border-right:1px solid var(--line);
+    color:var(--mut);font-size:11px;padding:8px 0;transition:color .15s,background .15s}
+  .seg button:last-child{border-right:0}
+  .seg button:hover{color:var(--ink)}
+  .seg button.active{background:var(--acc-soft);color:var(--acc)}
+
+  #logoTxt,#codeIn{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);font-family:var(--mono);font-size:12px;padding:9px 11px;letter-spacing:.05em}
+  #codeIn{text-transform:uppercase}
+  #codeIn::placeholder{color:var(--dim);text-transform:none}
+  #logoTxt:focus,#codeIn:focus{border-color:rgba(255,106,43,.5)}
+
+  .rows{display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;align-items:baseline;gap:9px;font-size:12.5px}
+  .row .k{color:var(--mut)}
+  .row .dots{flex:1;border-bottom:1px dotted #37322a;transform:translateY(-3px)}
+  .row .v{font-family:var(--mono);font-size:12px;white-space:nowrap}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px}
+  .dot.ok{background:var(--ok)} .dot.bad{background:var(--bad);box-shadow:0 0 0 3px rgba(255,93,82,.14)}
+  .note{font-size:11.5px;line-height:1.6;color:var(--mut);border-left:2px solid var(--acc);
+    padding-left:10px;margin-top:13px}
+
+  .ghost{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;
+    background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--mut);
+    font-size:12px;font-weight:600;transition:color .15s,border-color .15s;margin-top:4px}
+  .ghost:hover{color:var(--acc);border-color:rgba(255,106,43,.45)}
+  .ghost svg{width:14px;height:14px}
+  .fine2{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:9px;line-height:1.7;letter-spacing:.03em}
+
+  #dl{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:14px;
+    background:var(--acc);color:#190d04;border:0;border-radius:7px;font-size:14px;font-weight:700;
+    letter-spacing:.02em;transition:transform .12s,filter .12s}
+  #dl:hover{filter:brightness(1.08)}
+  #dl:active{transform:scale(.985)}
+  #dl svg{width:16px;height:16px}
+  .fine{font-family:var(--mono);font-size:9.5px;color:var(--dim);line-height:1.75;
+    margin-top:10px;text-align:center;letter-spacing:.03em}
+
+  #stage{flex:1;position:relative;min-width:0;min-height:0}
+  #stage canvas{position:absolute;inset:0;display:block}
+  #vig{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(115% 85% at 50% 40%, transparent 54%, rgba(4,3,2,.5) 100%)}
+
+  #ovl{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+    background:rgba(15,13,11,.78);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:99px;
+    padding:7px 14px;font-family:var(--mono);font-size:11px;color:var(--mut);letter-spacing:.02em;
+    pointer-events:none;max-width:calc(100% - 132px);text-align:center;line-height:1.45}
+  #ovl.bad{border-radius:14px}
+  #ovl .ic{flex:none}
+  #ovl .ic{display:none}
+  #ovl .ic svg{width:13px;height:13px}
+  #ovl.ok .ic.ok{display:flex;color:var(--ok)}
+  #ovl.bad .ic.bad{display:flex;color:var(--bad)}
+  #ovl.bad{border-color:rgba(255,93,82,.4);color:#e8b0aa}
+
+  #tools{position:absolute;top:16px;right:16px;display:flex;flex-direction:column;gap:6px}
+  #tools button{width:36px;height:36px;border-radius:7px;border:1px solid var(--line);
+    background:rgba(20,18,15,.8);backdrop-filter:blur(8px);color:var(--mut);
+    display:flex;align-items:center;justify-content:center;transition:color .15s,border-color .15s,background .15s}
+  #tools button:hover{color:var(--ink);border-color:#3b352c}
+  #tools button.on{color:var(--acc);border-color:rgba(255,106,43,.5);background:var(--acc-soft)}
+  #tools svg{width:16px;height:16px}
+
+  .find{display:flex;gap:8px}
+  .btnsm{flex:none;padding:0 14px;background:transparent;border:1px solid var(--line);border-radius:6px;
+    color:var(--mut);font-size:12px;font-weight:600;transition:color .15s,border-color .15s}
+  .btnsm:hover{color:var(--acc);border-color:rgba(255,106,43,.45)}
+  .arch{display:flex;flex-direction:column;margin-top:10px}
+  .arch button{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:transparent;border:0;
+    border-bottom:1px dotted #37322a;padding:8px 2px;color:var(--ink);font-family:var(--mono);font-size:12px;text-align:left}
+  .arch button:hover{color:var(--acc)}
+  .arch button span{font-size:10.5px;color:var(--dim)}
+  .arch .empty{font-size:11.5px;color:var(--dim);padding:4px 0}
+  #vSN{letter-spacing:.06em}
+  .dot.warn{background:#e0a33a;box-shadow:0 0 0 3px rgba(224,163,58,.18)}
+  [hidden]{display:none!important}
+  .sigsrc{margin-bottom:12px}
+  .sigsrc .find .ghost{margin-top:0}
+  .ghost.rec{color:var(--bad);border-color:rgba(255,93,82,.5)}
+  .ghost.rec svg{animation:vpulse 1s ease-in-out infinite}
+  @keyframes vpulse{50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){.ghost.rec svg{animation:none}}
+  .sigmeta{font-family:var(--mono);font-size:11px;color:var(--ink);line-height:1.6;margin-bottom:9px}
+  .sigmeta span{color:var(--dim)}
+  #sigPlot{display:block;width:100%;height:64px;background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+  #plotI{fill:none;stroke:#6b6154;stroke-width:1.5;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+  #plotR{fill:none;stroke:var(--acc);stroke-width:2;vector-effect:non-scaling-stroke}
+  #plotZ{stroke:#2c2822;stroke-width:1;vector-effect:non-scaling-stroke}
+  .cons label{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    font-size:12px;color:var(--mut);padding:6px 0;border-bottom:1px dotted #37322a}
+  .cons label span{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .cons input{width:74px;margin-right:6px;padding:5px 7px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:5px;color:var(--ink);font-family:var(--mono);font-size:12px;text-align:right}
+  .cons input:focus{outline:none;border-color:rgba(255,106,43,.5)}
+  .find-res{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+  .find-res button{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--line);
+    border-radius:7px;padding:9px 11px;color:var(--ink);font-family:var(--mono);font-size:11.5px;line-height:1.55}
+  .find-res button:hover{border-color:rgba(255,106,43,.5);color:var(--acc)}
+  .find-res button b{font-weight:600}
+  .find-res button i{font-style:normal;color:var(--dim)}
+  .find-res button.ko{border-color:rgba(255,93,82,.35)}
+  .find-res button.ko i{color:var(--bad)}
+  .find-res .empty{font-size:11.5px;color:var(--dim)}
+  .sighint{margin-top:10px;padding:8px 10px;border-left:2px solid #e0a33a;background:rgba(224,163,58,.07);
+    font-size:11.5px;line-height:1.5;color:var(--mut)}
+  .sighint b{color:var(--ink);font-weight:600}
+  .legend{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--dim);margin:6px 0 13px}
+  .legend i{display:inline-block;width:14px;height:0;border-top:2px solid var(--acc);vertical-align:middle;margin-right:6px}
+  .legend i.d{border-top:1.5px dashed #6b6154}
+  #dl.busy,.ghost.busy{pointer-events:none;opacity:.72}
+  #dl.busy svg,.ghost.busy svg{animation:vspin 1s linear infinite}
+  @keyframes vspin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){#dl.busy svg,.ghost.busy svg{animation:none}}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .45s}
+  #flash.go{opacity:.45;transition:none}
+
+  #toast{position:absolute;bottom:20px;left:50%;transform:translate(-50%,12px);opacity:0;
+    background:rgba(22,19,16,.94);border:1px solid #34302a;border-left:2px solid var(--acc);
+    color:var(--ink);font-family:var(--mono);font-size:11.5px;padding:10px 16px;border-radius:6px;
+    pointer-events:none;transition:opacity .25s,transform .25s;white-space:nowrap;max-width:80%;
+    overflow:hidden;text-overflow:ellipsis;z-index:20}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  #fatal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(15,14,12,.94);z-index:30;padding:24px}
+  #fatal .box{max-width:440px;font-family:var(--mono);font-size:12px;line-height:1.75;color:var(--ink);
+    border:1px solid var(--line);border-left:2px solid var(--bad);border-radius:8px;padding:20px 22px;
+    background:var(--panel)}
+  #fatal .box b{color:var(--bad);display:block;font-size:10px;letter-spacing:.2em;margin-bottom:10px}
+
+  @media (max-width:920px){
+    body{flex-direction:column}
+    #stage{order:0;flex:none;height:52vh}
+    #panel{order:1;width:auto;min-width:0;flex:1;border-right:0;border-top:1px solid var(--line)}
+    #ovl{font-size:10px;top:12px}
+  }
+</style>
+</head>
+<body>
+
+<aside id="panel">
+  <header>
+    <p class="kicker">STUDIO GENERATIVO · DISPENSER SU MISURA · 220 × 220 × 250</p>
+    <h1>VORTICE</h1>
+    <div class="rule"></div>
+    <p class="lead" id="lead">Vaso a guscio sottile con <b>collo filettato esterno (norma GPI)</b> e
+    <b>firma incisa sul fondo</b>. La pompa commerciale porta la vite interna e si avvita
+    sopra, come su una bottiglia. Tutto vincolato a ~44° — <b>senza supporti</b>.</p>
+  </header>
+
+  <section>
+    <h2 class="sec">PEZZO DEL SET</h2>
+    <div class="seg" id="segPiece" style="margin-bottom:6px">
+      <button data-p="disp" class="active">Dispenser</button>
+      <button data-p="tooth">Portaspazzolino</button>
+      <button data-p="plate">Set sul piatto</button>
+    </div>
+    <div id="plateBox" hidden>
+      <div class="rows" style="margin:12px 0 0">
+        <div class="row"><span class="k">Disposizione</span><span class="dots"></span><span class="v" id="plLay">—</span></div>
+        <div class="row"><span class="k">Ingombro sul piatto</span><span class="dots"></span>
+          <span class="v"><i class="dot ok" id="plDot"></i><span id="plSize">—</span></span></div>
+        <div class="row"><span class="k">Altezza massima</span><span class="dots"></span><span class="v" id="plH">—</span></div>
+        <div class="row"><span class="k">Materiale totale</span><span class="dots"></span><span class="v" id="plMat">—</span></div>
+        <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="plTime">—</span></div>
+      </div>
+    </div>
+    <p class="fine2" style="margin-bottom:18px">stesso codice, stesso DNA: profilo, costole,
+    torsione e segnale sono condivisi · le misure e l'inclinazione dell'elica derivano dal pezzo</p>
+
+    <h2 class="sec">PRESET</h2>
+    <div class="presets">
+      <button class="preset" data-p="aureo"><b>Aureo</b><span>clessidra · 6 costole</span></button>
+      <button class="preset" data-p="tempesta"><b>Maelström</b><span>vortice · 5 costole</span></button>
+      <button class="preset" data-p="fiamma"><b>Fiamma</b><span>snella · 7 costole</span></button>
+      <button class="preset" data-p="marea"><b>Marea</b><span>panciuta · 9 costole</span></button>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">VASO</h2>
+    <div class="ctl"><div class="lr"><label for="sH">Altezza corpo</label><output id="vH">185 mm</output></div>
+      <input type="range" id="sH" min="120" max="235" step="1" value="185"></div>
+    <div class="ctl"><div class="lr"><label for="sR">Raggio base</label><output id="vR">62 mm</output></div>
+      <input type="range" id="sR" min="30" max="100" step="1" value="62"></div>
+    <div class="ctl"><div class="lr"><label for="sP">Scanalature</label><output id="vP">6</output></div>
+      <input type="range" id="sP" min="3" max="9" step="1" value="6"></div>
+    <div class="ctl"><div class="lr"><label for="sT">Torsione</label><output id="vT">60°</output></div>
+      <input type="range" id="sT" min="0" max="360" step="5" value="60"></div>
+    <div class="ctl"><div class="lr"><label for="sS">Affilatura</label><output id="vS">36%</output></div>
+      <input type="range" id="sS" min="0" max="100" step="1" value="36"></div>
+    <div class="ctl"><div class="lr"><label for="sW">Parete del guscio</label><output id="vW">2.4 mm</output></div>
+      <input type="range" id="sW" min="20" max="32" step="1" value="24"></div>
+    <div class="ctl" style="margin-top:14px">
+      <div class="lr"><label>Profilo in quota</label></div>
+      <div class="seg" id="seg">
+        <button data-prof="clessidra" class="active">Clessidra</button>
+        <button data-prof="fiamma">Fiamma</button>
+        <button data-prof="tornado">Tornado</button>
+        <button data-prof="bulbo">Bulbo</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">SEGNALE PERSONALE</h2>
+    <div class="seg" id="segSig" style="margin-bottom:12px">
+      <button data-g="off" class="active">Nessuno</button>
+      <button data-g="gpx">Traccia GPX</button>
+      <button data-g="voce">Voce</button>
+    </div>
+    <div class="sigsrc" id="sigGpx" hidden>
+      <button id="gpxBtn" class="ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m6 9 6-6 6 6"/><path d="M4 21h16"/></svg><span>Carica un file .gpx</span></button>
+      <input type="file" id="gpxFile" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
+    </div>
+    <div class="sigsrc" id="sigVoce" hidden>
+      <div class="find">
+        <button id="recBtn" class="ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg><span>Registra · max 10 s</span></button>
+        <button id="audBtn" class="btnsm" type="button">Carica audio</button>
+      </div>
+      <input type="file" id="audFile" accept="audio/*" hidden>
+    </div>
+    <div id="sigBody" hidden>
+      <p class="sigmeta" id="sigMeta">—</p>
+      <svg id="sigPlot" viewBox="0 0 300 64" preserveAspectRatio="none" role="img" aria-label="Segnale e forma stampata lungo l'altezza">
+        <line id="plotZ" x1="0" y1="32" x2="300" y2="32"/><path id="plotI" d=""/><path id="plotR" d=""/></svg>
+      <div class="legend"><span><i class="d"></i>dato originale</span><span><i></i>forma stampata</span><span id="sigAxis">fondo → 80% altezza</span></div>
+      <div class="ctl"><div class="lr"><label for="sA">Intensità</label><output id="vA">20%</output></div>
+        <input type="range" id="sA" min="0" max="40" step="1" value="20"></div>
+      <div class="ctl"><div class="lr"><label for="sL" id="vLlab">Levigatura minima</label><output id="vL">15%</output></div>
+        <input type="range" id="sL" min="0" max="100" step="1" value="15"></div>
+      <div class="ctl"><div class="seg" id="segRev">
+        <button data-r="0" class="active">Inizio in basso</button>
+        <button data-r="1">Inizio in alto</button>
+      </div></div>
+      <div class="ctl"><div class="seg" id="segInv">
+        <button data-i="0" class="active">Picchi in fuori</button>
+        <button data-i="1">Picchi in dentro</button>
+      </div></div>
+      <div class="rows" style="margin-top:4px">
+        <div class="row"><span class="k">Adattamento ai 44°</span><span class="dots"></span>
+          <span class="v"><i class="dot ok" id="adaptDot"></i><span id="mAdapt">—</span></span></div>
+        <div class="row"><span class="k">Fedeltà al dato</span><span class="dots"></span>
+          <span class="v"><i class="dot ok" id="fidDot"></i><span id="mFid">—</span></span></div>
+      </div>
+      <p class="sighint" id="sigHint" hidden></p>
+    </div>
+    <p class="fine2">GPX: la quota lungo il percorso diventa la silhouette, dal fondo all'80%
+    dell'altezza · voce: il volume della frase corre attorno al vaso come un rilievo, dal
+    fondo al 60% (la spalla resta libera) · 64 punti · base bloccata · il dato viene
+    adattato ai 44° prima di modellare il vaso: la silhouette scelta non si sposta più di
+    0,4 mm e nessuna parete supera il vincolo · tutto avviene nel browser: della
+    registrazione resta solo la curva</p>
+  </section>
+
+  <section id="secNeck">
+    <h2 class="sec">COLLO A VITE · NORMA GPI (LATO BOTTIGLIA)</h2>
+    <div class="seg" id="segThr" style="margin-bottom:13px">
+      <button data-t="24/410">24/410</button>
+      <button data-t="24/415">24/415</button>
+      <button data-t="28/410" class="active">28/410</button>
+      <button data-t="free">Personali</button>
+    </div>
+    <div class="ctl"><div class="lr"><label for="sD">Ø creste filetto (T)</label><output id="vD">28.2 mm</output></div>
+      <input type="range" id="sD" min="180" max="320" step="1" value="282"></div>
+    <div class="ctl"><div class="lr"><label for="sP2">Passo</label><output id="vP2">3.2 mm</output></div>
+      <input type="range" id="sP2" min="24" max="50" step="1" value="32"></div>
+    <div class="ctl"><div class="lr"><label for="sG">Giri filetto</label><output id="vG">1.5</output></div>
+      <input type="range" id="sG" min="10" max="30" step="5" value="15"></div>
+    <button id="dlTest" class="ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.5L5.6 17a2.6 2.6 0 0 0 2.3 4h8.2a2.6 2.6 0 0 0 2.3-4L14 9.5V3"/><path d="M7.5 14h9"/></svg><span>Spool di prova · STL (~10 min)</span></button>
+    <p class="fine2">filetto esterno destro · la pompa commerciale ha la vite interna
+    e si avvita SOPRA il collo · T = Ø creste · E = Ø fondo ≈ T − 2,1
+    · 24/410 GPI: T 24,05–24,31 · E 21,99–22,25 · se avvita stretto, scendi
+    di 0,2–0,3 mm il Ø T (Personali) · lo spool di prova è il verdetto</p>
+  </section>
+
+  <section>
+    <h2 class="sec">FONDO · INCISIONE LOGO</h2>
+    <div class="seg" id="segLogo" style="margin-bottom:12px">
+      <button data-l="on" class="active">Inciso</button>
+      <button data-l="off">Liscio</button>
+    </div>
+    <input id="logoTxt" maxlength="30" value="Made by Umberto Molteni (2026)" spellcheck="false" autocomplete="off">
+    <div class="ctl" style="margin-top:12px">
+      <div class="lr"><label for="sLS">Corpo testo</label><output id="vLS">7.0 mm</output></div>
+      <input type="range" id="sLS" min="40" max="100" step="1" value="70"></div>
+    <div class="ctl">
+      <div class="lr"><label for="sLD">Profondità incisione</label><output id="vLD">0.8 mm</output></div>
+      <input type="range" id="sLD" min="4" max="12" step="1" value="8"></div>
+    <div class="ctl">
+      <div class="lr"><label>Disposizione</label></div>
+      <div class="seg" id="segArc">
+        <button data-a="arc" class="active">Arco</button>
+        <button data-a="line">Dritto</button>
+      </div></div>
+    <div class="ctl">
+      <div class="lr"><label for="sLR">Rotazione</label><output id="vLR">0°</output></div>
+      <input type="range" id="sLR" min="0" max="355" step="5" value="0"></div>
+    <div class="ctl">
+      <div class="lr"><label>Codice del design</label><output id="vSN">—</output></div>
+      <div class="seg" id="segSN">
+        <button data-s="on" class="active">Inciso</button>
+        <button data-s="off">Nessuno</button>
+      </div></div>
+    <p class="fine2">incisione ≤ 1,2 mm nella faccia esterna: sotto le lettere restano
+    sempre ≥ 1,8 mm di pieno · il pavimento della cavità (superficie di tenuta)
+    non viene mai toccato · il contatto col piatto resta la superficie piana
+    intorno alle lettere · orbita SOTTO il pezzo per leggerlo · il codice è l'impronta
+    dei parametri: stesso design, stesso codice · al centro con l'arco, sotto il testo se dritto</p>
+  </section>
+
+  <section>
+    <h2 class="sec">SCHEDA PEZZO</h2>
+    <div class="rows">
+      <div class="row"><span class="k">Ingombro</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="fitDot"></i><span id="mSize">—</span></span></div>
+      <div class="row"><span class="k">Capacità</span><span class="dots"></span><span class="v" id="mCap">—</span></div>
+      <div class="row"><span class="k">Profondità interna</span><span class="dots"></span><span class="v" id="mDepth">—</span></div>
+      <div class="row"><span class="k">Passaggio interno</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="passDot"></i><span id="mPass">—</span></span></div>
+      <div class="row"><span class="k">Overhang pareti</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="tiltDot"></i><span id="mTilt">—</span></span></div>
+      <div class="row"><span class="k">Tenuta fondo</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="sealDot"></i><span id="mSeal">—</span></span></div>
+      <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v" id="mVol">—</span></div>
+      <div class="row"><span class="k">Filamento PLA</span><span class="dots"></span><span class="v" id="mFil">—</span></div>
+      <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="mTime">—</span></div>
+      <div class="row"><span class="k">Mesh esportata</span><span class="dots"></span><span class="v" id="mTri">—</span></div>
+    </div>
+    <p class="note">Overhang = massimo tra crescita esterna e restringimento della cavità,
+    elica delle costole e inviluppo della spalla inclusi. «Tenuta fondo» = pieno minimo
+    tra il fondo delle lettere e il serbatoio. Il filetto è una feature progettata e non
+    è conteggiato. La tenuta al liquido la fanno i <b>perimetri</b> (4), non l'infill. «Tempo stimato» e «Filamento» sono tarati su 8 design affettati con
+    PrusaSlicer (0,2 mm, 4 perimetri, gyroid 6%, 45/25 mm/s, accelerazione 800): errore medio
+    8%, massimo 14% sul tempo e 2% sul materiale. Costole, torsione e affilatura rallentano
+    l'ugello, quindi pesano molto sul tempo. <span id="noteTube">«Profondità interna» = dal bordo del collo al
+    fondo della cavità: con la pompa avvitata, taglia la cannuccia 2–3 mm più corta, a becco di flauto.</span></p>
+  </section>
+
+  <section>
+    <h2 class="sec">RICETTA DI STAMPA · PLA</h2>
+    <div class="rows">
+      <div class="row"><span class="k">Ugello · layer</span><span class="dots"></span><span class="v">0.4 · 0.20 mm</span></div>
+      <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v">4 perimetri (tenuta)</span></div>
+      <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v">piena, 3–4 mm</span></div>
+      <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6%</span></div>
+      <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
+      <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v">PLA prova · PETG bagno</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">PROGETTAZIONE INVERSA</h2>
+    <p class="fine2" style="margin-bottom:12px">imposta i limiti e scegli cosa massimizzare:
+    l'app cerca fra migliaia di combinazioni di profilo, raggio, altezza, scanalature,
+    torsione e affilatura, poi riverifica i finalisti alla risoluzione dell'export</p>
+    <div class="seg" id="segGoal" style="margin-bottom:12px">
+      <button data-g="fid" class="active">Fedeltà al dato</button>
+      <button data-g="cap">Capacità</button>
+      <button data-g="time">Tempo minimo</button>
+    </div>
+    <div class="cons">
+      <label>Capacità minima <span><input id="cMin" type="number" min="0" max="3000" step="50" placeholder="—"> ml</span></label>
+      <label>Altezza massima <span><input id="cH" type="number" min="60" max="250" step="5" placeholder="—"> mm</span></label>
+      <label>Tempo massimo <span><input id="cT" type="number" min="1" max="40" step="1" placeholder="—"> h</span></label>
+      <label>Materiale massimo <span><input id="cG" type="number" min="20" max="900" step="10" placeholder="—"> g</span></label>
+    </div>
+    <div class="seg" id="segScope" style="margin:12px 0">
+      <button data-x="0" class="active">Solo il pezzo scelto</button>
+      <button data-x="1">Entrambi in una stampa</button>
+    </div>
+    <button id="findBtn" class="ghost" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Cerca il design</span></button>
+    <div id="findRes" class="find-res"></div>
+  </section>
+
+  <section>
+    <h2 class="sec">ARCHIVIO · QUESTO BROWSER</h2>
+    <div class="find">
+      <input id="codeIn" maxlength="12" placeholder="Codice inciso, es. VRT-7K3QX" spellcheck="false" autocomplete="off" aria-label="Codice del design">
+      <button id="codeGo" class="btnsm">Apri</button>
+    </div>
+    <div class="arch" id="arch"></div>
+    <p class="fine2">ogni STL esportato viene registrato qui con il suo codice · dal codice
+    inciso sul pezzo ritrovi il design · l'archivio vive in questo browser: per altri
+    dispositivi usa il link</p>
+  </section>
+
+  <footer style="margin-top:auto">
+    <div class="seg" id="segFmt" style="margin-bottom:10px">
+      <button data-f="stl" class="active">STL</button>
+      <button data-f="3mf">3MF · con ricetta</button>
+    </div>
+    <button id="dl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m6 11 6 6 6-6"/><path d="M4 21h16"/></svg><span>Scarica STL del dispenser</span></button>
+    <p class="fine"><span id="fmtNote" hidden>3MF: geometria + ricetta di stampa incorporata, letta da
+    PrusaSlicer e OrcaSlicer · Cura importa solo la geometria (ricetta da impostare a mano) ·
+    file ~5× più leggero<br></span>STL binario watertight · vaso cavo + collo filettato + firma e codice incisi<br>Z-up · base a 0 mm · elaborato nel browser</p>
+  </footer>
+</aside>
+
+<main id="stage">
+  <div id="vig"></div>
+  <div id="ovl" class="ok">
+    <span class="ic ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg></span>
+    <span class="ic bad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4.5"/><path d="M12 17.5v.01"/></svg></span>
+    <span id="ovlTxt">—</span>
+  </div>
+  <div id="tools">
+    <button id="tSpin" class="on" title="Rotazione automatica"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(-25 12 12)"/><circle cx="12" cy="12" r="2.8"/></svg></button>
+    <button id="tView" title="Riporta la vista"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg></button>
+    <button id="tCut" title="Vista in sezione: guarda dentro il vaso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9"/><path d="M14.5 14.5 20 20"/><path d="M8.1 8.1 12 12"/></svg></button>
+    <button id="tFlat" title="Sfaccettato / superfici lisce"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3 2.5 19.5h19L12 3z"/><path d="M12 3v16.5"/></svg></button>
+    <button id="tLink" title="Copia il link di questo design"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2"/><path d="M14 10.5a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg></button>
+    <button id="tShot" title="Salva uno screenshot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3.5L9.5 5h5L16.5 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button>
+  </div>
+  <div id="flash"></div>
+  <div id="toast"></div>
+  <div id="fatal"><div class="box"><b>ERRORE DI AVVIO</b><span id="fatalMsg">—</span></div></div>
+</main>
+
+<script id="vcore">
+/* =====================================================================
+   VCORE · geometria pura, senza DOM né Three.js.
+   Lo stesso sorgente gira (1) nella pagina come script classico e
+   (2) in un Web Worker creato da questo testo: un'unica fonte di verità.
+   Nessuna dipendenza da stato globale: tutto entra per parametro.
+   ===================================================================== */
+(function(G){
+'use strict';
+const TAU = Math.PI * 2;
+const sstep = x => x <= 0 ? 0 : x >= 1 ? 1 : x*x*(3 - 2*x);
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+
+/* ================= profili in quota e preset ================= */
+const PROFILES = {
+  clessidra: t => 1 - .34 * Math.exp(-(((t - .46) / .21) ** 2)) - .22 * t,
+  fiamma:    t => .30 + .70 * Math.pow(1 - t, .62),
+  tornado:   t => .40 + .60 * Math.pow(t, .85),
+  bulbo:     t => .52 + .50 * Math.exp(-(((t - .34) / .30) ** 2)) - .18 * t,
+};
+
+/* Font a tratto singolo: glifi in corpi [0..1] (baseline 0, capitale 1). */
+const GLYPHS = {
+  'A':{w:.72,g:[[[0,0],[.5,1],[1,0]],[[.18,.42],[.82,.42]]]},
+  'B':{w:.62,g:[[[0,0],[0,1]],[[0,1],[.45,1],[.62,.84],[.45,.66],[0,.66]],[[0,.66],[.5,.66],[.68,.33],[.45,0],[0,0]]]},
+  'C':{w:.7,g:[[[.8,.9],[.5,1],[.15,.85],[0,.5],[.15,.15],[.5,0],[.8,.1]]]},
+  'D':{w:.68,g:[[[0,0],[0,1]],[[0,1],[.5,1],[.72,.7],[.72,.3],[.5,0],[0,0]]]},
+  'E':{w:.55,g:[[[1,1],[0,1],[0,0],[1,0]],[[0,.55],[.68,.55]]]},
+  'F':{w:.55,g:[[[1,1],[0,1],[0,0]],[[0,.55],[.68,.55]]]},
+  'G':{w:.72,g:[[[.82,.88],[.55,1],[.2,.95],[0,.6],[0,.4],[.2,.08],[.55,0],[.8,.12],[.8,.35],[.5,.35]]]},
+  'H':{w:.7,g:[[[0,0],[0,1]],[[1,0],[1,1]],[[0,.55],[1,.55]]]},
+  'I':{w:.5,g:[[[0,1],[.5,1]],[[.25,1],[.25,0]],[[0,0],[.5,0]]]},
+  'J':{w:.6,g:[[[.6,1],[.6,.25],[.45,.05],[.2,0],[.05,.1]]]},
+  'K':{w:.65,g:[[[0,0],[0,1]],[[.95,1],[.05,.5],[1,0]]]},
+  'L':{w:.55,g:[[[0,1],[0,0],[.9,0]]]},
+  'M':{w:1,g:[[[0,0],[0,1],[.5,.6],[1,1],[1,0]]]},
+  'N':{w:.85,g:[[[0,0],[0,1],[1,0],[1,1]]]},
+  'O':{w:.8,g:[[[.5,1],[.85,.85],[1,.5],[.85,.15],[.5,0],[.15,.15],[0,.5],[.15,.85],[.5,1]]]},
+  'P':{w:.6,g:[[[0,0],[0,1]],[[0,1],[.55,1],[.7,.8],[.55,.6],[0,.6]]]},
+  'Q':{w:.8,g:[[[.5,1],[.85,.85],[1,.5],[.85,.15],[.5,0],[.15,.15],[0,.5],[.15,.85],[.5,1]],[[.65,.3],[.98,.02]]]},
+  'R':{w:.62,g:[[[0,0],[0,1]],[[0,1],[.55,1],[.7,.8],[.55,.6],[0,.6]],[[.4,.62],[1,0]]]},
+  'S':{w:.65,g:[[[.85,.9],[.55,1],[.2,.95],[.05,.75],[.25,.55],[.65,.45],[.9,.3],[.85,.08],[.5,0],[.15,.1]]]},
+  'T':{w:.8,g:[[[0,1],[1,1]],[[.5,1],[.5,0]]]},
+  'U':{w:.85,g:[[[0,1],[0,.25],[.2,.05],[.5,0],[.8,.05],[1,.25],[1,1]]]},
+  'V':{w:.8,g:[[[0,1],[.5,0],[1,1]]]},
+  'W':{w:1,g:[[[0,1],[.25,0],[.5,.55],[.75,0],[1,1]]]},
+  'X':{w:.8,g:[[[0,0],[1,1]],[[0,1],[1,0]]]},
+  'Y':{w:.8,g:[[[0,1],[.5,.5]],[[1,1],[.5,.5]],[[.5,.5],[.5,0]]]},
+  'Z':{w:.72,g:[[[0,1],[1,1],[0,0],[1,0]]]},
+  '0':{w:.62,g:[[[.5,1],[.85,.85],[1,.5],[.85,.15],[.5,0],[.15,.15],[0,.5],[.15,.85],[.5,1]]]},
+  '1':{w:.55,g:[[[.2,.85],[.5,1],[.5,0]],[[.15,0],[.85,0]]]},
+  '2':{w:.62,g:[[[.1,.8],[.35,1],[.7,.95],[.9,.7],[.75,.45],[.3,.2],[0,0],[.95,0]]]},
+  '3':{w:.62,g:[[[.05,1],[.85,1],[.4,.55],[.8,.5],[.95,.3],[.8,.05],[.4,0],[.05,.12]]]},
+  '4':{w:.62,g:[[[.65,1],[0,.3],[.95,.3]],[[.65,1],[.65,0]]]},
+  '5':{w:.62,g:[[[.95,1],[.15,1],[.1,.55],[.5,.5],[.85,.35],[.95,.12],[.7,0],[.2,0],[.05,.1]]]},
+  '6':{w:.62,g:[[[.85,.9],[.55,1],[.25,.85],[.1,.5],[.15,.2],[.4,.02],[.65,.05],[.85,.2],[.8,.45],[.5,.55],[.15,.5]]]},
+  '7':{w:.62,g:[[[0,1],[1,1],[.35,0]]]},
+  '8':{w:.62,g:[[[.5,1],[.8,.85],[.65,.66],[.5,.6],[.35,.66],[.2,.85],[.5,1]],[[.5,.6],[.85,.48],[1,.28],[.8,.06],[.5,0],[.2,.06],[0,.28],[.15,.48],[.5,.6]]]},
+  '9':{w:.62,g:[[[.15,.1],[.45,0],[.75,.15],[.9,.5],[.85,.8],[.6,.98],[.35,.95],[.15,.8],[.2,.55],[.5,.45],[.85,.5]]]},
+  '.':{w:.3,g:[[[.5,.08],[.5,0]]]},
+  '-':{w:.55,g:[[[.1,.5],[.9,.5]]]},
+  "'":{w:.25,g:[[[.5,.72],[.42,1]]]},
+  '!':{w:.3,g:[[[.5,1],[.5,.3]],[[.5,.08],[.5,0]]]},
+  '&':{w:.8,g:[[[1,.05],[.3,.72],[.42,1],[.68,.9],[.12,.25],[0,.08],[.22,0],[.55,.2],[1,.65]]]},
+};
+const TRACK = .34;
+
+/* layoutLogo: sviluppa il testo in segmenti normalizzati su r95 (u,v ∈ [-1..1]).
+   CORRETTO: la lunghezza del testo (corpi) viene prima convertita in unità
+   normalizzate con sN = size/r95, poi in angolo sull'arco. Nella versione
+   precedente la conversione mancava e il default veniva scartato (fit≈0,14). */
+function layoutLogo(logo, r95){
+  const text = logo.text.toUpperCase();
+  const segs = [];
+  let rMinN = 1e9, rMaxN = -1e9;
+  let dev = 0;
+  for (const ch of text){ const g = GLYPHS[ch]; dev += (g ? g.w : .5) + TRACK; }
+  dev = Math.max(.1, dev - TRACK);
+  const sN = logo.size / r95;
+  const ROT = logo.rot * Math.PI / 180;
+  let fit;
+  if (logo.arc){
+    const RARC = .72;                        // raggio arco (normalizzato)
+    const avail = 5.2;                       // ampiezza massima ~300°
+    fit = Math.min(1, avail * RARC / (dev * sN));
+    const thC = Math.PI / 2 + ROT;
+    let acc = 0;
+    for (const ch of text){
+      const g = GLYPHS[ch]; if (!g){ acc += (.5 + TRACK) * fit; continue; }
+      for (const poly of g.g){
+        let prev = null;
+        for (const [u, v] of poly){
+          const s = (acc + u * fit - dev * fit / 2) * sN;   // arco dal centro testo
+          const th = thC - s / RARC;
+          const rr = RARC - v * fit * sN;                   // alto lettera verso il centro
+          const X = rr * Math.cos(th), Y = rr * Math.sin(th);
+          const q = Math.hypot(X, Y);
+          if (q < rMinN) rMinN = q; if (q > rMaxN) rMaxN = q;
+          if (prev) segs.push(prev[0], prev[1], X, Y);
+          prev = [X, Y];
+        }
+      }
+      acc += (g.w + TRACK) * fit;
+    }
+  } else {
+    fit = Math.min(1, 1.3 / (dev * sN));
+    const cs = Math.cos(ROT), sn = Math.sin(ROT);
+    let acc = 0;
+    for (const ch of text){
+      const g = GLYPHS[ch]; if (!g){ acc += (.5 + TRACK) * fit; continue; }
+      for (const poly of g.g){
+        let prev = null;
+        for (const [u, v] of poly){
+          const lx = (acc + u * fit - dev * fit / 2) * sN;
+          const ly = (.5 - v) * fit * sN;
+          const X = lx * cs - ly * sn, Y = lx * sn + ly * cs;
+          const q = Math.hypot(X, Y);
+          if (q < rMinN) rMinN = q; if (q > rMaxN) rMaxN = q;
+          if (prev) segs.push(prev[0], prev[1], X, Y);
+          prev = [X, Y];
+        }
+      }
+      acc += (g.w + TRACK) * fit;
+    }
+  }
+  return { segs, rMinN, rMaxN, fit, ok: segs.length > 0 && logo.size * fit >= 3.2 };
+}
+
+
+/* raster 256² su [-1..1]²: deposito gocce lungo i tratti, inviluppo (non somma).
+   Ritorna null (fondo liscio), {ok:false} (testo non entra), {ok:false, blank:true}
+   (nessun tratto da incidere) o {ok:true,data}. Il codice del design, se presente
+   in logo.serial, viene impaginato come seconda riga (layoutSerial). */
+const RRES = 256;
+function depositSegs(data, segs, r95){
+  const half = .75 / r95;
+  const stepN = .7 / r95;
+  const cc = v => clamp(Math.round((v + 1) * RRES / 2 - .5), 0, RRES - 1);
+  for (let s = 0; s < segs.length; s += 4){
+    const x1 = segs[s], y1 = segs[s+1], x2 = segs[s+2], y2 = segs[s+3];
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    const n = Math.max(1, Math.ceil(len / stepN));
+    for (let k = 0; k <= n; k++){
+      const t = k / n, px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
+      const cx = cc(px), cy = cc(py);
+      const rad = Math.ceil(half * RRES / 2);
+      for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++){
+        const gx = cx + dx, gy = cy + dy;
+        if (gx < 0 || gy < 0 || gx >= RRES || gy >= RRES) continue;
+        const wx = (gx + .5) * 2 / RRES - 1, wy = (gy + .5) * 2 / RRES - 1;
+        const d2 = ((wx - px) ** 2 + (wy - py) ** 2) / (half * half);
+        if (d2 >= 1) continue;
+        const q = 1 - d2;
+        const idx = gy * RRES + gx;
+        if (q > data[idx]) data[idx] = q;
+      }
+    }
+  }
+}
+
+/* codice del design: riga dritta, ruotata come il testo.
+   Arco → al centro del fondo, dentro l'arco. Dritto (o testo vuoto) → sotto il testo.
+   Luce minima 3 mm tra le mezzerie: tratto largo 1,5 mm + 1,5 mm di pieno tra i solchi
+   (≈ 4 linee da 0,4 mm: il setto resta stampabile e leggibile). */
+const SERIAL_MIN_MM = 3.2;
+function layoutSerial(logo, code, r95, main){
+  const text = code.toUpperCase();
+  let dev = 0;
+  for (const ch of text){ const g = GLYPHS[ch]; dev += (g ? g.w : .5) + TRACK; }
+  dev = Math.max(.1, dev - TRACK);
+  const sizeMM = clamp(logo.size * .7, 3.6, 5);
+  const sN = sizeMM / r95, clr = 3 / r95;
+  const inArc = !!(main && logo.arc);
+  const rLim = inArc ? main.rMinN - clr : 1 - clr;
+  const mainHalf = (main && !logo.arc) ? main.fit * logo.size / r95 / 2 : 0;
+  const cyOf = f => (main && !logo.arc) ? mainHalf + clr + f * sN / 2 : 0;
+  const fits = f => Math.hypot(dev * f * sN / 2, Math.abs(cyOf(f)) + f * sN / 2) <= rLim;
+  let fit = 1;
+  while (fit > .5 && !fits(fit)) fit -= .01;
+  const ok = rLim > 0 && fits(fit) && sizeMM * fit >= SERIAL_MIN_MM;
+  const segs = [];
+  let rMinN = 1e9, rMaxN = -1e9;
+  if (ok){
+    const ROT = logo.rot * Math.PI / 180, cs = Math.cos(ROT), sn = Math.sin(ROT), cy = cyOf(fit);
+    let acc = 0;
+    for (const ch of text){
+      const g = GLYPHS[ch]; if (!g){ acc += (.5 + TRACK) * fit; continue; }
+      for (const poly of g.g){
+        let prev = null;
+        for (const [u, v] of poly){
+          const lx = (acc + u * fit - dev * fit / 2) * sN;
+          const ly = cy + (.5 - v) * fit * sN;
+          const X = lx * cs - ly * sn, Y = lx * sn + ly * cs;
+          const q = Math.hypot(X, Y);
+          if (q < rMinN) rMinN = q; if (q > rMaxN) rMaxN = q;
+          if (prev) segs.push(prev[0], prev[1], X, Y);
+          prev = [X, Y];
+        }
+      }
+      acc += (g.w + TRACK) * fit;
+    }
+  }
+  return { segs, rMinN, rMaxN, ok, sizeMM: sizeMM * fit };
+}
+
+function buildLogoRaster(logo, r95){
+  if (!logo.on) return null;
+  const serial = typeof logo.serial === 'string' ? logo.serial : '';
+  const L = layoutLogo(logo, r95);
+  if (!L.segs.length && !serial) return null;  // testo vuoto/solo spazi: fondo liscio, nessun avviso
+  if (L.segs.length && !L.ok)
+    return { data:null, ok:false, rMinN:L.rMinN, rMaxN:L.rMaxN, r95, serial, serialOk:false, hasSerial:false };
+  let segs = L.segs, serialOk = false;
+  const bands = L.segs.length ? [[L.rMinN, L.rMaxN]] : [];
+  if (serial){
+    const S = layoutSerial(logo, serial, r95, L.segs.length ? L : null);
+    if (S.ok){ segs = segs.concat(S.segs); bands.push([S.rMinN, S.rMaxN]); serialOk = true; }
+  }
+  if (!segs.length)
+    return { data:null, ok:false, blank:true, rMinN:1e9, rMaxN:-1e9, r95, serial, serialOk:false, hasSerial:false };
+  const data = new Float32Array(RRES * RRES);
+  depositSegs(data, segs, r95);
+  /* rMinN/rMaxN restano quelli del testo: senza codice il raster è identico alla versione precedente */
+  return { data, ok:true, rMinN:L.segs.length ? L.rMinN : 1e9, rMaxN:L.segs.length ? L.rMaxN : -1e9,
+           r95, serial, serialOk, hasSerial:serialOk, bands };
+}
+/* raster: null o non ok → 0 (stessa semantica del vecchio controllo su logo.on/ok) */
+function logoDepth(raster, depth, x, y, r95){
+  if (!raster || !raster.ok) return 0;
+  const u = x / r95, v = y / r95;
+  if (u <= -1 || u >= 1 || v <= -1 || v >= 1) return 0;
+  const fx = (u + 1) * RRES / 2 - .5, fy = (v + 1) * RRES / 2 - .5;
+  const x0 = clamp(Math.floor(fx), 0, RRES - 2), y0 = clamp(Math.floor(fy), 0, RRES - 2);
+  const tx = clamp(fx - x0, 0, 1), ty = clamp(fy - y0, 0, 1);
+  const D = raster.data;
+  const a = D[y0*RRES+x0], b = D[y0*RRES+x0+1], c = D[(y0+1)*RRES+x0], d = D[(y0+1)*RRES+x0+1];
+  const val = (a*(1-tx)+b*tx)*(1-ty) + (c*(1-tx)+d*tx)*ty;
+  return val * depth;
+}
+
+/* ============ collo filettato ESTERNO: quote critiche (lato bottiglia) ============ */
+/* ---- pezzi del set: stesso DNA (profilo, costole, torsione, segnale), misure derivate.
+   Il codice del design identifica il SET: entrambi i pezzi lo portano inciso. ---- */
+const PIECES = {
+  disp:  { name:'Dispenser',       hK:1,   rK:1,   neck:true  },
+  tooth: { name:'Portaspazzolino', hK:.58, rK:.62, neck:false },
+};
+const pieceOf = P => PIECES[P && P.piece] || PIECES.disp;
+/* misure del pezzo a partire dai parametri del set */
+function piecePar(P, key){
+  const pc = PIECES[key] || PIECES.disp;
+  if (pc === PIECES.disp) return { ...P, piece:'disp' };
+  /* la torsione scala con l'altezza: i pezzi del set condividono l'INCLINAZIONE
+     dell'elica delle costole, non l'angolo totale (che su un pezzo più basso
+     darebbe un'elica più ripida e mangerebbe il budget dei 44°) */
+  return { ...P, piece:key, h: clamp(P.h * pc.hK, 40, 235), r: clamp(P.r * pc.rK, 20, 110),
+           twist: P.twist * pc.hK };
+}
+function neckSpec(P){
+  if (!pieceOf(P).neck)                      // pezzo aperto: nessun collo, nessun filetto
+    return { ridgeH:0, crestR:0, rootR:0, neckBoreR:0, entry:1, land:0, Hn:0, open:true };
+  const ridgeH     = Math.min(1.5, Math.max(.9, P.thD * .044));
+  const crestR     = P.thD / 2;
+  const rootR      = crestR - ridgeH;
+  const neckBoreR  = Math.max(6, rootR - 3);
+  const entry      = Math.max(1.4, ridgeH / .6);
+  const land       = 2.4;
+  const Hn         = entry + P.turns * P.pitch + land;
+  return { ridgeH, crestR, rootR, neckBoreR, entry, land, Hn };
+}
+
+/* ================= segnale personale (GPX / voce) =================
+   64 campioni quantizzati 0..63 (base64url, 1 carattere ciascuno) modulano il
+   PROFILO IN QUOTA prima di clampProfile: il limitatore di pendenza garantisce
+   i ~44° per costruzione. Mappa: dal fondo fino a SIG_SPAN dell'altezza del
+   corpo; nei primi SIG_BASE la modulazione sale da 0 (appoggio, firma e
+   stabilità restano governati dal raggio base). */
+const SIG_N = 64, SIG_SPAN = .8, SIG_BASE = .08;
+const B64U = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+function sigValid(q){
+  if (typeof q !== 'string' || q.length !== SIG_N) return false;
+  for (const c of q) if (B64U.indexOf(c) < 0) return false;
+  return true;
+}
+/* valori qualsiasi (≥ 2 distinti) → stringa canonica min-max su 0..63 */
+function sigEncode(vals){
+  let lo = Infinity, hi = -Infinity;
+  for (const v of vals){ if (v < lo) lo = v; if (v > hi) hi = v; }
+  if (!(hi - lo > 1e-9)) return null;
+  let q = '';
+  for (const v of vals) q += B64U[Math.round((v - lo) / (hi - lo) * 63)];
+  return q;
+}
+/* valori grezzi 0..1 con verso/inversione applicati */
+function sigRaw(sig){
+  if (!sig || !sigValid(sig.q)) return null;
+  const v = new Float64Array(SIG_N);
+  for (let i = 0; i < SIG_N; i++) v[i] = B64U.indexOf(sig.q[i]) / 63;
+  if (sig.rev) v.reverse();
+  if (sig.inv) for (let i = 0; i < SIG_N; i++) v[i] = 1 - v[i];
+  return v;
+}
+/* gaussiana σ in campioni, bordi a specchio (nessuna normalizzazione) */
+function gaussRaw(raw, sigma){
+  if (!(sigma > .05)) return Float64Array.from(raw);
+  const R = Math.ceil(sigma * 3), w = new Float64Array(2 * R + 1);
+  let ws = 0;
+  for (let k = -R; k <= R; k++){ w[k + R] = Math.exp(-(k * k) / (2 * sigma * sigma)); ws += w[k + R]; }
+  const v = new Float64Array(SIG_N);
+  for (let i = 0; i < SIG_N; i++){
+    let acc = 0;
+    for (let k = -R; k <= R; k++){
+      let j = i + k;
+      while (j < 0 || j >= SIG_N) j = j < 0 ? -j - 1 : 2 * SIG_N - j - 1;
+      acc += raw[j] * w[k + R];
+    }
+    v[i] = acc / ws;
+  }
+  return v;
+}
+/* media nulla, picco ±1 (null = piatta) */
+function normZero(v){
+  const o = Float64Array.from(v);
+  let mean = 0; for (let i = 0; i < SIG_N; i++) mean += o[i]; mean /= SIG_N;
+  let mx = 0; for (let i = 0; i < SIG_N; i++){ o[i] -= mean; if (Math.abs(o[i]) > mx) mx = Math.abs(o[i]); }
+  if (mx < 1e-6) return null;
+  for (let i = 0; i < SIG_N; i++) o[i] /= mx;
+  return o;
+}
+const smoothNorm = (raw, sigma) => normZero(gaussRaw(raw, sigma));
+/* tolleranza di stampabilità: lo stampato non si scosta dal voluto più di 0,4 mm (2 layer).
+   Levigatura: σ fino a 16 campioni. */
+const SIG_SIGMA_MAX = 16, SIG_TOL = .4;
+/* Catmull-Rom sui campioni: curva C1, niente spigoli che il limitatore dovrebbe tagliare */
+function shapeAt(shape, t){
+  const u = clamp(t / SIG_SPAN, 0, 1) * (SIG_N - 1);
+  const i = Math.min(SIG_N - 2, Math.floor(u)), f = u - i;
+  const p0 = shape[Math.max(0, i - 1)], p1 = shape[i], p2 = shape[i + 1], p3 = shape[Math.min(SIG_N - 1, i + 2)];
+  return p1 + .5 * f * (p2 - p0 + f * (2*p0 - 5*p1 + 4*p2 - p3 + f * (3*(p1 - p2) + p3 - p0)));
+}
+const sigWeight = t => sstep(t / SIG_BASE);
+/* ---- adattamento ai vincoli con il limitatore VERO ----
+   Si esegue clampProfile sulle righe dell'export e si misura quanta modulazione il
+   limitatore altera: scostamento massimo |ΔBo_limitato − ΔBo_libero| sul corpo.
+   Una curva è stampabile se lo scostamento ≤ SIG_TOL mm ovunque: la forma voluta
+   è quella stampata a meno di 2 layer, per costruzione. */
+function sigRig(P, base){
+  const n = neckSpec(P), rows = pieceRows(P, PE), zs = new Float64Array(rows);
+  buildRows(P, n, PE.nB, PE.nN, zs);
+  const rig = { P, n, zs, rows, Rc:new Float64Array(rows), Bo:new Float64Array(rows), Bi:new Float64Array(rows),
+    BoB:new Float64Array(rows), BiB:new Float64Array(rows), s:new Float64Array(rows), jTop:0 };
+  clampProfile(P, n, base, zs, rig.Rc, rig.BoB, rig.BiB);
+  for (let j = 0; j < rows && zs[j] <= P.h; j++){
+    const u = Math.min(1, Math.max(0, (zs[j] / P.h - .6) / .4));
+    rig.s[j] = u*u*(3 - 2*u); rig.jTop = j;
+  }
+  return rig;
+}
+/* scostamento massimo (mm) tra modulazione limitata e libera di fnA rispetto a fnB
+   (fnB già limitata in refBo), su TUTTE le righe del corpo: il limitatore procede
+   riga per riga e un taglio sposta anche le righe successive */
+function sigResidual(rig, fnA, fnB, refBo){
+  const { P, n, zs, s: sb } = rig;
+  clampProfile(P, n, fnA, zs, rig.Rc, rig.Bo, rig.Bi);
+  let mx = 0;
+  for (let j = 0; j <= rig.jTop; j++){
+    const t = zs[j] / P.h, dU = P.r * (fnA(t) - fnB(t)) * (1 - sb[j]), dC = rig.Bo[j] - refBo[j];
+    const e = Math.abs(dC - dU); if (e > mx) mx = e;
+  }
+  return mx;
+}
+/* ---- voce attorno alla circonferenza ---- */
+const RING_SIGMA_MAX = 6;
+function gaussCirc(raw, sigma){
+  if (!(sigma > .05)) return Float64Array.from(raw);
+  const R = Math.min(SIG_N >> 1, Math.ceil(sigma * 3)), w = new Float64Array(2 * R + 1);
+  let ws = 0;
+  for (let k = -R; k <= R; k++){ w[k + R] = Math.exp(-(k * k) / (2 * sigma * sigma)); ws += w[k + R]; }
+  const v = new Float64Array(SIG_N);
+  for (let i = 0; i < SIG_N; i++){
+    let acc = 0;
+    for (let k = -R; k <= R; k++) acc += raw[((i + k) % SIG_N + SIG_N) % SIG_N] * w[k + R];
+    v[i] = acc / ws;
+  }
+  return v;
+}
+/* Catmull-Rom periodico: inizio e fine della frase si incontrano senza cucitura */
+function shapeCirc(c, th){
+  const u = ((th / TAU) % 1 + 1) % 1 * SIG_N, i = Math.floor(u), f = u - i;
+  const at = k => c[((k % SIG_N) + SIG_N) % SIG_N];
+  const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+  return p1 + .5 * f * (p2 - p0 + f * (2*p0 - 5*p1 + 4*p2 - p3 + f * (3*(p1 - p2) + p3 - p0)));
+}
+/* rampa di attivazione dal fondo: abbastanza lunga da non rubare più di ~1/3 del budget */
+const ringRamp = (A, Bmax) => Math.max(12, 3.5 * Bmax * A);
+function ringTable(vr, nTh){
+  const c = new Float64Array(nTh);
+  for (let i = 0; i < nTh; i++) c[i] = vr.A * shapeCirc(vr.shape, i * TAU / nTh);
+  return c;
+}
+/* intensità stampabile, due condizioni:
+   1) la silhouette (guscio e cavità) non si sposta più di SIG_TOL mm rispetto al vaso senza voce;
+   2) nessuna riga resta con pendenza oltre il budget grezzo del limitatore più di quanto
+      già accada senza voce (il minimo di sicurezza 0,05 non deve diventare un taglio dei 44°). */
+const RING_TOP = .6;
+function fitRing(P, base, sig, A){
+  const raw = sigRaw(sig);
+  if (!raw || !(A > 0)) return null;
+  const sigma = clamp(+sig.smooth || 0, 0, 1) * RING_SIGMA_MAX;
+  const shape = normZero(gaussCirc(raw, sigma));
+  if (!shape) return null;
+  /* il limitatore assume |c| ≤ 1: normalizzo sul massimo della curva INTERPOLATA
+     (Catmull-Rom supera i campioni fino al ~16% senza levigatura) */
+  let cmx = 0;
+  for (let i = 0; i < 2048; i++) cmx = Math.max(cmx, Math.abs(shapeCirc(shape, i * TAU / 2048)));
+  for (let i = 0; i < SIG_N; i++) shape[i] /= cmx;
+  const rig = sigRig(P, base), rows = rig.rows, zs = rig.zs, zTop = RING_TOP * P.h;
+  let Bmax = 0; for (let j = 0; j <= rig.jTop; j++) Bmax = Math.max(Bmax, rig.BoB[j]);
+  /* sforamento del budget RIGA PER RIGA: un confronto sul massimo globale lascerebbe
+     peggiorare righe diverse da quella peggiore del vaso base */
+  const overBudget = (Bo, Bi, lim, out) => {
+    for (let j = 1; j < rows; j++){
+      const dz = Math.max(zs[j] - zs[j-1], 1e-6);
+      const need = Math.max(Math.abs(Bo[j] - Bo[j-1]), Math.abs(Bi[j] - Bi[j-1])) / dz;
+      out[j] = need - lim(Bo[j-1], j);
+    }
+    return out;
+  };
+  const dB = {}; clampProfile(P, rig.n, base, zs, rig.Rc, rig.BoB, rig.BiB, null, dB);
+  const baseOver = overBudget(rig.BoB, rig.BiB, dB.limRaw, new Float64Array(rows));
+  const ringOver = new Float64Array(rows);
+  const vrOf = a => ({ A:a, ramp:ringRamp(a, Bmax), zTop });
+  const ok = a => {
+    const d = {}; clampProfile(P, rig.n, base, zs, rig.Rc, rig.Bo, rig.Bi, vrOf(a), d);
+    let mx = 0;
+    for (let j = 0; j < rows; j++) mx = Math.max(mx, Math.abs(rig.Bo[j] - rig.BoB[j]), Math.abs(rig.Bi[j] - rig.BiB[j]));
+    if (mx > SIG_TOL) return false;
+    overBudget(rig.Bo, rig.Bi, d.limRaw, ringOver);
+    for (let j = 1; j < rows; j++) if (ringOver[j] > Math.max(0, baseOver[j]) + 1e-4) return false;
+    return true;
+  };
+  let Aeff = A;
+  if (!ok(A)){
+    let lo = 0, hi = A;
+    for (let it = 0; it < 14; it++){ const mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; }
+    Aeff = lo < 1e-3 ? 0 : lo;
+  }
+  return { kind:'ring', shape, A:Aeff, Areq:A, sigma, ...vrOf(Aeff), Bmax };
+}
+const ringCache = new Map();
+function ringFor(P, profKey){
+  if (!(P.amp > 0) || !P.sig || P.sig.kind !== 'ring') return null;
+  const key = [P.piece, P.h, P.r, P.petals, P.twist, P.sharp, P.w, P.thD, P.pitch, P.turns, P.amp, profKey,
+               P.sig.q, P.sig.smooth, !!P.sig.rev, !!P.sig.inv].join('|');
+  if (ringCache.has(key)) return ringCache.get(key);
+  let f = fitRing(P, PROFILES[profKey], P.sig, P.amp);
+  if (f && !(f.A > 0)) f = null;
+  if (ringCache.size > 16) ringCache.clear();
+  ringCache.set(key, f);
+  return f;
+}
+
+const modFn = (base, shape, A) => t => base(t) * (1 + A * sigWeight(t) * shapeAt(shape, t));
+/* adattamento deterministico:
+   1) levigatura richiesta; 2) altrimenti la minima levigatura stampabile (bisezione);
+   3) se nemmeno la massima basta, la massima intensità stampabile. */
+function fitSignal(P, base, sig, A){
+  const raw = sigRaw(sig);
+  if (!raw || !(A > 0)) return null;
+  const s0 = clamp(+sig.smooth || 0, 0, 1) * SIG_SIGMA_MAX;
+  const sh0 = smoothNorm(raw, s0);
+  if (!sh0) return null;
+  const rig = sigRig(P, base);
+  const ok = (sh, a) => sigResidual(rig, modFn(base, sh, a), base, rig.BoB) <= SIG_TOL;
+  if (ok(sh0, A)) return { shape:sh0, A, sigma:s0, sigmaReq:s0, Areq:A };
+  const shM = smoothNorm(raw, SIG_SIGMA_MAX);
+  if (shM && ok(shM, A)){
+    let lo = s0, hi = SIG_SIGMA_MAX, shHi = shM;
+    for (let it = 0; it < 12; it++){
+      const mid = (lo + hi) / 2, sh = smoothNorm(raw, mid);
+      if (sh && ok(sh, A)){ hi = mid; shHi = sh; } else lo = mid;
+    }
+    return { shape:shHi, A, sigma:hi, sigmaReq:s0, Areq:A };
+  }
+  const sh = shM || sh0;
+  let lo = 0, hi = A;
+  for (let it = 0; it < 14; it++){ const mid = (lo + hi) / 2; if (ok(sh, mid)) lo = mid; else hi = mid; }
+  return { shape:sh, A: lo < 1e-3 ? 0 : lo, sigma:SIG_SIGMA_MAX, sigmaReq:s0, Areq:A };
+}
+const fitCache = new Map();
+function fitSignalFor(P, profKey){
+  if (!(P.amp > 0) || !P.sig || P.sig.kind === 'ring') return null;
+  const key = [P.piece, P.h, P.r, P.petals, P.twist, P.sharp, P.thD, P.pitch, P.turns, P.amp, profKey,
+               P.sig.q, P.sig.smooth, !!P.sig.rev, !!P.sig.inv].join('|');
+  if (fitCache.has(key)) return fitCache.get(key);
+  const f = fitSignal(P, PROFILES[profKey], P.sig, P.amp);
+  if (fitCache.size > 16) fitCache.clear();
+  fitCache.set(key, f);
+  return f;
+}
+/* profilo effettivo: unica fonte per export, raggio del fondo e layout del logo.
+   Senza segnale (o intensità 0, o intensità stampabile nulla) ritorna il profilo
+   base: STL identici al bit. */
+function fitProfile(base, fit){ return fit && fit.A > 0 ? modFn(base, fit.shape, fit.A) : base; }
+function profileFn(P, profKey){ return fitProfile(PROFILES[profKey], fitSignalFor(P, profKey)); }
+
+/* ================= righe in quota ================= */
+function buildRows(P, n, nB, nN, zs){
+  for (let j = 0; j < nB; j++) zs[j] = P.h * j / (nB - 1);
+  if (n.open) return;                        // senza collo le righe finiscono al bordo
+  for (let k = 1; k <= nN; k++) zs[nB + k - 1] = P.h + n.Hn * k / nN;
+}
+/* righe totali del pezzo: senza collo solo il corpo */
+const pieceRows = (P, cfg) => neckSpec(P).open ? cfg.nB : cfg.nB + cfg.nN;
+
+/* ====== profilo autocostretto: budget di pendenza per riga (~44°) ====== */
+/* vr (opzionale) = voce attorno alla circonferenza {A, ramp}: termine angolare
+   G = f(θ − twist) + A·wv(z)·c(θ), con c fermo rispetto alla torsione e |c| ≤ 1.
+   wv(z) = sstep(z/ramp)·sstep((zTop − z)/ramp): fascia dal fondo a zTop, sotto la spalla.
+   Il budget di pendenza tiene conto di ampiezza extra (anche nel raccordo di spalla),
+   derivata esatta della fascia wv' e denominatore.
+   diag (opzionale): riceve limRaw(B, j), il budget senza il minimo di sicurezza. */
+function ringBand(z, vr){
+  const u = Math.min(1, Math.max(0, z / vr.ramp)), v = Math.min(1, Math.max(0, (vr.zTop - z) / vr.ramp));
+  const a = u*u*(3 - 2*u), b = v*v*(3 - 2*v);
+  const da = (u > 0 && u < 1) ? 6*u*(1-u) / vr.ramp : 0, db = (v > 0 && v < 1) ? 6*v*(1-v) / vr.ramp : 0;
+  return [a * b, Math.abs(da * b - a * db)];
+}
+function clampProfile(P, n, prof, zs, Rc, Bo, Bi, vr, diag){
+  const fm  = P.sharp*.42 + 2*P.sharp*P.sharp*.10;
+  const fmx = P.sharp*.42 +   P.sharp*P.sharp*.10;
+  const mp  = P.petals * (P.twist*Math.PI/180) / Math.max(40, P.h);
+  const CAP = .97;
+  const rows = zs.length;
+  const fd  = new Float64Array(rows), fdd = new Float64Array(rows);
+  const open = !!n.open;                     // bordo aperto: costole a piena ampiezza fino in cima
+  for (let j = 0; j < rows; j++){
+    const t = Math.min(1, zs[j] / P.h);
+    const u = Math.min(1, Math.max(0, (t - .6) / .4));
+    fd[j]  = open ? 1 : 1 - u*u*(3 - 2*u);
+    fdd[j] = open ? 0 : (u > 0 && u < 1) ? 6*u*(1-u)*2.5/P.h : 0;
+  }
+  const VA = vr && vr.A > 0 ? vr.A : 0;
+  let wv = null, wvd = null;
+  if (VA){
+    wv = new Float64Array(rows); wvd = new Float64Array(rows);
+    for (let j = 0; j < rows; j++){ const w = ringBand(zs[j], vr); wv[j] = w[0]; wvd[j] = w[1]; }
+  }
+  if (diag) diag.limRaw = VA ? (B, j) => {
+    const f = fd[j], g = fdd[j], ax = fmx + VA*wv[j], ad = VA*wvd[j];
+    return Math.min((CAP - B*f*fm*mp - B*f*ad - B*g*ax) / (1 + f*ax), (CAP - B*f*f*fm*mp - B*f*f*ad - 2*B*f*g*ax) / (1 + f*f*ax));
+  } : (B, j) => {
+    const f = fd[j], g = fdd[j];
+    return Math.min((CAP - B*f*fm*mp - B*g*fmx) / (1 + f*fmx), (CAP - B*f*f*fm*mp - 2*B*f*g*fmx) / (1 + f*f*fmx));
+  };
+  const limAt = VA ? (B, j) => {
+    const f = fd[j], g = fdd[j], ax = fmx + VA*wv[j], ad = VA*wvd[j];
+    const lBo = (CAP - B*f*fm*mp   - B*f*ad   - B*g*ax)     / (1 + f*ax);
+    const lBi = (CAP - B*f*f*fm*mp - B*f*f*ad - 2*B*f*g*ax) / (1 + f*f*ax);
+    return Math.max(.05, Math.min(lBo, lBi));
+  } : (B, j) => {
+    const f = fd[j], g = fdd[j];
+    const lBo = (CAP - B*f*fm*mp   - B*g*fmx)     / (1 + f*fmx);
+    const lBi = (CAP - B*f*f*fm*mp - 2*B*f*g*fmx) / (1 + f*f*fmx);
+    return Math.max(.05, Math.min(lBo, lBi));
+  };
+  let prev = Rc[0] = P.r * prof(0);
+  for (let j = 1; j < rows; j++){
+    const dz = Math.max(zs[j] - zs[j-1], 1e-6);
+    const raw = zs[j] <= P.h ? P.r * prof(zs[j] / P.h) : prev;
+    let d = raw - prev;
+    const lim = limAt(prev, j);
+    if (d >  lim*dz) d =  lim*dz;
+    if (d < -lim*dz) d = -lim*dz;
+    prev = Rc[j] = prev + d;
+  }
+  for (let j = 0; j < rows; j++){
+    const t = Math.min(1, zs[j] / P.h);
+    const u = Math.min(1, Math.max(0, (t - .6) / .4));
+    const s = open ? 0 : u*u*(3 - 2*u);
+    Bo[j] = Rc[j]*(1-s) + n.rootR*s;
+    Bi[j] = (Rc[j] - P.w)*(1-s) + n.neckBoreR*s;
+  }
+  const sweep = (B, inner) => {
+    for (let j = 1; j < rows && zs[j] <= P.h; j++){
+      const dz = Math.max(zs[j] - zs[j-1], 1e-6);
+      let d = B[j] - B[j-1];
+      const lim = limAt(inner ? Bo[j-1] : B[j-1], j);
+      if (d >  lim*dz) d =  lim*dz;
+      if (d < -lim*dz) d = -lim*dz;
+      B[j] = B[j-1] + d;
+    }
+  };
+  const cone = (B, inner) => {
+    for (let j = rows - 2; j >= 0; j--){
+      const dz = Math.max(zs[j+1] - zs[j], 1e-6);
+      const bound = B[j+1] + limAt(inner ? Bo[j+1] : B[j+1], j+1) * dz;
+      if (B[j] > bound) B[j] = bound;
+    }
+  };
+  sweep(Bo, false); cone(Bo, false);
+  sweep(Bi, true);  cone(Bi, true);
+}
+
+
+/* raggio di riferimento del fondo: 95% del minimo reale della riga 0 del guscio */
+/* CORRETTO: il raggio della riga 0 va preso DOPO clampProfile, che per rispettare
+   i 44° può restringerla a ritroso (fino a −35%). Con il valore teorico il disco
+   usciva dalla parete: corona del fondo ripiegata e testo oltre il bordo. */
+function r95Of(P, prof0, Bo0){
+  const a = P.sharp*.42, bb = P.sharp*P.sharp*.10;
+  /* stesso ordine delle operazioni della versione precedente quando la riga non è
+     ristretta: design non interessati dal difetto → STL identici al bit */
+  return P.r * prof0 <= Bo0 ? Math.max(3, .95 * P.r * prof0 * (1 - a - bb))
+                            : Math.max(3, .95 * Bo0 * (1 - a - bb));
+}
+function targetR95(P, profKey){
+  /* stesse righe dell'export: il valore coincide con ctx.r95 di makeExportCtx */
+  const n = neckSpec(P), rows = pieceRows(P, PE), zs = new Float64Array(rows);
+  buildRows(P, n, PE.nB, PE.nN, zs);
+  const Bo = new Float64Array(rows), Bi = new Float64Array(rows);
+  clampProfile(P, n, profileFn(P, profKey), zs, new Float64Array(rows), Bo, Bi, ringFor(P, profKey));
+  return r95Of(P, PROFILES[profKey](0), Bo[0]);          // profileFn(0) ≡ base(0): peso nullo al fondo
+}
+
+/* raggi degli anelli interni del disco (densi sulla fascia della scritta);
+   l'anello esterno del disco È la riga 0 del guscio: condivisa, zero cuciture */
+function buildRadK(KI, r95, rMinN, rMaxN){
+  const rad = new Float64Array(KI);
+  const has = rMaxN > rMinN && rMinN > 0 && rMaxN < 1e8;
+  const z0 = has ? clamp(rMinN*r95 - 1.5, 0, r95*.75) : 0;
+  const z1 = has ? clamp(rMaxN*r95 + 1.5, Math.min(z0 + 2, r95*.9), r95*.9) : r95*.9;
+  const n0 = clamp(Math.round(KI * z0 / r95), 0, KI - 2);
+  const n1 = clamp(Math.round(KI * (z1 - z0) / r95 * 2), 1, KI - n0 - 1);
+  const n2 = KI - n0 - n1;
+  let p = 0;
+  for (let k = 1; k <= n0; k++) rad[p++] = z0 * k / (n0 + 1);
+  for (let k = 1; k <= n1; k++) rad[p++] = z0 + (z1 - z0) * k / n1;
+  for (let k = 1; k <= n2; k++) rad[p++] = z1 + (r95 - z1) * k / n2;
+  return rad;
+}
+
+/* anelli del disco con più fasce dense (testo + codice): distribuzione per
+   densità, peso 6 dentro le fasce (±1,5 mm), 1 fuori. L'ultimo anello è r95. */
+function buildRadKBands(KI, r95, bands, W = 6){
+  const N = 4096, pad = 1.5;
+  const iv = bands.map(([a, b]) => [Math.max(0, a * r95 - pad), Math.min(r95, b * r95 + pad)]);
+  const w = r => { for (const [a, b] of iv) if (r >= a && r <= b) return W; return 1; };
+  const cdf = new Float64Array(N + 1);
+  for (let i = 1; i <= N; i++) cdf[i] = cdf[i-1] + w((i - .5) * r95 / N);
+  const tot = cdf[N], rad = new Float64Array(KI);
+  let i = 1;
+  for (let k = 1; k <= KI; k++){
+    const target = tot * k / KI;
+    while (i < N && cdf[i] < target) i++;
+    rad[k-1] = r95 * (i - 1 + (target - cdf[i-1]) / (cdf[i] - cdf[i-1])) / N;
+  }
+  rad[KI-1] = r95;
+  return rad;
+}
+
+/* ================= costruzione della mesh (vaso cavo, dati Z-up) =================
+   Fondo = disco (anelli 1..K-1) il cui anello esterno È la riga 0 del guscio:
+   condivisa, quindi watertight per costruzione. Il pavimento della cavità
+   (superficie di tenuta) resta intoccato: l'incisione vive solo sotto. */
+function fillVessel(pos, ctx){
+  const { zs, Bo, Bi, nTh, P } = ctx;
+  const n = ctx.n, rows = zs.length, jB = ctx.jB;
+  const K = ctx.K, r95 = ctx.r95, KI = K - 1;
+  const engr = ctx.engrave !== false;
+  const twist = P.twist * Math.PI / 180;
+  const a = P.sharp * .42, b = -P.sharp * P.sharp * .10;
+  const DTH = TAU / nTh, snD = Math.sin(DTH);
+  const pA = ctx.sA, pO = ctx.sM, pI = ctx.sI, qO = ctx.prevM, qI = ctx.prevI;
+  const ridgeH = n.ridgeH, entry = n.entry, zTop = ctx.Ht - n.land;
+  let maxR = 0, maxW = 0, maxWz = 0, maxWall = 0, capV = 0, wallV = 0, solidV = 0, prevZ = zs[0], minRi = 1e9;
+
+  for (let j = 0; j < rows; j++){
+    const z = zs[j], dz = Math.max(1e-6, z - prevZ); prevZ = z;
+    let s, m;
+    if (ctx.ring){ s = 1; m = 0; }
+    else {
+      const t = Math.min(1, z / P.h);
+      const u = Math.min(1, Math.max(0, (t - .6) / .4));
+      s = ctx.open ? 0 : u*u*(3 - 2*u);
+      m = twist * t;
+    }
+    const fade = 1 - s;
+    const vrc = ctx.vr, wvz = vrc ? ringBand(z, vrc)[0] : 0;
+    for (let i = 0; i < nTh; i++){
+      const th = i * DTH;
+      const x = P.petals * (th - m);
+      let f = a*Math.cos(x) + b*Math.cos(2*x);
+      if (vrc) f += wvz * vrc.cth[i];                      // voce: ferma rispetto alla torsione
+      const modAmp = Bo[j] * fade;
+      const ro0 = Bo[j] + modAmp * f;
+      let ro = ro0;
+      if (!ctx.open && z > ctx.zBase && z <= zTop){
+        const zn = z - ctx.zBase;
+        const fr = th / TAU - zn / P.pitch;
+        const dd = Math.abs(fr - Math.round(fr));
+        let g = 0;
+        if (dd < .14) g = 1;
+        else if (dd < .5) g = .5 * (1 + Math.cos(Math.PI * (dd - .14) / .36));
+        if (g > 0) ro = ro0 + ridgeH * g * sstep(zn / entry) * sstep((zTop - z) / (.4 * P.pitch));
+      }
+      if (ro > maxR) maxR = ro;
+      let k = (j * nTh + i) * 3;
+      pos[k] = ro * Math.cos(th); pos[k+1] = ro * Math.sin(th); pos[k+2] = z;
+      if (j >= jB){
+        let ri = Bi[j] + modAmp * f * fade;
+        if (ri < 2.5) ri = 2.5;
+        if (ri > ro0 - .9) ri = ro0 - .9;
+        pI[i] = ri;
+        if (j > jB && ri < minRi) minRi = ri;                  // cerchio inscritto minimo della cavità
+        k = (rows * nTh + (j - jB) * nTh + i) * 3;
+        pos[k] = ri * Math.cos(th); pos[k+1] = ri * Math.sin(th); pos[k+2] = z;
+      }
+      pA[i] = ro;
+      pO[i] = ro0;
+    }
+    let Ao = 0, Ai = 0;
+    for (let i = 0; i < nTh; i++){
+      const i2 = (i + 1) % nTh;
+      Ao += pA[i] * pA[i2];
+      if (j >= jB) Ai += pI[i] * pI[i2];
+    }
+    Ao *= .5 * snD; Ai *= .5 * snD;
+    if (j <= jB) solidV += Ao * dz;
+    else { wallV += (Ao - Ai) * dz; capV += Ai * dz; }
+    if (j > 0){
+      for (let i = 0; i < nTh; i++){
+        const wo = (pO[i] - qO[i]) / dz;
+        if (wo > maxW){ maxW = wo; maxWz = z; maxWall = 0; }
+        if (j > jB){
+          const wi = (qI[i] - pI[i]) / dz;
+          if (wi > maxW){ maxW = wi; maxWz = z; maxWall = 1; }
+        }
+      }
+    }
+    qO.set(pO);
+    if (j >= jB) qI.set(pI);
+  }
+
+  /* disco del fondo: anelli 1..K-1 con nD campioni angolari propri (nD = m·nTh);
+     l'anello K è la riga 0 del guscio, già scritta, raccordata dalla cerniera */
+  const nD = ctx.nD || nTh, DTHD = TAU / nD;
+  const nIn = rows - jB;
+  const D0 = rows * nTh + nIn * nTh;
+  const Cf = D0 + KI * nD, C1 = Cf + 1;
+  for (let a2 = 1; a2 <= KI; a2++){
+    const r = ctx.radK[a2 - 1];
+    for (let i = 0; i < nD; i++){
+      const th = i * DTHD, x = r * Math.cos(th), y = r * Math.sin(th);
+      const kk = (D0 + (a2 - 1) * nD + i) * 3;
+      pos[kk] = x; pos[kk+1] = y; pos[kk+2] = engr ? logoDepth(ctx.raster, ctx.depth, x, y, r95) : 0;
+    }
+  }
+  let kc = Cf * 3;
+  pos[kc] = 0; pos[kc+1] = 0; pos[kc+2] = engr ? logoDepth(ctx.raster, ctx.depth, 0, 0, r95) : 0;
+  pos[C1*3] = 0; pos[C1*3+1] = 0; pos[C1*3+2] = zs[jB];
+  return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi };
+}
+
+/* ================= topologia: vertici, triangoli, indici =================
+   nD = campioni angolari del disco del fondo, multiplo intero di nTh (m = nD/nTh).
+   Cerniera tra l'anello esterno del disco (nD) e la riga 0 del guscio (nTh): per ogni
+   settore i, i primi h=⌊m/2⌋ spicchi vanno a O(0,i), i restanti a O(0,i+1), più un
+   triangolo di raccordo. Con m = 1 la topologia coincide con la versione precedente. */
+function vesselVerts(rows, nTh, jB, K, nD = nTh){
+  return rows*nTh + (rows-jB)*nTh + (K-1)*nD + 2;       // unica fonte di verità
+}
+function vesselTriCount(rows, nTh, jB, K, nD = nTh){
+  const nIn = rows - jB, m = nD / nTh;
+  return (rows-1)*2*nTh + (nIn-1)*2*nTh + nD + (K-2)*2*nD + nTh*(m+1) + nTh + 2*nTh;
+}
+function writeVesselIndex(ind, rows, nTh, jB, K, nD = nTh){
+  if (nD % nTh !== 0) throw new Error('nD deve essere multiplo di nTh');
+  const nIn = rows - jB, D0 = rows*nTh + nIn*nTh, KI = K - 1, m = nD / nTh, h = m >> 1;
+  const Cf = D0 + KI*nD, C1 = Cf + 1;
+  let p = 0;
+  const O = (j,i) => j*nTh + (i % nTh);
+  const I = (j,i) => rows*nTh + (j-jB)*nTh + (i % nTh);
+  const F = (a,i) => D0 + (a-1)*nD + (i % nD);
+  for (let j = 0; j < rows-1; j++) for (let i = 0; i < nTh; i++){        // guscio esterno
+    const A=O(j,i), B=O(j,i+1), C=O(j+1,i), D=O(j+1,i+1);
+    ind[p++]=A; ind[p++]=B; ind[p++]=D;  ind[p++]=A; ind[p++]=D; ind[p++]=C;
+  }
+  for (let j = jB; j < rows-1; j++) for (let i = 0; i < nTh; i++){       // parete cavità
+    const A=I(j,i), B=I(j,i+1), C=I(j+1,i), D=I(j+1,i+1);
+    ind[p++]=A; ind[p++]=D; ind[p++]=B;  ind[p++]=A; ind[p++]=C; ind[p++]=D;
+  }
+  for (let i = 0; i < nD; i++){ ind[p++]=Cf; ind[p++]=F(1,i+1); ind[p++]=F(1,i); }
+  for (let a2 = 1; a2 < KI; a2++) for (let i = 0; i < nD; i++){
+    const A=F(a2,i), B=F(a2,i+1), C=F(a2+1,i), D=F(a2+1,i+1);
+    ind[p++]=A; ind[p++]=B; ind[p++]=D;  ind[p++]=A; ind[p++]=D; ind[p++]=C;
+  }
+  for (let i = 0; i < nTh; i++){                                          // cerniera disco → riga 0
+    const k0 = i*m, Oa = O(0,i), Ob = O(0,i+1);
+    for (let k = k0; k < k0 + h; k++){ ind[p++]=F(KI,k); ind[p++]=F(KI,k+1); ind[p++]=Oa; }
+    for (let k = k0 + h; k < k0 + m; k++){ ind[p++]=F(KI,k); ind[p++]=F(KI,k+1); ind[p++]=Ob; }
+    ind[p++]=F(KI,k0+h); ind[p++]=Ob; ind[p++]=Oa;
+  }
+  for (let i = 0; i < nTh; i++){ ind[p++]=C1; ind[p++]=I(jB,i); ind[p++]=I(jB,i+1); }
+  for (let i = 0; i < nTh; i++){
+    ind[p++]=O(rows-1,i); ind[p++]=O(rows-1,i+1); ind[p++]=I(rows-1,i+1);
+    ind[p++]=O(rows-1,i); ind[p++]=I(rows-1,i+1); ind[p++]=I(rows-1,i);
+  }
+  return p;
+}
+function vesselIndex(rows, nTh, jB, K, nD = nTh){
+  const ind = new Uint32Array(vesselTriCount(rows, nTh, jB, K, nD) * 3);
+  writeVesselIndex(ind, rows, nTh, jB, K, nD);
+  return ind;
+}
+
+/* ================= contesti ================= */
+/* Disco del fondo. Liscio: K anelli, nTh campioni (mesh invariata).
+   Inciso: KD anelli con peso WD sulle fasce di testo/codice, nTh·mD campioni.
+   Export ≈ 0,31 mm tangenziali a 35 mm dal centro e ≈ 0,35 mm radiali in fascia. */
+const PN = { nTh:112, nB:132, nN:56, K:26, KD:48, mD:2, WD:10 };
+const PE = { nTh:176, nB:240, nN:96, K:38, KD:72, mD:4, WD:10 };
+function discCounts(cfg, engraved){
+  return engraved ? { K:cfg.KD, nD:cfg.nTh * cfg.mD } : { K:cfg.K, nD:cfg.nTh };
+}
+function discSpec(cfg, L, r95){
+  const c = discCounts(cfg, !!L);
+  c.radK = L ? buildRadKBands(c.K - 1, r95, L.bands, cfg.WD) : buildRadK(cfg.K - 1, r95, 1e9, -1e9);
+  return c;
+}
+const mkScratch = nTh => ({ sA:new Float32Array(nTh), sM:new Float32Array(nTh), sI:new Float32Array(nTh),
+                            prevM:new Float32Array(nTh), prevI:new Float32Array(nTh) });
+
+function baseCtx(P, nTh, K){
+  return { P, nTh, nD:nTh, K, ring:false, open:false, vr:null, engrave:true, jB:1, zBase:0, Ht:10, n:null, r95:10,
+    raster:null, depth:0, radK:new Float64Array(Math.max(1, K-1)), ...mkScratch(nTh) };
+}
+function firstInnerRow(zs){
+  let jB = 1; while (jB < zs.length - 1 && zs[jB] < 3) jB++;
+  return jB;
+}
+/* stessa regola di firstInnerRow applicata alle righe di esportazione */
+function exportFloorRow(h){
+  let j = 1; while (j < PE.nB - 1 && h * j / (PE.nB - 1) < 3) j++;
+  return j;
+}
+/* contesto per una qualsiasi risoluzione: PE per l'export, PS per la ricerca.
+   Con cfg = PE il percorso è identico alla versione precedente (STL invariati). */
+function makeCtxFor(cfg, P, profKey, raster, depth){
+  const n = neckSpec(P), rows = pieceRows(P, cfg);
+  const zs = new Float64Array(rows);
+  buildRows(P, n, cfg.nB, cfg.nN, zs);
+  const Bo = new Float64Array(rows), Bi = new Float64Array(rows);
+  const vr = ringFor(P, profKey);
+  clampProfile(P, n, profileFn(P, profKey), zs, new Float64Array(rows), Bo, Bi, vr);
+  const L = (raster && raster.ok) ? raster : null;
+  const ctx = baseCtx(P, cfg.nTh, cfg.K);
+  ctx.zs = zs; ctx.Bo = Bo; ctx.Bi = Bi;
+  ctx.n = n; ctx.open = !!n.open;
+  ctx.jB = firstInnerRow(zs); ctx.zBase = P.h; ctx.Ht = zs[rows-1];
+  ctx.r95 = r95Of(P, PROFILES[profKey](0), Bo[0]);
+  ctx.raster = L; ctx.depth = depth;
+  ctx.vr = vr ? { A:vr.A, ramp:vr.ramp, zTop:vr.zTop, cth: ringTable(vr, cfg.nTh) } : null;
+  Object.assign(ctx, discSpec(cfg, L, ctx.r95));
+  return ctx;
+}
+const makeExportCtx = (P, profKey, raster, depth) => makeCtxFor(PE, P, profKey, raster, depth);
+function makeRingCtx(P){
+  const n = neckSpec(P), base = 2.4;
+  const Ht = base + n.entry + P.turns * P.pitch + n.land, nTh = PE.nTh;
+  const list = [0, base], steps = Math.max(14, Math.round((Ht - base) / .2));
+  for (let k = 1; k <= steps; k++) list.push(base + (Ht - base) * k / steps);
+  const zs = Float64Array.from(list);
+  const ctx = baseCtx(P, nTh, 4);
+  ctx.zs = zs;
+  ctx.Bo = new Float64Array(zs.length).fill(n.rootR);
+  ctx.Bi = new Float64Array(zs.length).fill(n.neckBoreR);
+  ctx.n = n;
+  ctx.jB = 1; ctx.zBase = base; ctx.Ht = Ht; ctx.ring = true; ctx.engrave = false;
+  ctx.r95 = n.rootR;
+  for (let k = 0; k < 3; k++) ctx.radK[k] = n.rootR * (.3 + .3*k);
+  return ctx;
+}
+
+/* ================= STL binario ================= */
+function buildSTLBuffer(pos, ind, label){
+  const tris = ind.length / 3;
+  const buf = new ArrayBuffer(84 + tris*50), dv = new DataView(buf);
+  for (let i = 0; i < label.length && i < 80; i++) dv.setUint8(i, label.charCodeAt(i) & 0x7f);
+  dv.setUint32(80, tris, true);
+  let o = 84;
+  for (let p = 0; p < ind.length; p += 3){
+    const A=ind[p]*3, B=ind[p+1]*3, C=ind[p+2]*3;
+    const ax=pos[A],ay=pos[A+1],az=pos[A+2], bx=pos[B],by=pos[B+1],bz=pos[B+2], cx=pos[C],cy=pos[C+1],cz=pos[C+2];
+    let nx=(by-ay)*(cz-az)-(bz-az)*(cy-ay),
+        ny=(bz-az)*(cx-ax)-(bx-ax)*(cz-az),
+        nz=(bx-ax)*(cy-ay)-(by-ay)*(cx-ax);
+    const l = Math.hypot(nx,ny,nz) || 1; nx/=l; ny/=l; nz/=l;
+    dv.setFloat32(o,nx,true); dv.setFloat32(o+4,ny,true); dv.setFloat32(o+8,nz,true);
+    dv.setFloat32(o+12,ax,true); dv.setFloat32(o+16,ay,true); dv.setFloat32(o+20,az,true);
+    dv.setFloat32(o+24,bx,true); dv.setFloat32(o+28,by,true); dv.setFloat32(o+32,bz,true);
+    dv.setFloat32(o+36,cx,true); dv.setFloat32(o+40,cy,true); dv.setFloat32(o+44,cz,true);
+    dv.setUint16(o+48,0,true); o += 50;
+  }
+  return buf;
+}
+
+/* ================= export del piatto: più pezzi in un solo file ================= */
+function pieceMesh(P, profKey, logo){
+  const raster = buildLogoRaster(logo, targetR95(P, profKey));
+  const ctx = makeExportCtx(P, profKey, raster, logo.depth);
+  const pos = new Float32Array(vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+  const st = fillVessel(pos, ctx);
+  const ind = vesselIndex(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD);
+  const check = validateMesh(pos, ind, st.solidV + st.wallV);
+  const folds = discFolds(pos, ind, ctx);
+  if (folds){ check.ok = false; check.errors.push(folds + ' triangoli del fondo ripiegati'); }
+  return { ctx, pos, ind, st, check, raster };
+}
+/* STL: nessuna trasformazione nel formato, quindi le coordinate vengono traslate */
+function plateSTL(parts, label){
+  let tris = 0; for (const p of parts) tris += p.ind.length / 3;
+  const buf = new ArrayBuffer(84 + tris*50), dv = new DataView(buf);
+  for (let i = 0; i < label.length && i < 80; i++) dv.setUint8(i, label.charCodeAt(i) & 0x7f);
+  dv.setUint32(80, tris, true);
+  let o = 84;
+  for (const p of parts){
+    const { pos, ind, x, y } = p;
+    for (let q = 0; q < ind.length; q += 3){
+      const A=ind[q]*3, B=ind[q+1]*3, C=ind[q+2]*3;
+      const ax=pos[A]+x, ay=pos[A+1]+y, az=pos[A+2], bx=pos[B]+x, by=pos[B+1]+y, bz=pos[B+2], cx=pos[C]+x, cy=pos[C+1]+y, cz=pos[C+2];
+      let nx=(by-ay)*(cz-az)-(bz-az)*(cy-ay), ny=(bz-az)*(cx-ax)-(bx-ax)*(cz-az), nz=(bx-ax)*(cy-ay)-(by-ay)*(cx-ax);
+      const l = Math.hypot(nx,ny,nz) || 1; nx/=l; ny/=l; nz/=l;
+      dv.setFloat32(o,nx,true); dv.setFloat32(o+4,ny,true); dv.setFloat32(o+8,nz,true);
+      dv.setFloat32(o+12,ax,true); dv.setFloat32(o+16,ay,true); dv.setFloat32(o+20,az,true);
+      dv.setFloat32(o+24,bx,true); dv.setFloat32(o+28,by,true); dv.setFloat32(o+32,bz,true);
+      dv.setFloat32(o+36,cx,true); dv.setFloat32(o+40,cy,true); dv.setFloat32(o+44,cz,true);
+      dv.setUint16(o+48,0,true); o += 50;
+    }
+  }
+  return buf;
+}
+function runPlate(job){
+  const plan = platePlan(job.P, job.profKey, job.pieces || ['disp','tooth']);
+  const parts = [], errs = [];
+  let tris = 0, matVol = 0, secs = 0, Ht = 0;
+  for (const it of plan.items){
+    const m = pieceMesh(it.P, job.profKey, job.logo);
+    if (!m.check.ok) errs.push(pieceOf(it.P).name + ': ' + m.check.errors.join(' · '));
+    tris += m.check.tris; matVol += matVolOf(m.st); secs += printSeconds(matVolOf(m.st), rippleQ(m.pos, m.ctx)); Ht = Math.max(Ht, m.ctx.Ht);
+    const code = job.logo && job.logo.serial ? job.logo.serial + ' · ' : '';
+    parts.push({ name: code + pieceOf(it.P).name, pos:m.pos, ind:m.ind, x:it.x, y:it.y });
+  }
+  if (errs.length) return { ok:false, error:'mesh non valida · ' + errs.join(' | ') };
+  if (!plan.fits) return { ok:false, error:'i pezzi non stanno insieme sul piatto · ' + plan.why };
+  const label = 'VORTICE set: ' + parts.map(p => p.name).join(' + ');
+  const summary = { ok:true, check:{ tris }, plate:{ W:plan.W, D:plan.D, H:plan.H }, matVol, secs, Ht, tris, pieces:parts.length };
+  if (job.format === '3mf') return build3MF(parts, label).then(buffer => ({ ...summary, buffer, format:'3mf' }));
+  return { ...summary, buffer: plateSTL(parts, label), format:'stl' };
+}
+
+/* ================= 3MF =================
+   ZIP (deflate-raw quando il browser lo offre, altrimenti non compresso) con:
+   · 3D/3dmodel.model  — geometria standard, multi-oggetto, letta da qualsiasi slicer
+   · Metadata/Slic3r_PE.config      — ricetta per PrusaSlicer
+   · Metadata/project_settings.config — ricetta per OrcaSlicer / famiglia Bambu
+   Cura importa la sola geometria: le impostazioni vanno messe a mano. */
+const CRC_T = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++){ let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; }
+  return t;
+})();
+function crc32(buf){
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) c = CRC_T[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+async function deflateRaw(bytes){
+  if (typeof CompressionStream === 'undefined') return null;
+  try{
+    const cs = new CompressionStream('deflate-raw');
+    const w = cs.writable.getWriter(); w.write(bytes); w.close();
+    const parts = [], rd = cs.readable.getReader();
+    for (;;){ const { value, done } = await rd.read(); if (done) break; parts.push(value); }
+    let n = 0; for (const p of parts) n += p.length;
+    const out = new Uint8Array(n); let o = 0;
+    for (const p of parts){ out.set(p, o); o += p.length; }
+    return out;
+  }catch(_){ return null; }
+}
+async function zipArchive(entries){
+  const enc = new TextEncoder(), locals = [], dirs = [];
+  let offset = 0;
+  for (const e of entries){
+    const name = enc.encode(e.name), raw = typeof e.data === 'string' ? enc.encode(e.data) : e.data;
+    const def = await deflateRaw(raw);
+    const body = def && def.length < raw.length ? def : raw, method = body === def ? 8 : 0;
+    const crc = crc32(raw);
+    const lh = new Uint8Array(30 + name.length), dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0, true);
+    dv.setUint16(8, method, true); dv.setUint16(10, 0, true); dv.setUint16(12, 0x2821, true);   // data fissa
+    dv.setUint32(14, crc, true); dv.setUint32(18, body.length, true); dv.setUint32(22, raw.length, true);
+    dv.setUint16(26, name.length, true); dv.setUint16(28, 0, true);
+    lh.set(name, 30);
+    locals.push(lh, body);
+    const ch = new Uint8Array(46 + name.length), cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true); cv.setUint16(10, method, true); cv.setUint16(12, 0, true); cv.setUint16(14, 0x2821, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, body.length, true); cv.setUint32(24, raw.length, true);
+    cv.setUint16(28, name.length, true); cv.setUint32(42, offset, true);
+    ch.set(name, 46);
+    dirs.push(ch);
+    offset += lh.length + body.length;
+  }
+  let dirSize = 0; for (const d of dirs) dirSize += d.length;
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, dirs.length, true); ev.setUint16(10, dirs.length, true);
+  ev.setUint32(12, dirSize, true); ev.setUint32(16, offset, true);
+  let total = offset + dirSize + 22;
+  const out = new Uint8Array(total); let o = 0;
+  for (const p of locals){ out.set(p, o); o += p.length; }
+  for (const d of dirs){ out.set(d, o); o += d.length; }
+  out.set(end, o);
+  return out.buffer;
+}
+const xmlEsc = t => String(t).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
+/* parti: [{name, pos, ind, x, y}] — x,y in mm sul piatto (centro del pezzo) */
+function model3MF(parts, title){
+  const L = ['<?xml version="1.0" encoding="UTF-8"?>',
+    '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">',
+    `<metadata name="Application">VORTICE</metadata>`,
+    `<metadata name="Title">${xmlEsc(title)}</metadata>`,
+    '<resources>'];
+  parts.forEach((p, k) => {
+    L.push(`<object id="${k+1}" type="model" name="${xmlEsc(p.name)}"><mesh><vertices>`);
+    const v = [];
+    for (let i = 0; i < p.pos.length; i += 3)
+      v.push(`<vertex x="${p.pos[i].toFixed(4)}" y="${p.pos[i+1].toFixed(4)}" z="${p.pos[i+2].toFixed(4)}"/>`);
+    L.push(v.join(''), '</vertices><triangles>');
+    const t = [];
+    for (let i = 0; i < p.ind.length; i += 3)
+      t.push(`<triangle v1="${p.ind[i]}" v2="${p.ind[i+1]}" v3="${p.ind[i+2]}"/>`);
+    L.push(t.join(''), '</triangles></mesh></object>');
+  });
+  L.push('</resources>', '<build>');
+  parts.forEach((p, k) => L.push(`<item objectid="${k+1}" transform="1 0 0 0 1 0 0 0 1 ${(p.x||0).toFixed(3)} ${(p.y||0).toFixed(3)} 0"/>`));
+  L.push('</build>', '</model>');
+  return L.join('\n');
+}
+/* ricetta di stampa: stessi valori della scheda */
+const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6, pattern:'gyroid' };
+const slic3rConfig = () => [
+  '; ricetta VORTICE — tenuta al liquido affidata ai perimetri',
+  `layer_height = ${RECIPE.layer}`, `first_layer_height = ${RECIPE.first}`,
+  `perimeters = ${RECIPE.walls}`, `top_solid_layers = ${RECIPE.top}`, `bottom_solid_layers = ${RECIPE.bottom}`,
+  `fill_density = ${RECIPE.infill}%`, `fill_pattern = ${RECIPE.pattern}`,
+  'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + RECIPE.nozzle, ''].join('\n');
+const orcaConfig = () => JSON.stringify({
+  layer_height: String(RECIPE.layer), initial_layer_print_height: String(RECIPE.first),
+  wall_loops: String(RECIPE.walls), top_shell_layers: String(RECIPE.top), bottom_shell_layers: String(RECIPE.bottom),
+  sparse_infill_density: RECIPE.infill + '%', sparse_infill_pattern: RECIPE.pattern,
+  enable_support: '0', brim_type: 'no_brim', version: '1.0.0', from: 'VORTICE',
+}, null, 1);
+function build3MF(parts, title){
+  return zipArchive([
+    { name:'[Content_Types].xml', data:'<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="text/plain"/></Types>' },
+    { name:'_rels/.rels', data:'<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rel0" Target="/3D/3dmodel.model" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>' },
+    { name:'3D/3dmodel.model', data: model3MF(parts, title) },
+    { name:'Metadata/Slic3r_PE.config', data: slic3rConfig() },
+    { name:'Metadata/project_settings.config', data: orcaConfig() },
+  ]);
+}
+
+/* ================= verifica della mesh =================
+   Bloccanti: coordinate non finite, indici fuori range o ripetuti, bordi aperti,
+   bordi non-manifold, winding incoerente, volume ≤ 0 (normali rovesciate).
+   Informative: triangoli degeneri, vertici inutilizzati, scarto di volume. */
+function validateMesh(pos, ind, expectVol){
+  const nV = pos.length / 3, nT = ind.length / 3, errors = [];
+  for (let k = 0; k < pos.length; k++) if (!Number.isFinite(pos[k])){ errors.push('coordinate non finite'); break; }
+  const used = new Uint8Array(nV);
+  const keys = new Float64Array(nT * 3);
+  let bad = 0, degen = 0, vol = 0;
+  for (let t = 0, e = 0; t < nT; t++){
+    const a = ind[t*3], b = ind[t*3+1], c = ind[t*3+2];
+    if (a >= nV || b >= nV || c >= nV || a === b || b === c || a === c){ bad++; keys[e++] = -1; keys[e++] = -1; keys[e++] = -1; continue; }
+    used[a] = used[b] = used[c] = 1;
+    keys[e++] = a * nV + b; keys[e++] = b * nV + c; keys[e++] = c * nV + a;
+    const ax=pos[a*3],ay=pos[a*3+1],az=pos[a*3+2], bx=pos[b*3],by=pos[b*3+1],bz=pos[b*3+2], cx=pos[c*3],cy=pos[c*3+1],cz=pos[c*3+2];
+    const ux=bx-ax,uy=by-ay,uz=bz-az, vx=cx-ax,vy=cy-ay,vz=cz-az;
+    const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+    if (nx*nx + ny*ny + nz*nz < 1e-12) degen++;
+    vol += ax*(by*cz-bz*cy) + ay*(bz*cx-bx*cz) + az*(bx*cy-by*cx);
+  }
+  vol /= 6;
+  if (bad) errors.push(bad + ' triangoli con indici non validi');
+  keys.sort();
+  let dup = 0, open = 0;
+  const has = k => { let lo = 0, hi = keys.length - 1;
+    while (lo <= hi){ const m = (lo + hi) >> 1; if (keys[m] < k) lo = m + 1; else if (keys[m] > k) hi = m - 1; else return true; }
+    return false; };
+  for (let i = 0; i < keys.length; i++){
+    const k = keys[i]; if (k < 0) continue;
+    if (i > 0 && keys[i-1] === k){ dup++; continue; }
+    const a = Math.floor(k / nV), b = k - a * nV;
+    if (!has(b * nV + a)) open++;
+  }
+  if (dup)  errors.push(dup + ' bordi non-manifold o con winding incoerente');
+  if (open) errors.push(open + ' bordi aperti (mesh non chiusa)');
+  if (!(vol > 0)) errors.push('volume non positivo (normali rovesciate)');
+  let unused = 0; for (let v = 0; v < nV; v++) if (!used[v]) unused++;
+  const volErr = expectVol > 0 ? Math.abs(vol - expectVol) / expectVol : 0;
+  return { ok: errors.length === 0, errors, tris: nT, verts: nV, degen, unused, vol, volErr };
+}
+
+/* il fondo è un campo di altezze sul piano: ogni triangolo del disco e della cerniera
+   deve avere proiezione xy orientata verso il basso. Un segno opposto = fondo ripiegato. */
+function discFolds(pos, ind, ctx){
+  const rows = ctx.zs.length, nTh = ctx.nTh, nD = ctx.nD, m = nD / nTh;
+  const t0 = (rows-1)*2*nTh + (rows-ctx.jB-1)*2*nTh;
+  const t1 = t0 + nD + (ctx.K-2)*2*nD + nTh*(m+1);
+  let f = 0;
+  for (let t = t0; t < t1; t++){
+    const a = ind[t*3]*3, b = ind[t*3+1]*3, c = ind[t*3+2]*3;
+    if ((pos[b]-pos[a])*(pos[c+1]-pos[a+1]) - (pos[b+1]-pos[a+1])*(pos[c]-pos[a]) >= 0) f++;
+  }
+  return f;
+}
+
+/* ================= materiale e tempo di stampa =================
+   Tarati su 8 design affettati con PrusaSlicer 2.8.1 (ugello 0,4 · layer 0,2 ·
+   4 perimetri · 5+5 solidi · gyroid 6% · 45/25/60 mm/s · accelerazione 800):
+   · materiale = parete + 0,67·base  (la base non è piena: 5 layer solidi + gyroid)
+   · tempo = V·(0,394 + 0,353·(Q−1)), con Q = ondulazione del contorno (1 = cerchio).
+   Il termine in Q coglie il rallentamento su costole, torsione e affilatura: la
+   portata reale scende da 2,5 a 1,1 mm³/s. Errore sui casi di taratura: medio 8%,
+   massimo 14%. Il modello volumetrico precedente sbagliava fino a −60%. */
+const MAT_BASE_K = .672, T_V = .394, T_Q = .353;
+const matVolOf = st => st.wallV + MAT_BASE_K * st.solidV;
+const printSeconds = (matVol, Q) => matVol * (T_V + T_Q * Math.max(0, (Q || 1) - 1));
+/* ondulazione: lunghezza del contorno esterno diviso quella del cerchio equivalente */
+function rippleQ(pos, ctx){
+  const nTh = ctx.nTh, zs = ctx.zs, hB = ctx.P.h;
+  let L = 0, C = 0;
+  for (let j = 1; j < zs.length; j++){
+    if (zs[j] > hB) break;
+    const o = j * nTh * 3;
+    let l = 0, rm = 0;
+    for (let i = 0; i < nTh; i++){
+      const a = o + i*3, b = o + ((i + 1) % nTh)*3;
+      l += Math.hypot(pos[b] - pos[a], pos[b+1] - pos[a+1]);
+      rm += Math.hypot(pos[a], pos[a+1]);
+    }
+    L += l; C += 2 * Math.PI * rm / nTh;
+  }
+  return C > 0 ? L / C : 1;
+}
+
+/* ================= valutatore veloce per la ricerca =================
+   Stessa geometria dell'export a risoluzione ridotta: niente incisione, mesh mai
+   indicizzata, solo le statistiche di fillVessel. Costa ~0,3 ms per candidato. */
+/* tarata sul confronto con l'export: capacità ±1,4%, grammi ±2,5%, Ø ±0,5 mm */
+const PS = { nTh:48, nB:160, nN:40, K:6, KD:6, mD:1, WD:10 };
+const scratchPS = { pos:null, n:0 };
+function evalPiece(P, profKey){
+  const ctx = makeCtxFor(PS, P, profKey, null, 0);
+  const r95 = ctx.r95;
+  const need = vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3;
+  if (!scratchPS.pos || scratchPS.pos.length < need) scratchPS.pos = new Float32Array(need);
+  const st = fillVessel(scratchPS.pos, ctx);
+  const matVol = matVolOf(st), Q = rippleQ(scratchPS.pos, ctx);
+  return { capML: st.capV / 1000, matVol, Q, grams: matVol * 1.24e-3, minutes: printSeconds(matVol, Q) / 60,
+    Ht: ctx.Ht, D: st.maxR * 2, R: st.maxR, tilt: Math.atan(st.maxW) * 180 / Math.PI, minRi: st.minRi, r95 };
+}
+/* espressività del segnale: intensità stampabile × somiglianza della curva al dato */
+function evalSignal(P, profKey){
+  if (!(P.amp > 0) || !P.sig) return null;
+  const raw = normZero(sigRaw(P.sig));
+  if (!raw) return null;
+  const ring = P.sig.kind === 'ring';
+  const fit = ring ? ringFor(P, profKey) : fitSignalFor(P, profKey);
+  if (!fit || !(fit.A > 0)) return { A:0, corr:0, score:0 };
+  const N = 128;
+  let sx=0, sy=0, sxx=0, syy=0, sxy=0;
+  for (let k = 0; k < N; k++){
+    const x = ring ? shapeCirc(raw, k/N*TAU) : shapeAt(raw, k/(N-1)*SIG_SPAN);
+    const y = ring ? shapeCirc(fit.shape, k/N*TAU) : shapeAt(fit.shape, k/(N-1)*SIG_SPAN);
+    sx+=x; sy+=y; sxx+=x*x; syy+=y*y; sxy+=x*y;
+  }
+  const cov = sxy - sx*sy/N, vx = sxx - sx*sx/N, vy = syy - sy*sy/N;
+  const corr = vx > 1e-9 && vy > 1e-9 ? Math.max(0, cov / Math.sqrt(vx*vy)) : 0;
+  return { A: fit.A, corr, score: corr * fit.A / Math.max(1e-6, fit.Areq) };
+}
+/* un design completo (set o pezzo singolo) rispetto ai vincoli dell'utente */
+function evalDesign(setP, profKey, opt){
+  const keys = opt.plate ? ['disp','tooth'] : [opt.piece || 'disp'];
+  const parts = keys.map(k => { const P = piecePar(setP, k); return { key:k, P, ...evalPiece(P, profKey) }; });
+  const main = parts[0];
+  let grams = 0, minutes = 0, Ht = 0, tilt = 0, minRi = 1e9;
+  for (const p of parts){ grams += p.grams; minutes += p.minutes; Ht = Math.max(Ht, p.Ht); tilt = Math.max(tilt, p.tilt); minRi = Math.min(minRi, p.minRi); }
+  const plan = opt.plate ? platePlan(setP, profKey, keys) : null;
+  const fitsBed = opt.plate ? plan.fits : main.D <= BED - 2*BED_MARGIN;
+  const sig = evalSignal(piecePar(setP, keys[0]), profKey);
+  /* incisione: il fondo deve restare abbastanza grande per firma e codice
+     (solo impaginazione, nessun raster: costa pochi microsecondi) */
+  let engrave = 1;
+  if (opt.logo && opt.logo.on){
+    const rr = main.r95 * .98;          // margine: alla risoluzione di ricerca r95 ha ~1% di errore
+    const L = layoutLogo(opt.logo, rr);
+    if (L.segs.length && !L.ok) engrave = 0;
+    else if (opt.logo.serial && !layoutSerial(opt.logo, opt.logo.serial, rr, L.segs.length ? L : null).ok) engrave = .6;
+  }
+  const V = [];                                     // violazioni, in unità confrontabili
+  if (!fitsBed) V.push(1);
+  if (Ht > Z_MAX_CORE) V.push((Ht - Z_MAX_CORE) / 50);
+  if (tilt > 45) V.push((tilt - 45) / 10);
+  if (minRi * 2 < 10) V.push((10 - minRi*2) / 10);
+  if (opt.capMin && main.capML < opt.capMin) V.push((opt.capMin - main.capML) / Math.max(50, opt.capMin));
+  if (opt.capMax && main.capML > opt.capMax) V.push((main.capML - opt.capMax) / Math.max(50, opt.capMax));
+  if (opt.hMax && Ht > opt.hMax) V.push((Ht - opt.hMax) / 30);
+  if (opt.gMax && grams > opt.gMax) V.push((grams - opt.gMax) / Math.max(20, opt.gMax * .2));
+  if (opt.tMax && minutes > opt.tMax * 60) V.push((minutes - opt.tMax * 60) / 60);
+  let viol = 0; for (const v of V) viol += v;
+  const goal = opt.goal === 'cap' ? main.capML / 1500
+             : opt.goal === 'time' ? 1 - Math.min(1, minutes / 900)
+             : sig ? sig.score : main.capML / 1500;     // fedeltà, o capacità se non c'è segnale
+  return { parts, main, plan, grams, minutes, Ht, tilt, minRi, capML: main.capML, fitsBed, sig, viol, engrave,
+    /* l'incisione non è un vincolo ma pesa: a parità di risultato vince il fondo che la contiene */
+    score: viol > 0 ? -viol : goal * (.75 + .25 * engrave) };
+}
+const Z_MAX_CORE = 250;
+
+/* ================= progettazione inversa =================
+   Ricerca deterministica (seme fisso): campionamento largo, poi discesa per
+   coordinate sui migliori semi. I vincoli sono penalità; a parità di fattibilità
+   vince l'obiettivo scelto. Il vincitore viene riverificato alla risoluzione
+   dell'export, perché il valutatore veloce ha un margine di qualche punto percentuale. */
+const SEARCH_VARS = [
+  { k:'h',      lo:120, hi:235, step:1 },
+  { k:'r',      lo:30,  hi:100, step:1 },
+  { k:'petals', lo:3,   hi:9,   step:1 },
+  { k:'twist',  lo:0,   hi:360, step:5 },
+  { k:'sharp',  lo:0,   hi:1,   step:.02 },
+];
+const PROF_KEYS = ['clessidra','fiamma','tornado','bulbo'];
+const SEARCH_MARGIN = .03;
+function quant(v, va){ return Math.min(va.hi, Math.max(va.lo, Math.round(v / va.step) * va.step)); }
+function runSearch(job){
+  const user = job.opt || {}, base = job.P;
+  /* margine di sicurezza: il valutatore veloce ha ±3%, quindi cerco un po' più stretto
+     dei limiti richiesti, così il controllo esatto non li supera */
+  const M = 1 - SEARCH_MARGIN, opt = { ...user,
+    gMax: user.gMax ? user.gMax * M : 0,
+    tMax: user.tMax ? user.tMax * M : 0,
+    hMax: user.hMax ? user.hMax - 2 : 0,
+    capMin: user.capMin ? user.capMin / M : 0 };
+  let seed = 20260918 >>> 0;
+  const rnd = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
+  let evals = 0;
+  const score = cand => {
+    evals++;
+    const P = { ...base, ...cand.v, piece:'disp' };
+    const e = evalDesign(P, cand.prof, opt);
+    return { ...cand, e, s:e.score };
+  };
+  const seeds = [];
+  const N1 = opt.wide ? 900 : 600;
+  for (let i = 0; i < N1; i++){
+    const v = {};
+    for (const va of SEARCH_VARS) v[va.k] = quant(va.lo + rnd() * (va.hi - va.lo), va);
+    seeds.push(score({ v, prof: PROF_KEYS[Math.floor(rnd() * 4)] }));
+  }
+  /* il design attuale è sempre un candidato: la ricerca non può peggiorarlo */
+  for (const prof of PROF_KEYS){
+    const v = {}; for (const va of SEARCH_VARS) v[va.k] = base[va.k];
+    seeds.push(score({ v, prof }));
+  }
+  seeds.sort((a, b) => b.s - a.s);
+  const out = [];
+  for (const sd of seeds.slice(0, 10)){
+    let cur = sd;
+    for (let pass = 0; pass < 3; pass++){
+      const shrink = [1, .45, .2][pass];
+      for (const va of SEARCH_VARS){
+        const span = Math.max(va.step, (va.hi - va.lo) * .18 * shrink);
+        for (const d of [-span, span, -span/3, span/3]){
+          const v = { ...cur.v }; v[va.k] = quant(v[va.k] + d, va);
+          if (v[va.k] === cur.v[va.k]) continue;
+          const t = score({ v, prof: cur.prof });
+          if (t.s > cur.s) cur = t;
+        }
+      }
+    }
+    out.push(cur);
+  }
+  out.sort((a, b) => b.s - a.s);
+  /* risultati distinti: scarta i quasi-uguali */
+  const picks = [];
+  for (const c of out){
+    if (picks.some(p => p.prof === c.prof && Math.abs(p.v.h - c.v.h) < 8 && Math.abs(p.v.r - c.v.r) < 5
+        && Math.abs(p.v.petals - c.v.petals) <= 1 && Math.abs(p.v.twist - c.v.twist) < 30)) continue;
+    picks.push(c);
+    if (picks.length === 3) break;
+  }
+  /* verifica alla risoluzione dell'export */
+  const results = picks.map(c => {
+    const keys = opt.plate ? ['disp','tooth'] : [opt.piece || 'disp'];
+    const setP = { ...base, ...c.v };
+    let grams = 0, minutes = 0, Ht = 0, tilt = 0, capML = 0;
+    keys.forEach((k, i) => {
+      const P = piecePar(setP, k);
+      const ctx = makeExportCtx(P, c.prof, null, 0);
+      const pos = new Float32Array(vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+      const st = fillVessel(pos, ctx);
+      const mv = matVolOf(st);
+      grams += mv * 1.24e-3; minutes += printSeconds(mv, rippleQ(pos, ctx)) / 60; Ht = Math.max(Ht, ctx.Ht); tilt = Math.max(tilt, Math.atan(st.maxW) * 180 / Math.PI);
+      if (i === 0) capML = st.capV / 1000;
+    });
+    const plan = opt.plate ? platePlan(setP, c.prof, keys) : null;
+    /* esito sui valori ESATTI, non su quelli della ricerca */
+    const bad = [];
+    if (plan ? !plan.fits : c.e.main.D > BED - 2*BED_MARGIN) bad.push('non entra nel piatto');
+    if (Ht > Z_MAX_CORE) bad.push('oltre la corsa Z');
+    if (tilt > 45) bad.push(`pareti ${tilt.toFixed(0)}°`);
+    if (user.hMax && Ht > user.hMax) bad.push(`h ${Math.round(Ht)} > ${user.hMax} mm`);
+    if (user.gMax && grams > user.gMax) bad.push(`${Math.round(grams)} > ${user.gMax} g`);
+    if (user.tMax && minutes > user.tMax * 60) bad.push(`${(minutes/60).toFixed(1)} > ${user.tMax} h`);
+    if (user.capMin && capML < user.capMin) bad.push(`${Math.round(capML)} < ${user.capMin} ml`);
+    if (user.capMax && capML > user.capMax) bad.push(`${Math.round(capML)} > ${user.capMax} ml`);
+    return { v:c.v, prof:c.prof, ok: bad.length === 0, bad,
+      engrave: c.e.engrave,
+      exact:{ capML, grams, minutes, Ht, tilt, fits: plan ? plan.fits : c.e.fitsBed, layout: plan && plan.layout,
+              W: plan && plan.W, D: plan ? plan.D : c.e.main.D },
+      sig: c.e.sig ? { corr:c.e.sig.corr, A:c.e.sig.A } : null };
+  });
+  return { ok:true, search:true, evals, results };
+}
+
+/* ================= piatto condiviso =================
+   Ingombro di un pezzo senza costruire la mesh: raggio massimo del guscio
+   (costole al colmo + eventuale voce) e altezza totale. */
+const BED = 220, BED_MARGIN = 5, PIECE_GAP = 6;
+function pieceExtent(P, profKey){
+  const n = neckSpec(P), rows = pieceRows(P, PE), zs = new Float64Array(rows);
+  buildRows(P, n, PE.nB, PE.nN, zs);
+  const Bo = new Float64Array(rows), Bi = new Float64Array(rows);
+  const vr = ringFor(P, profKey);
+  clampProfile(P, n, profileFn(P, profKey), zs, new Float64Array(rows), Bo, Bi, vr);
+  const a = P.sharp*.42, bb = P.sharp*P.sharp*.10;
+  let R = 0;
+  for (let j = 0; j < rows; j++){
+    const t = Math.min(1, zs[j] / P.h), u = Math.min(1, Math.max(0, (t - .6) / .4));
+    const fade = n.open ? 1 : 1 - u*u*(3 - 2*u);
+    const ring = vr ? vr.A * ringBand(zs[j], vr)[0] : 0;
+    R = Math.max(R, Bo[j] * (1 + fade * (a - bb + ring)));
+  }
+  return { R, H: zs[rows-1], name: pieceOf(P).name };
+}
+/* disposizione: prima affiancati lungo X (più leggibile), altrimenti in diagonale
+   agli angoli opposti, dove un piatto quadrato offre molto più spazio */
+function platePlan(setP, profKey, keys){
+  const items = keys.map(k => { const P = piecePar(setP, k); const e = pieceExtent(P, profKey); return { key:k, P, ...e }; });
+  const free = BED - 2 * BED_MARGIN, half = free / 2;
+  let H = 0; for (const it of items) H = Math.max(H, it.H);
+  const tooBig = items.find(it => 2 * it.R > free);
+  if (tooBig) return { items, H, free, fits:false, why:`${tooBig.name}: Ø ${Math.ceil(2*tooBig.R)} mm su ${free} utili` };
+  let W = 0; for (const it of items) W += 2 * it.R;
+  W += PIECE_GAP * (items.length - 1);
+  if (W <= free){                                   // affiancati e centrati
+    let x = -W / 2;
+    for (const it of items){ it.x = x + it.R; it.y = 0; x += 2 * it.R + PIECE_GAP; }
+    return { items, H, free, fits:true, layout:'fila', W, D: Math.max(...items.map(i => 2*i.R)) };
+  }
+  if (items.length === 2){                          // diagonale: angoli opposti
+    const [a, b] = items;
+    const pa = half - a.R, pb = half - b.R;
+    const dist = Math.hypot(pa + pb, pa + pb);
+    if (dist >= a.R + b.R + PIECE_GAP){
+      a.x = -pa; a.y = -pa; b.x = pb; b.y = pb;
+      return { items, H, free, fits:true, layout:'diagonale',
+        W: Math.max(a.x + a.R, b.x + b.R) - Math.min(a.x - a.R, b.x - b.R),
+        D: Math.max(a.y + a.R, b.y + b.R) - Math.min(a.y - a.R, b.y - b.R) };
+    }
+    return { items, H, free, fits:false, W, why:`servono ${Math.ceil(a.R + b.R + PIECE_GAP)} mm tra i centri, ne restano ${Math.floor(dist)} in diagonale` };
+  }
+  return { items, H, free, fits:false, W, why:`servono ${Math.ceil(W)} mm in fila su ${free} utili` };
+}
+
+/* ================= lavoro di esportazione completo ================= */
+function runExport(job){
+  if (job.kind === 'search') return runSearch(job);
+  if (job.kind === 'plate') return runPlate(job);
+  const P = job.P;
+  let ctx, label, st = null, raster = null;
+  if (job.kind === 'ring'){
+    ctx = makeRingCtx(P);
+    label = 'VORTICE spool di prova, filetto esterno destro';
+  } else {
+    raster = buildLogoRaster(job.logo, targetR95(P, job.profKey));
+    ctx = makeExportCtx(P, job.profKey, raster, job.logo.depth);
+    const code = typeof job.logo.serial === 'string' && job.logo.serial ? job.logo.serial + ' ' : '';
+    label = 'VORTICE ' + code + (pieceOf(P).neck
+      ? 'dispenser cavo, collo GPI esterno, firma incisa sul fondo'
+      : pieceOf(P).name.toLowerCase() + ' aperto, guscio cavo, firma incisa sul fondo');
+  }
+  const pos = new Float32Array(vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+  st = fillVessel(pos, ctx);
+  const ind = vesselIndex(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD);
+  const check = validateMesh(pos, ind, job.kind === 'ring' ? 0 : st.solidV + st.wallV);
+  const folds = discFolds(pos, ind, ctx);
+  if (folds){ check.ok = false; check.errors.push(folds + ' triangoli del fondo ripiegati (disco oltre la parete)'); }
+  if (!check.ok) return { ok:false, error:'mesh non valida: ' + check.errors.join(' · '), check };
+  if (job.format === '3mf'){
+    const name = (job.logo && job.logo.serial ? job.logo.serial + ' · ' : '') + pieceOf(P).name;
+    return build3MF([{ name, pos, ind, x:0, y:0 }], label).then(buffer => ({
+      ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi,
+      tilt: Math.atan(st.maxW) * 180 / Math.PI, depth: ctx.Ht - ctx.zs[ctx.jB],
+      serialOk: !!(raster && raster.serialOk), format:'3mf',
+    }));
+  }
+  const buffer = buildSTLBuffer(pos, ind, label);
+  return { ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, tilt: Math.atan(st.maxW) * 180 / Math.PI,
+           depth: ctx.Ht - ctx.zs[ctx.jB], serialOk: !!(raster && raster.serialOk) };
+}
+
+G.VCore = { TAU, sstep, clamp, PROFILES, RRES, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
+  buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, layoutSerial, fillVessel, vesselVerts, vesselTriCount,
+  writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow,
+  makeExportCtx, makeRingCtx, buildSTLBuffer, validateMesh, discFolds, r95Of, runExport, PIECES, pieceOf, piecePar, pieceRows,
+  matVolOf, printSeconds, rippleQ, build3MF, model3MF, zipArchive, RECIPE, BED, BED_MARGIN, PIECE_GAP, pieceExtent, platePlan, runPlate,
+  PS, makeCtxFor, evalPiece, evalSignal, evalDesign, runSearch, SEARCH_VARS,
+  SIG_N, SIG_SPAN, SIG_SIGMA_MAX, SIG_TOL, B64U, sigValid, sigEncode, sigRaw, smoothNorm,
+  shapeAt, sigWeight, sigRig, sigResidual, fitSignal, fitSignalFor, fitProfile, profileFn,
+  RING_SIGMA_MAX, RING_TOP, ringBand, gaussCirc, shapeCirc, ringRamp, ringTable, fitRing, ringFor, normZero, clampProfile };
+
+/* dentro un Worker: risponde ai lavori di esportazione */
+if (typeof WorkerGlobalScope !== 'undefined' && G instanceof WorkerGlobalScope){
+  G.onmessage = e => {
+    const { id, job } = e.data;
+    try{
+      const r = runExport(job);
+      Promise.resolve(r).then(v => G.postMessage({ id, ...v }, v.buffer ? [v.buffer] : []))
+        .catch(err => G.postMessage({ id, ok:false, error: String(err && err.message || err) }));
+    }catch(err){
+      G.postMessage({ id, ok:false, error: String(err && err.message || err) });
+    }
+  };
+}
+})(typeof self !== 'undefined' ? self : globalThis);
+</script>
+
+<script type="module">
+/* ================= caricamento Three.js con CDN di riserva =================
+   Percorso 1: importmap → jsDelivr. Percorso 2: esm.sh (self-contained, riscrive
+   internamente i propri import). Se entrambi falliscono (rete bloccata/proxy
+   aziendale) viene mostrato un banner chiaro invece di fallire in silenzio. */
+const $ = id => document.getElementById(id);
+function fatal(msg){
+  $('fatalMsg').innerHTML = msg;
+  $('fatal').style.display = 'flex';
+}
+window.addEventListener('error', e => {
+  if (!$('fatal').style.display || $('fatal').style.display === 'none')
+    fatal((e.message || 'Errore inatteso') + '<br><br>Se il problema persiste, ricarica la pagina.');
+});
+
+let THREE, OrbitControls, RoomEnvironment;
+{
+  const routes = [
+    { lib:'three', addons:'three/addons/' },
+    { lib:'https://esm.sh/three@0.160.0',
+      addons:'https://esm.sh/three@0.160.0/examples/jsm/' },
+  ];
+  let ok = false, lastErr = null;
+  for (const r of routes){
+    try{
+      THREE = await import(r.lib);
+      OrbitControls = (await import(r.addons + 'controls/OrbitControls.js')).OrbitControls;
+      RoomEnvironment = (await import(r.addons + 'environments/RoomEnvironment.js')).RoomEnvironment;
+      ok = true; break;
+    }catch(err){ lastErr = err; THREE = undefined; }
+  }
+  if (!ok){
+    fatal('Impossibile caricare la libreria 3D (Three.js).<br><br>' +
+      'Cause tipiche: rete aziendale con proxy che blocca le CDN ' +
+      '(cdn.jsdelivr.net / esm.sh), o assenza di connessione.<br><br>' +
+      'Apri questo file su una rete che consenta l\'accesso alle CDN, ' +
+      'oppure scarica Three.js in locale e adatta i percorsi negli import.');
+    throw lastErr || new Error('load');
+  }
+}
+
+if (!self.VCore){ fatal('Nucleo geometrico non caricato.'); throw new Error('vcore'); }
+const { TAU, PROFILES, PIECES, piecePar, pieceOf, platePlan, clamp, neckSpec, buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, fillVessel,
+  vesselVerts, vesselTriCount, writeVesselIndex, PN, PE, discCounts, discSpec, r95Of,
+  SIG_N, SIG_SPAN, SIG_SIGMA_MAX, sigEncode, sigRaw, smoothNorm, shapeAt, sigWeight, fitSignal, fitProfile,
+  fitRing, ringTable, shapeCirc, normZero, baseCtx, firstInnerRow, exportFloorRow,
+  runExport } = VCore;
+
+/* ================= preset e norme ================= */
+const PRESETS = {
+  aureo:    { h:185, r:62, petals:6, twist:60, sharp:.36, profile:'clessidra' },
+  tempesta: { h:225, r:58, petals:5, twist:70, sharp:.50, profile:'tornado'   },
+  fiamma:   { h:170, r:66, petals:7, twist:70, sharp:.38, profile:'fiamma'    },
+  marea:    { h:155, r:58, petals:9, twist:30, sharp:.28, profile:'bulbo'     },
+};
+const THREAD_STD = {
+  '24/410': { d:24.2, p:3.18, t:1.5 },
+  '24/415': { d:24.2, p:3.18, t:2.0 },
+  '28/410': { d:28.2, p:3.18, t:1.5 },
+};
+const THREAD_DEFAULT = '28/410';             // unica fonte del filetto di default
+const Z_MAX = 250;
+
+/* ================= stato con morphing continuo ================= */
+const TD = THREAD_STD[THREAD_DEFAULT];
+const cur = { h:2, r:6, petals:6, twist:0, sharp:0, w:2.4, thD:TD.d, pitch:TD.p, turns:TD.t, amp:0 };
+const tgt = { ...PRESETS.aureo, w:2.4, thD:TD.d, pitch:TD.p, turns:TD.t, amp:0, sig:null };
+
+/* segnale personale: stato UI. In anteprima la forma adattata si ricalcola sullo stato
+   animato (cur) con la stessa funzione dell'export; a riposo coincide con l'STL.
+   I cambi di forma (nuovo dato, verso, inversione) entrano facendo ricrescere l'intensità. */
+/* pezzo del set: cur/tgt sono il DNA, curP/tgtP le misure del pezzo scelto */
+let piece = 'disp', plateMode = false;
+const PLATE_PIECES = ['disp', 'tooth'];
+const pieceK = { h:1, r:1 };            // fattori animati: il cambio pezzo è una transizione, non un salto
+const curP = piecePar(cur, piece), tgtP = piecePar(tgt, piece);
+function syncPieceP(){
+  Object.assign(tgtP, piecePar(tgt, piece));
+  Object.assign(curP, cur, { piece,
+    h: clamp(cur.h * pieceK.h, 40, 235),
+    r: clamp(cur.r * pieceK.r, 20, 110),
+    twist: cur.twist * pieceK.h });     // stessa inclinazione d'elica in tutto il set
+}
+const sig = { on:false, src:'gpx', q:'', amp:.2, smooth:.15, rev:false, inv:false, meta:'' };
+const sigStore = { gpx:null, voce:null };          // ultimo dato per fonte: cambiare scheda non lo perde
+let sigPrev = null;                                 // ultima specifica attiva: serve anche alla dissolvenza in spegnimento
+const sigActive = () => sig.on && !!sig.q;
+/* GPX → silhouette in quota; voce → anello attorno alla circonferenza */
+function sigSpec(){ return { q:sig.q, smooth:sig.smooth, rev:sig.rev, inv:sig.inv, kind: sig.src === 'voce' ? 'ring' : 'sil' }; }
+function syncSigTarget(regrow){
+  if (sigActive()){
+    const spec = sigSpec();
+    if (regrow && sigPrev && (sigPrev.q !== spec.q || sigPrev.rev !== spec.rev || sigPrev.inv !== spec.inv || sigPrev.kind !== spec.kind)) cur.amp = 0;
+    sigPrev = spec;
+  }
+  tgt.amp = sigActive() ? sig.amp : 0;
+  tgt.sig = sigActive() ? sigSpec() : null;
+}
+let lastFit = null;
+/* profilo dell'anteprima: stessa funzione dell'export (fitSignal + fitProfile) sul profilo in dissolvenza */
+let lastRing = null;
+function previewProfile(){
+  lastFit = (curP.amp > 0 && sigPrev && sigPrev.kind !== 'ring') ? fitSignal(curP, profAt, sigPrev, curP.amp) : null;
+  return fitProfile(profAt, lastFit);
+}
+let profFrom = PROFILES.clessidra, profTo = profFrom, profBlend = 1, profKey = 'clessidra';
+let smoothMode = true, presetKey = 'aureo', intro = true;
+const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+const profAt = t => profBlend >= 1 ? profTo(t)
+  : profFrom(t) + (profTo(t) - profFrom(t)) * ease(profBlend);
+
+function snapshotProfile(){
+  if (profBlend >= 1) return profTo;
+  const f = profFrom, g = profTo, e = ease(profBlend);
+  return t => f(t) + (g(t) - f(t)) * e;
+}
+function setProfile(key){
+  profFrom = snapshotProfile();
+  profTo = PROFILES[key];
+  profKey = key;
+  profBlend = 0;
+}
+
+/* ================= logo inciso: stato ================= */
+const logo = { on:true, text:'Made by Umberto Molteni (2026)', size:7, depth:.8, arc:true, rot:0, sn:true, serial:'' };
+let logoRaster = null;
+function buildLogoRaster(){
+  logo.serial = logo.sn ? designCode() : '';
+  syncPieceP();
+  logoRaster = VCore.buildLogoRaster(logo, targetR95(tgtP, profKey));
+}
+const engravedMesh = () => !!(logo.on && logoRaster && logoRaster.ok);
+
+/* ================= contesto di anteprima ================= */
+const rowsPrev = PN.nB + PN.nN;
+const ctxPrev = baseCtx(curP, PN.nTh, PN.K);
+const zsBuf = new Float64Array(rowsPrev), BoBuf = new Float64Array(rowsPrev), BiBuf = new Float64Array(rowsPrev);
+/* viste della lunghezza giusta: senza collo le righe sono solo quelle del corpo */
+function setPreviewRows(rows){
+  if (ctxPrev.zs && ctxPrev.zs.length === rows) return;
+  ctxPrev.zs = zsBuf.subarray(0, rows); ctxPrev.Bo = BoBuf.subarray(0, rows); ctxPrev.Bi = BiBuf.subarray(0, rows);
+}
+setPreviewRows(rowsPrev);
+
+/* ================= scena Three.js (mondo Y-up, dati mesh Z-up) ================= */
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.02;
+renderer.localClippingEnabled = true;
+stage.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f0e0c);
+scene.fog = new THREE.Fog(0x0f0e0c, 620, 1500);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), .04).texture;
+
+const camera = new THREE.PerspectiveCamera(40, 1, 1, 3000);
+const camHome = new THREE.Vector3(235, 175, 300);
+camera.position.set(430, 330, 520);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = .06;
+controls.enablePan = false;
+controls.minDistance = 110; controls.maxDistance = 980;
+controls.maxPolarAngle = Math.PI * .72;
+controls.autoRotate = true; controls.autoRotateSpeed = 1.1;
+controls.target.set(0, 70, 0);
+controls.addEventListener('start', () => {
+  intro = false;
+  if (controls.autoRotate){ controls.autoRotate = false; $('tSpin').classList.remove('on'); }
+});
+
+function plateTexture(){
+  const S = 1024, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.fillStyle = '#141210'; g.fillRect(0, 0, S, S);
+  const step = S/22;
+  for (let i = 0; i <= 22; i++){
+    const p = Math.round(i*step) + .5;
+    g.strokeStyle = i % 5 === 0 ? 'rgba(235,225,210,.10)' : 'rgba(235,225,210,.04)';
+    g.beginPath(); g.moveTo(p,0); g.lineTo(p,S); g.stroke();
+    g.beginPath(); g.moveTo(0,p); g.lineTo(S,p); g.stroke();
+  }
+  g.strokeStyle = 'rgba(235,225,210,.22)'; g.lineWidth = 2; g.strokeRect(1,1,S-2,S-2);
+  g.strokeStyle = 'rgba(255,106,43,.5)';
+  g.beginPath(); g.moveTo(S/2-26,S/2); g.lineTo(S/2+26,S/2); g.moveTo(S/2,S/2-26); g.lineTo(S/2,S/2+26); g.stroke();
+  g.fillStyle = 'rgba(235,225,210,.28)'; g.font = '500 22px monospace';
+  g.fillText('ELEGOO NEPTUNE 3 PRO', 34, S-40);
+  g.textAlign = 'right'; g.fillText('220 × 220', S-34, S-40);
+  const tx = new THREE.CanvasTexture(c);
+  tx.anisotropy = 8; tx.colorSpace = THREE.SRGBColorSpace;
+  return tx;
+}
+const plateMat = new THREE.MeshStandardMaterial({ roughness:.95, metalness:0 });
+plateMat.map = plateTexture();
+
+const plate = new THREE.Mesh(new THREE.PlaneGeometry(220,220), plateMat);
+plate.rotation.x = -Math.PI/2; plate.receiveShadow = true; scene.add(plate);
+const bed = new THREE.Mesh(new THREE.BoxGeometry(229,7,229),
+  new THREE.MeshStandardMaterial({ color:0x0a0908, roughness:.9 }));
+bed.position.y = -3.6; scene.add(bed);
+
+const key = new THREE.DirectionalLight(0xfff0dd, 1.5);
+key.position.set(170, 330, 130); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+const sc = key.shadow.camera;
+sc.left=-240; sc.right=240; sc.top=280; sc.bottom=-140; sc.near=40; sc.far=900;
+sc.updateProjectionMatrix();
+key.shadow.bias = -3e-4; key.shadow.normalBias = 2.2;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x9db4c8, .45);
+rim.position.set(-260, 150, -240); scene.add(rim);
+const hemi = new THREE.HemisphereLight(0x59503f, 0x0c0b09, .35);
+scene.add(hemi);
+
+/* luce del fondo: attiva solo con la camera sotto il piatto.
+   Resta sempre nella scena (intensità 0 sopra): cambiare visible modificherebbe il
+   numero di luci e forzerebbe la ricompilazione degli shader (scatto visibile).
+   Radente (EL ≈ 34° sotto l'orizzonte) e sfalsata di AZ rispetto alla camera:
+   le pareti dei solchi prendono ombra/luce e l'incisione si legge. Senza ombre. */
+const UNDER = { I:2.1, AZ:.7, EL:.6, FADE:40, R:500 };
+const underLight = new THREE.DirectionalLight(0xfff0e2, 0);
+scene.add(underLight);                          // target di default: origine = centro del fondo
+const HEMI_GROUND = new THREE.Color(0x0c0b09), HEMI_GROUND_UNDER = new THREE.Color(0x3a3129);
+let underK = 0;
+
+/* buffer dimensionati sul caso massimo tra disco liscio e disco inciso */
+const DP0 = discCounts(PN, false), DP1 = discCounts(PN, true);
+const idxMax = Math.max(vesselTriCount(rowsPrev, PN.nTh, 1, DP0.K, DP0.nD), vesselTriCount(rowsPrev, PN.nTh, 1, DP1.K, DP1.nD)) * 3;
+const posArr = new Float32Array(Math.max(vesselVerts(rowsPrev, PN.nTh, 1, DP0.K, DP0.nD), vesselVerts(rowsPrev, PN.nTh, 1, DP1.K, DP1.nD)) * 3);
+const idxArr = new Uint32Array(idxMax);
+/* uno slot per pezzo: buffer, contesto e geometria. Il secondo serve solo sul piatto. */
+function makeSlot(){
+  const pos = new Float32Array(posArr.length), idx = new Uint32Array(idxMax);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.setDrawRange(0, 0);
+  const bs = new THREE.Sphere(new THREE.Vector3(), 100);
+  g.boundingSphere = bs;
+  const ctx = baseCtx(curP, PN.nTh, PN.K);
+  const zb = new Float64Array(rowsPrev), ob = new Float64Array(rowsPrev), ib = new Float64Array(rowsPrev);
+  ctx.buf = { zb, ob, ib };
+  return { pos, idx, geo:g, bs, ctx };
+}
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+geo.setIndex(new THREE.BufferAttribute(idxArr, 1));
+geo.setDrawRange(0, 0);
+const bsphere = new THREE.Sphere(new THREE.Vector3(), 100);
+geo.boundingSphere = bsphere;
+
+const clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 400);
+const mat = new THREE.MeshStandardMaterial({
+  color:0xff6a2b, roughness:.34, metalness:.05, envMapIntensity:.6,
+  side:THREE.DoubleSide, clippingPlanes:[clipPlane], clipShadows:true
+});
+const sculpt = new THREE.Mesh(geo, mat);
+sculpt.rotation.x = -Math.PI/2;
+sculpt.position.y = .12;
+sculpt.castShadow = sculpt.receiveShadow = true;
+scene.add(sculpt);
+/* secondo pezzo e impronte sul piatto: visibili solo in modalità set */
+const slotB = makeSlot();
+const sculptB = new THREE.Mesh(slotB.geo, mat);
+sculptB.rotation.x = -Math.PI/2; sculptB.position.y = .12;
+sculptB.castShadow = sculptB.receiveShadow = true;
+sculptB.visible = false;
+scene.add(sculptB);
+const footMat = new THREE.LineBasicMaterial({ color:0xff6a2b, transparent:true, opacity:.55 });
+function makeFoot(){
+  const pts = [];
+  for (let i = 0; i <= 72; i++){ const a = i/72*Math.PI*2; pts.push(new THREE.Vector3(Math.cos(a), 0, Math.sin(a))); }
+  const l = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), footMat);
+  l.position.y = .6; l.visible = false; scene.add(l); return l;
+}
+const feet = [makeFoot(), makeFoot()];
+
+/* ================= ricostruzione e letture ================= */
+let lastMx = 0, pending = false, errShown = false;
+
+function rebuild(force){
+  try{ rebuildInner(force); }
+  catch(err){
+    console.error(err);
+    if (!errShown){ errShown = true; fatal('Errore durante la generazione della geometria:<br>' + (err.message || err)); }
+  }
+}
+/* costruisce un pezzo in uno slot; il secondo pezzo del set usa la stessa funzione,
+   così non esistono due strade diverse per la stessa geometria */
+function buildSlotGeom(slot, P, pos, idx, g, bs){
+  const n = neckSpec(P), rows = n.open ? PN.nB : rowsPrev, ctx = slot;
+  if (!ctx.zs || ctx.zs.length !== rows){
+    const b = ctx.buf;
+    ctx.zs = b.zb.subarray(0, rows); ctx.Bo = b.ob.subarray(0, rows); ctx.Bi = b.ib.subarray(0, rows);
+  }
+  ctx.P = P; ctx.open = !!n.open;
+  buildRows(P, n, PN.nB, PN.nN, ctx.zs);
+  const rp = (P.amp > 0 && sigPrev && sigPrev.kind === 'ring') ? fitRing(P, profAt, sigPrev, P.amp) : null;
+  const rg = rp && rp.A > 0 ? rp : null;
+  const ft = (P.amp > 0 && sigPrev && sigPrev.kind !== 'ring') ? fitSignal(P, profAt, sigPrev, P.amp) : null;
+  clampProfile(P, n, fitProfile(profAt, ft), ctx.zs, new Float64Array(ctx.zs.length), ctx.Bo, ctx.Bi, rg);
+  ctx.vr = rg ? { A:rg.A, ramp:rg.ramp, zTop:rg.zTop, cth: ringTable(rg, PN.nTh) } : null;
+  ctx.n = n;
+  ctx.jB = firstInnerRow(ctx.zs);
+  ctx.zBase = P.h;
+  ctx.Ht = ctx.zs[ctx.zs.length - 1];
+  ctx.r95 = r95Of(P, profAt(0), ctx.Bo[0]);
+  const L = (logo.on && logoRaster && logoRaster.ok) ? logoRaster : null;
+  ctx.raster = L; ctx.depth = logo.depth;
+  Object.assign(ctx, discSpec(PN, L, ctx.r95));
+  const st = fillVessel(pos, ctx);
+  g.attributes.position.needsUpdate = true;
+  const pIdx = writeVesselIndex(idx, ctx.zs.length, PN.nTh, ctx.jB, ctx.K, ctx.nD);
+  idx.fill(0, pIdx);
+  g.index.needsUpdate = true;
+  g.setDrawRange(0, pIdx);
+  bs.center.set(0, 0, ctx.Ht * .5);
+  bs.radius = Math.hypot(ctx.Ht * .5, st.maxR) + 10;
+  if (smoothMode) g.computeVertexNormals();
+  return { st, fit:ft, ring:rg };
+}
+ctxPrev.buf = { zb: zsBuf, ob: BoBuf, ib: BiBuf };
+function rebuildInner(force){
+  syncPieceP();
+  const A = buildSlotGeom(ctxPrev, curP, posArr, idxArr, geo, bsphere);
+  lastFit = A.fit; lastRing = A.ring;
+  let plan = null, stB = null;
+  if (plateMode){
+    plan = platePlan(cur, profKey, PLATE_PIECES);
+    const other = piecePar(cur, PLATE_PIECES.find(k => k !== piece) || 'tooth');
+    stB = buildSlotGeom(slotB.ctx, other, slotB.pos, slotB.idx, slotB.geo, slotB.bs).st;
+    const mine = plan.items.find(i => i.key === piece) || plan.items[0];
+    const his  = plan.items.find(i => i !== mine);
+    sculpt.position.set(mine.x, .12, -mine.y);
+    sculptB.position.set(his.x, .12, -his.y);
+    feet.forEach((f, k) => {
+      const it = k ? his : mine;
+      f.visible = true; f.position.set(it.x, .6, -it.y); f.scale.set(it.R, 1, it.R);
+    });
+  } else {
+    sculpt.position.set(0, .12, 0);
+    feet.forEach(f => f.visible = false);
+  }
+  sculptB.visible = plateMode;
+  const now = performance.now();
+  if (force || now - lastMx > 120){ lastMx = now; refreshReadout(A.st, plan, stB); }
+  else pending = true;
+}
+function fmtTime(s){
+  const tm = Math.round(s/60), h = Math.floor(tm/60), m = tm % 60;
+  return h > 0 ? `${h} h ${String(m).padStart(2,'0')} min` : `${m} min`;
+}
+function tiltHint(P, z, wall){
+  if (wall === 1) return 'la cavità si restringe salendo — riduci il raggio base o aumenta l\'altezza';
+  return z > P.h + .5
+    ? 'spalla troppo ripida — riduci il raggio base o aumenta l\'altezza'
+    : 'costole troppo ripide — riduci torsione o affilatura';
+}
+function refreshReadout(st, plan, stB){
+  $('plateBox').hidden = !plateMode;
+  if (plateMode && plan){
+    /* stessa correzione della base per i totali del piatto */
+    const fixBase = (stx, ctxx) => {
+      const fe = ctxx.P.h * exportFloorRow(ctxx.P.h) / (PE.nB - 1);   // pavimento come nell'export
+      const fp = ctxx.zs[ctxx.jB] || fe;
+      return stx.wallV + (VCore.matVolOf(stx) - stx.wallV) * (fe / fp);
+    };
+    const matB = stB ? fixBase(stB, slotB.ctx) : 0, matA = fixBase(st, ctxPrev);
+    const secB = stB ? VCore.printSeconds(matB, VCore.rippleQ(slotB.pos, slotB.ctx)) : 0;
+    const secA = VCore.printSeconds(matA, VCore.rippleQ(posArr, ctxPrev));
+    $('plLay').textContent = plan.fits ? (plan.layout === 'fila' ? 'in fila' : 'in diagonale') : 'non entrano';
+    $('plSize').textContent = plan.fits ? `${Math.ceil(plan.W)} × ${Math.ceil(plan.D)} mm su ${plan.free}` : (plan.why || '—');
+    $('plDot').className = 'dot ' + (plan.fits ? 'ok' : 'bad');
+    $('plH').textContent = Math.round(plan.H) + ' mm' + (plan.H > Z_MAX ? ' · oltre la corsa Z' : '');
+    $('plMat').textContent = Math.round((matA + matB) * 1.24e-3) + ' g · ≈ ' + Math.round((matA + matB)/1000) + ' cm³';
+    $('plTime').textContent = '≈ ' + fmtTime(secA + secB);
+  }
+  const d = st.maxR * 2, Ht = ctxPrev.Ht;
+  const tilt = Math.atan(st.maxW) * 180 / Math.PI;
+  const ml = Math.round(st.capV / 1000);
+  $('mSize').textContent = `Ø ${Math.round(d)} × ${Math.round(Ht)} mm`;
+  $('mCap').textContent  = `≈ ${ml} ml`;
+  $('mTilt').textContent = tilt.toFixed(0) + '° max';
+  $('tiltDot').className = 'dot ' + (tilt > 45 ? 'bad' : 'ok');
+  const jBE = exportFloorRow(curP.h);
+  const lastra = curP.h * jBE / (PE.nB - 1);   // quota reale del pavimento nello STL
+  /* la base piena dipende dalla riga del pavimento: in anteprima è più grossolana,
+     quindi la riporto allo spessore che avrà davvero nell'export */
+  const floorPrev = ctxPrev.zs[ctxPrev.jB] || lastra;
+  const matVol = st.wallV + (VCore.matVolOf(st) - st.wallV) * (lastra / floorPrev);
+  const qRip = VCore.rippleQ(posArr, ctxPrev);
+  const seal = logo.on && logoRaster && logoRaster.ok ? lastra - logo.depth : lastra;
+  $('mSeal').textContent = '≥ ' + seal.toFixed(1) + ' mm pieni';
+  $('mDepth').textContent = '≈ ' + Math.round(Ht - lastra) + ' mm';
+  const pass = st.minRi * 2;
+  $('mPass').textContent = 'Ø min ' + pass.toFixed(0) + ' mm';
+  $('passDot').className = 'dot ' + (pass >= PASS_MIN ? 'ok' : 'bad');
+  const fid = refreshSignal();
+  const codeNow = designCode();
+  if ($('vSN').textContent !== codeNow) $('vSN').textContent = codeNow;   // bordo collo → pavimento cavità (quote STL)
+  $('sealDot').className = 'dot ' + (seal >= 1.5 ? 'ok' : 'bad');
+  $('mVol').textContent  = '≈ ' + Math.round(matVol/1000) + ' cm³';
+  $('mFil').textContent  = Math.round(matVol*1.24e-3) + ' g · ' + Math.round(matVol/2405) + ' m';
+  $('mTime').textContent = '≈ ' + fmtTime(VCore.printSeconds(matVol, qRip));
+  $('mTri').textContent  = '≈ ' + Math.round(vesselTriCount(VCore.pieceRows(curP, PE), PE.nTh, jBE, discCounts(PE, engravedMesh()).K, discCounts(PE, engravedMesh()).nD) / 1000) + ' mila triangoli';
+  const issues = [];
+  const overXY = d - 220, overZ = Ht - Z_MAX;
+  if (overXY > 0) issues.push(`sfora il piatto di ${Math.ceil(overXY)} mm — riduci raggio o affilatura`);
+  if (overZ  > 0) issues.push(`supera i ${Z_MAX} mm di corsa Z di ${Math.ceil(overZ)} mm — riduci l'altezza o i giri del filetto`);
+  if (tilt > 45)  issues.push(`pareti a ${tilt.toFixed(0)}° — ` + tiltHint(cur, st.maxWz, st.maxWall));
+  if (pass < PASS_MIN)
+    issues.push(`strozzatura interna Ø ${pass.toFixed(0)} mm — la cannuccia rischia di non arrivare al fondo; riduci l'intensità del segnale o la parete`);
+  if (logo.on && logo.sn && logoRaster && (logoRaster.ok || logoRaster.blank) && !logoRaster.serialOk)
+    issues.push('il codice non entra nel fondo e verrà omesso — riduci il corpo testo o aumenta il raggio base');
+  if (logo.on && logoRaster && !logoRaster.ok && !logoRaster.blank)
+    issues.push('logo troppo lungo per il fondo — accorcia il testo, riduci il corpo' + (logo.arc ? '' : ' o passa ad arco'));
+  const bad = issues.length > 0;
+  $('fitDot').className = 'dot ' + (overXY <= 0 && overZ <= 0 ? 'ok' : 'bad');
+  $('ovl').className = bad ? 'bad' : 'ok';
+  const plateTxt = plateMode && plan
+    ? (plan.fits ? `set · 2 pezzi ${plan.layout} · ${Math.ceil(plan.W)} × ${Math.ceil(plan.D)} mm su ${plan.free} · h ${Math.round(plan.H)} mm`
+                 : `i due pezzi non entrano insieme · ${plan.why}`)
+    : null;
+  $('ovlTxt').textContent = plateTxt && !plan.fits ? plateTxt
+    : bad ? issues.join(' · ')
+    : plateTxt || `Ø ${Math.round(d)} × ${Math.round(Ht)} mm · ≈${ml} ml · pareti ${tilt.toFixed(0)}°`;
+  if (plateTxt) $('ovl').className = (plan.fits && !bad) ? 'ok' : 'bad';
+}
+
+/* ================= segnale: adattamento, fedeltà e grafico =================
+   Fedeltà al dato = correlazione di Pearson tra il dato originale (64 punti, senza
+   levigatura) e la modulazione davvero presente nel guscio Bo(con) − Bo(senza),
+   sulle righe del corpo con peso pieno. */
+const PASS_MIN = 10, FID_MIN = .5;
+const fidBo = new Float64Array(rowsPrev), fidBi = new Float64Array(rowsPrev), fidRc = new Float64Array(rowsPrev);
+const pctS = x => Math.round(x * 100) + '%';
+function plotPath(vals, n){
+  let d = '';
+  for (let k = 0; k < n; k++) d += (k ? 'L' : 'M') + (k / (n - 1) * 300).toFixed(1) + ' ' + (32 - 26 * vals[k]).toFixed(1);
+  return d;
+}
+let fitMemo = { key:'', fit:null };
+/* suggerimento calcolato: quale singola modifica del vaso restituisce più intensità */
+function adaptHint(fitter, spec, key, current){
+  if (fitMemo.hintKey !== key){
+    const tries = [
+      ['affilatura a 0%', { sharp:0 }],
+      ['torsione a 0°', { twist:0 }],
+      ['altezza a ' + $('sH').max + ' mm', { h:+$('sH').max }],
+    ];
+    let best = null;
+    for (const [label, ch] of tries){
+      if (Object.keys(ch).every(k => tgt[k] === ch[k])) continue;
+      const f = fitter(piecePar({ ...tgt, ...ch }, piece), PROFILES[profKey], spec, sig.amp);
+      const a = f ? f.A : 0;
+      if (a > current + .005 && (!best || a > best.a)) best = { label, a };
+    }
+    fitMemo.hintKey = key; fitMemo.hint = best;
+  }
+  const hb = fitMemo.hint;
+  $('sigHint').hidden = !hb;
+  if (hb) $('sigHint').innerHTML = `Il vaso limita il segnale. Con <b>${hb.label}</b> l'intensità stampabile sale a <b>${pctS(hb.a)}</b> (ora ${pctS(current)}).`;
+}
+/* voce ad anello: la forma angolare non passa dal limitatore (ne riduce solo l'intensità),
+   quindi il realizzato è la curva levigata; fedeltà = correlazione dato ↔ curva */
+function refreshRing(spec, key){
+  const raw = normZero(sigRaw(spec));
+  if (!raw){ $('sigHint').hidden = true; $('mFid').textContent = '—'; $('mAdapt').textContent = '—';
+    $('plotI').setAttribute('d', ''); $('plotR').setAttribute('d', ''); return null; }
+  if (fitMemo.key !== key) fitMemo = { key, fit: fitRing(tgtP, PROFILES[profKey], spec, sig.amp) };
+  const fT = fitMemo.fit, NP = 128, vi = new Float64Array(NP), vr = new Float64Array(NP);
+  let mx = 0;
+  for (let k = 0; k < NP; k++){ vi[k] = shapeCirc(raw, k / (NP - 1) * TAU); mx = Math.max(mx, Math.abs(vi[k])); }
+  for (let k = 0; k < NP; k++) vi[k] /= mx || 1;
+  $('plotI').setAttribute('d', plotPath(vi, NP));
+  const printable = fT && fT.A > 0;
+  let adaptOk = true;
+  if (!printable){ $('mAdapt').textContent = sig.amp > 0 ? 'non stampabile con questo vaso' : 'intensità 0'; adaptOk = !(sig.amp > 0); }
+  else if (fT.A < fT.Areq - 1e-6){ $('mAdapt').textContent = `intensità ${pctS(fT.Areq)} → ${pctS(fT.A)}`; adaptOk = false; }
+  else $('mAdapt').textContent = 'nessuno';
+  $('adaptDot').className = 'dot ' + (adaptOk ? 'ok' : 'warn');
+  if (!adaptOk && sig.amp > 0) adaptHint(fitRing, spec, key, printable ? fT.A : 0); else $('sigHint').hidden = true;
+  if (!printable){ $('plotR').setAttribute('d', ''); $('mFid').textContent = '—'; return null; }
+  for (let k = 0; k < NP; k++) vr[k] = shapeCirc(fT.shape, k / (NP - 1) * TAU);
+  $('plotR').setAttribute('d', plotPath(vr, NP));
+  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+  for (let k = 0; k < NP; k++){ const x = vi[k], y = vr[k]; sx += x; sy += y; sxx += x*x; syy += y*y; sxy += x*y; }
+  const cov = sxy - sx*sy/NP, vx = sxx - sx*sx/NP, vy = syy - sy*sy/NP;
+  const fid = vx > 1e-9 && vy > 1e-9 ? Math.max(0, cov / Math.sqrt(vx * vy)) : 0;
+  const jm = ctxPrev.zs.findIndex(z => z >= .35 * curP.h);
+  $('mFid').textContent = pctS(fid) + ' · ±' + (fT.A * ctxPrev.Bo[Math.max(0, jm)]).toFixed(1) + ' mm';
+  $('fidDot').className = 'dot ' + (fid >= FID_MIN ? 'ok' : 'warn');
+  return fid;
+}
+function refreshSignal(){
+  const spec = sigActive() ? sigSpec() : null;
+  const key = spec && JSON.stringify([piece, tgt.h, tgt.r, tgt.petals, tgt.twist, tgt.sharp, tgt.w, tgt.thD,
+    tgt.pitch, tgt.turns, sig.amp, profKey, spec]);
+  const rawN = spec && spec.kind !== 'ring' ? smoothNorm(sigRaw(spec), 0) : null;
+  if (spec && spec.kind === 'ring') return refreshRing(spec, key);
+  if (!rawN){ $('sigHint').hidden = true; $('mFid').textContent = '—'; $('mAdapt').textContent = '—'; $('plotI').setAttribute('d', ''); $('plotR').setAttribute('d', ''); return null; }
+  const NP = 96, vi = new Float64Array(NP);
+  for (let k = 0; k < NP; k++){ const t = k / (NP - 1) * SIG_SPAN; vi[k] = shapeAt(rawN, t) * sigWeight(t); }
+  $('plotI').setAttribute('d', plotPath(vi, NP));
+  /* adattamento sul bersaglio (tgt): è quello dell'export */
+  if (fitMemo.key !== key) fitMemo = { key, fit: fitSignal(tgtP, PROFILES[profKey], spec, sig.amp) };
+  const fT = fitMemo.fit;
+  let adaptOk = true;
+  if (!fT || !(fT.A > 0)){ $('mAdapt').textContent = sig.amp > 0 ? 'non stampabile con questo vaso' : 'intensità 0'; adaptOk = !(sig.amp > 0); }
+  else {
+    const parts = [];
+    if (fT.sigma > fT.sigmaReq + 1e-6) parts.push(`levigatura ${pctS(fT.sigmaReq / SIG_SIGMA_MAX)} → ${pctS(fT.sigma / SIG_SIGMA_MAX)}`);
+    if (fT.A < fT.Areq - 1e-6){ parts.push(`intensità ${pctS(fT.Areq)} → ${pctS(fT.A)}`); adaptOk = false; }
+    $('mAdapt').textContent = parts.length ? parts.join(' · ') : 'nessuno';
+  }
+  $('adaptDot').className = 'dot ' + (adaptOk ? 'ok' : 'warn');
+  if (!adaptOk && sig.amp > 0) adaptHint(fitSignal, spec, key, fT && fT.A > 0 ? fT.A : 0); else $('sigHint').hidden = true;
+  if (!(cur.amp > .004) || !lastFit || !(lastFit.A > 0)){ $('plotR').setAttribute('d', ''); $('mFid').textContent = '—'; return null; }
+  const zs = ctxPrev.zs;
+  clampProfile(curP, ctxPrev.n, profAt, zs, fidRc, fidBo, fidBi);   // stesso pezzo senza segnale
+  const T = [], M = [];
+  let peak = 0;
+  for (let j = 0; j < zs.length && zs[j] <= curP.h * SIG_SPAN; j++){
+    const d = ctxPrev.Bo[j] - fidBo[j]; T.push(zs[j] / curP.h); M.push(d); if (Math.abs(d) > peak) peak = Math.abs(d);
+  }
+  const vr = new Float64Array(NP);
+  let q = 0;
+  for (let k = 0; k < NP; k++){
+    const t = k / (NP - 1) * SIG_SPAN;
+    while (q < T.length - 2 && T[q + 1] < t) q++;
+    const f = Math.min(1, Math.max(0, (t - T[q]) / ((T[q + 1] - T[q]) || 1)));
+    vr[k] = (M[q] + ((M[q + 1] ?? M[q]) - M[q]) * f) / (peak || 1);   // stessa scala ±1 del dato
+  }
+  $('plotR').setAttribute('d', plotPath(vr, NP));
+  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, cnt = 0;
+  for (let k = 0; k < NP; k++){
+    const t = k / (NP - 1) * SIG_SPAN; if (sigWeight(t) < .5) continue;
+    const x = shapeAt(rawN, t), y = vr[k];
+    sx += x; sy += y; sxx += x*x; syy += y*y; sxy += x*y; cnt++;
+  }
+  const cov = sxy - sx*sy/cnt, vx = sxx - sx*sx/cnt, vy = syy - sy*sy/cnt;
+  const fid = vx > 1e-9 && vy > 1e-9 ? Math.max(0, cov / Math.sqrt(vx * vy)) : 0;
+  $('mFid').textContent = pctS(fid) + ' · ±' + peak.toFixed(1) + ' mm';
+  $('fidDot').className = 'dot ' + (fid >= FID_MIN ? 'ok' : 'warn');
+  return fid;
+}
+
+/* ================= ciclo di animazione ================= */
+const EPS = { h:.05, r:.05, twist:.05, sharp:.002, w:.004, thD:.02, pitch:.005, turns:.005, amp:.001 };
+function step(dt){
+  let mv = false;
+  for (const k of ['h','r','twist','sharp','w','thD','pitch','turns','amp']){
+    const d = tgt[k] - cur[k];
+    if (Math.abs(d) > EPS[k]){ cur[k] += d * Math.min(1, dt*7); mv = true; }
+    else if (cur[k] !== tgt[k]){ cur[k] = tgt[k]; mv = true; }
+  }
+  if (cur.petals !== tgt.petals){ cur.petals = tgt.petals; mv = true; }
+  for (const k of ['h','r']){
+    const t = PIECES[piece][k + 'K'], d = t - pieceK[k];
+    if (Math.abs(d) > .002){ pieceK[k] += d * Math.min(1, dt * 7); mv = true; } else pieceK[k] = t;
+  }
+  if (profBlend < 1){ profBlend = Math.min(1, profBlend + dt*2.6); mv = true; }
+  if (mv) rebuild(false);
+  else if (pending){ rebuild(true); pending = false; }
+  return mv;
+}
+let cutC = 400, last = performance.now();
+function tick(now){
+  requestAnimationFrame(tick);
+  const dt = Math.min(.05, (now - last)/1000); last = now;
+  step(dt);
+  const under = camera.position.y < 0;
+  plate.visible = !under; bed.visible = !under;
+  {
+    const k = Math.min(1, Math.max(0, -camera.position.y / UNDER.FADE));
+    underK += (k*k*(3 - 2*k) - underK) * Math.min(1, dt*6);
+    if (underK < 1e-3 && k === 0) underK = 0;
+    underLight.intensity = UNDER.I * underK;
+    hemi.groundColor.copy(HEMI_GROUND).lerp(HEMI_GROUND_UNDER, underK);
+    if (underK > 0){
+      const az = Math.atan2(camera.position.z, camera.position.x) + UNDER.AZ;
+      const ce = Math.cos(UNDER.EL) * UNDER.R;
+      underLight.position.set(Math.cos(az) * ce, -Math.sin(UNDER.EL) * UNDER.R, Math.sin(az) * ce);
+    }
+  }
+  const cutTgt = $('tCut').classList.contains('on') ? 2.5 : 400;
+  if (Math.abs(cutC - cutTgt) > .1){ cutC += (cutTgt - cutC) * Math.min(1, dt*5); clipPlane.constant = cutC; }
+  if (intro){
+    camera.position.lerp(camHome, 1 - Math.exp(-dt*2.2));
+    if (camera.position.distanceTo(camHome) < 1.5) intro = false;
+  }
+  controls.target.y += (ctxPrev.Ht*.45 - controls.target.y) * Math.min(1, dt*3.5);
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+/* ================= collegamento interfaccia ================= */
+const sliders = [
+  { id:'sH',  out:'vH',  key:'h',      fmt:v=>v+' mm',                       shape:true },
+  { id:'sR',  out:'vR',  key:'r',      fmt:v=>v+' mm',                       shape:true },
+  { id:'sP',  out:'vP',  key:'petals', fmt:v=>v,                             shape:true },
+  { id:'sT',  out:'vT',  key:'twist',  fmt:v=>v+'°',                         shape:true },
+  { id:'sS',  out:'vS',  key:'sharp',  fmt:v=>v+'%',        scale:100,       shape:true },
+  { id:'sW',  out:'vW',  key:'w',      fmt:v=>(v/10).toFixed(1)+' mm', scale:10, shape:true },
+  { id:'sD',  out:'vD',  key:'thD',    fmt:v=>(v/10).toFixed(1)+' mm', scale:10 },
+  { id:'sP2', out:'vP2', key:'pitch',  fmt:v=>(v/10).toFixed(1)+' mm', scale:10 },
+  { id:'sG',  out:'vG',  key:'turns',  fmt:v=>(v/10).toFixed(1),       scale:10 },
+];
+for (const s of sliders){
+  const inp = $(s.id), out = $(s.out);
+  const paint = () => {
+    const pct = (+inp.value - +inp.min) / (+inp.max - +inp.min) * 100;
+    inp.style.background = `linear-gradient(90deg,var(--acc) ${pct}%,#2c2822 ${pct}%)`;
+  };
+  inp.addEventListener('input', () => {
+    tgt[s.key] = +inp.value / (s.scale || 1);
+    out.textContent = s.fmt(+inp.value);
+    paint();
+    if (s.shape){ setActivePreset('custom'); if (s.key === 'r' || s.key === 'sharp') buildLogoRaster(); }
+    else $('segThr').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.t === 'free'));
+  });
+  inp._sync = () => { inp.value = Math.round(tgt[s.key] * (s.scale||1)); out.textContent = s.fmt(+inp.value); paint(); };
+  inp._sync();
+}
+function setActivePreset(key){
+  presetKey = key;
+  document.querySelectorAll('.preset').forEach(b => b.classList.toggle('active', b.dataset.p === key));
+}
+document.querySelectorAll('.preset').forEach(b => b.addEventListener('click', () => {
+  Object.assign(tgt, PRESETS[b.dataset.p]);
+  setProfile(PRESETS[b.dataset.p].profile);
+  $('seg').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.prof === PRESETS[b.dataset.p].profile));
+  sliders.forEach(s => $(s.id)._sync());
+  setActivePreset(b.dataset.p);
+  buildLogoRaster(); pending = true;
+}));
+ $('seg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  setProfile(b.dataset.prof);
+  $('seg').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  setActivePreset('custom');
+  buildLogoRaster(); pending = true;
+}));
+ $('segThr').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  $('segThr').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  const std = THREAD_STD[b.dataset.t];
+  if (std){ tgt.thD = std.d; tgt.pitch = std.p; tgt.turns = std.t;
+    ['sD','sP2','sG'].forEach(id => $(id)._sync());
+    toast(`Filetto ${b.dataset.t} · lato bottiglia, la pompa si avvita sopra`);
+  }
+}));
+
+/* --- logo --- */
+ $('logoTxt').addEventListener('input', e => { logo.text = e.target.value; buildLogoRaster(); pending = true; });
+ $('segLogo').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  $('segLogo').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  logo.on = b.dataset.l === 'on';
+  buildLogoRaster(); pending = true;
+}));
+ $('segSN').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  $('segSN').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  logo.sn = b.dataset.s === 'on';
+  buildLogoRaster(); pending = true;
+}));
+ $('segArc').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  $('segArc').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  logo.arc = b.dataset.a === 'arc';
+  buildLogoRaster(); pending = true;
+}));
+const logoSliders = [
+  { id:'sLS', out:'vLS', key:'size',  scale:10, fmt:v => (v/10).toFixed(1)+' mm', raster:true  },
+  { id:'sLD', out:'vLD', key:'depth', scale:10, fmt:v => (v/10).toFixed(1)+' mm', raster:false },
+  { id:'sLR', out:'vLR', key:'rot',   scale:1,  fmt:v => v+'°',                   raster:true  },
+];
+for (const s of logoSliders){
+  const inp = $(s.id), out = $(s.out);
+  const paint = () => {
+    const pct = (+inp.value - +inp.min) / (+inp.max - +inp.min) * 100;
+    inp.style.background = `linear-gradient(90deg,var(--acc) ${pct}%,#2c2822 ${pct}%)`;
+  };
+  inp.addEventListener('input', () => {
+    logo[s.key] = +inp.value / s.scale;
+    out.textContent = s.fmt(+inp.value);
+    paint();
+    if (s.raster) buildLogoRaster();
+    pending = true;
+  });
+  inp.value = logo[s.key] * s.scale;          // FIX: inizializzazione con scala corretta
+  out.textContent = s.fmt(+inp.value);
+  paint();
+  inp._sync = () => { inp.value = Math.round(logo[s.key] * s.scale); out.textContent = s.fmt(+inp.value); paint(); };
+}
+
+/* strumenti flottanti */
+ $('tSpin').addEventListener('click', () => {
+  controls.autoRotate = !controls.autoRotate;
+  $('tSpin').classList.toggle('on', controls.autoRotate);
+});
+ $('tView').addEventListener('click', () => {
+  intro = false;
+  camera.position.copy(camHome);
+  controls.target.set(0, ctxPrev.Ht*.45, 0);
+});
+ $('tCut').addEventListener('click', () => $('tCut').classList.toggle('on'));
+ $('tFlat').addEventListener('click', () => {
+  smoothMode = !smoothMode;
+  mat.flatShading = !smoothMode; mat.needsUpdate = true;
+  if (smoothMode) geo.computeVertexNormals();
+  $('tFlat').classList.toggle('on', !smoothMode);
+});
+ $('tShot').addEventListener('click', () => {
+  renderer.render(scene, camera);
+  renderer.domElement.toBlob(b => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = 'vortice-dispenser-anteprima.png'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+  const f = $('flash'); f.classList.add('go'); void f.offsetWidth; f.classList.remove('go');
+  toast('Screenshot salvato');
+});
+
+let toastT;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+
+/* ================= esportazione STL · Web Worker =================
+   Il Worker nasce dal sorgente di #vcore (stesso codice dell'anteprima).
+   Fallback sincrono se il Worker non è disponibile o va in errore. */
+function saveBlob(blob, name){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+}
+let worker = null, workerBroken = false, jobSeq = 0;
+const jobs = new Map();
+function getWorker(){
+  if (worker || workerBroken) return worker;
+  try{
+    const url = URL.createObjectURL(new Blob([$('vcore').textContent], { type:'text/javascript' }));
+    worker = new Worker(url);
+    URL.revokeObjectURL(url);
+    worker.onmessage = e => { const j = jobs.get(e.data.id); if (j){ jobs.delete(e.data.id); j.resolve(e.data); } };
+    worker.onerror = e => {
+      e.preventDefault();
+      console.warn('Worker non disponibile, passo al calcolo in pagina:', e.message);
+      workerBroken = true; worker.terminate(); worker = null;
+      for (const [id, j] of jobs){ jobs.delete(id); j.resolve(runLocal(j.job)); }
+    };
+  }catch(err){
+    console.warn('Worker non creabile, calcolo in pagina:', err);
+    workerBroken = true; worker = null;
+  }
+  return worker;
+}
+function runLocal(job){
+  try{ return runExport(job); }
+  catch(err){ return { ok:false, error: String(err && err.message || err) }; }
+}
+function exportJob(job){
+  const w = getWorker();
+  if (!w) return new Promise(res => setTimeout(() => res(runLocal(job)), 30)); // lascia dipingere lo stato "busy"
+  return new Promise(resolve => {
+    const id = ++jobSeq;
+    jobs.set(id, { resolve, job });
+    w.postMessage({ id, job });
+  });
+}
+async function withBusy(btn, busyLabel, fn){
+  if (btn.classList.contains('busy')) return;
+  const span = btn.querySelector('span'), label = span.textContent;
+  btn.classList.add('busy'); btn.setAttribute('aria-busy', 'true'); span.textContent = busyLabel;
+  try{ await fn(); }
+  catch(err){ console.error(err); toast('Errore di esportazione: ' + (err.message || err)); }
+  finally{ btn.classList.remove('busy'); btn.removeAttribute('aria-busy'); span.textContent = label; }
+}
+let fmt = 'stl';
+$('segFmt').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  fmt = b.dataset.f;
+  $('segFmt').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+  $('fmtNote').hidden = fmt !== '3mf';
+  syncPieceUI();
+}));
+const snapshotJob = kind => (kind === 'vessel' && plateMode
+  ? { kind:'plate', P:{ ...tgt }, pieces: PLATE_PIECES, profKey, format: fmt,
+      logo:{ ...logo, serial: logo.sn ? designCode() : '' } }
+  : { kind, P: piecePar(tgt, piece), profKey, format: fmt,
+      logo:{ ...logo, serial: logo.sn ? designCode() : '' } });
+
+$('dl').addEventListener('click', () => withBusy($('dl'), 'Genero e verifico l\'STL…', async () => {
+  profBlend = 1;
+  pending = true;
+  const job = snapshotJob('vessel');
+  const r = await exportJob(job);
+  if (!r.ok){ console.error(r.check || r.error); toast('STL non salvato · ' + r.error); return; }
+  const code = designCode();
+  const three = r.format === '3mf', set = job.kind === 'plate';
+  const slug = set ? 'set' : piece === 'disp' ? 'dispenser' : 'portaspazzolino';
+  const tag = set ? `${Math.ceil(r.plate.W)}x${Math.ceil(r.plate.D)}mm_`
+            : piece === 'disp' ? `T${job.P.thD.toFixed(1)}mm_` : `D${Math.round(r.D)}mm_`;
+  saveBlob(new Blob([r.buffer], { type: three ? 'model/3mf' : 'model/stl' }),
+    `vortice-${slug}_${code}_${tag}${Math.round(r.Ht)}mm.${three ? '3mf' : 'stl'}`);
+  const archived = archiveAdd({ code, hash: encodeState(), t: Date.now(),
+    size: job.kind === 'plate' ? `set · ${Math.ceil(r.plate.W)} × ${Math.ceil(r.plate.D)} mm`
+        : `${PIECES[piece].name.slice(0, 4).toLowerCase()} · Ø ${Math.round(r.D)} × ${Math.round(r.Ht)} mm` });
+  const mb = r.buffer.byteLength / 1048576;
+  const warn = r.tilt > 45 ? ` — attenzione: pareti a ${r.tilt.toFixed(0)}°` : '';
+  const sn = job.kind !== 'plate' && job.logo.on && job.logo.serial && !r.serialOk ? ' · codice NON inciso (non entra)' : '';
+  toast(`${job.kind === 'plate' ? 'Set (2 pezzi)' : PIECES[piece].name} ${code} · ${(r.format === '3mf' ? '3MF' : 'STL')} ${mb.toFixed(1)} MB · ${job.kind === 'plate' ? `${r.tris.toLocaleString('it-IT')} triangoli · ${Math.ceil(r.plate.W)} × ${Math.ceil(r.plate.D)} mm sul piatto` : `mesh chiusa · profondità ${Math.round(r.depth)} mm`}${sn}${warn}`
+    + (archived ? '' : ' · archivio non disponibile'));
+}));
+
+$('dlTest').addEventListener('click', () => withBusy($('dlTest'), 'Genero lo spool…', async () => {
+  const job = snapshotJob('ring');
+  const r = await exportJob(job);
+  if (!r.ok){ console.error(r.check || r.error); toast('STL non salvato · ' + r.error); return; }
+  const th = r.format === '3mf';
+  saveBlob(new Blob([r.buffer], { type: th ? 'model/3mf' : 'model/stl' }),
+    `vortice-spool-prova_T${job.P.thD.toFixed(1)}mm-P${job.P.pitch.toFixed(1)}.${th ? '3mf' : 'stl'}`);
+  toast(`Spool di prova · ${r.check.tris.toLocaleString('it-IT')} triangoli · avvita la pompa reale sopra`);
+}));
+
+/* ================= segnale personale: interfaccia e import ================= */
+function syncPieceUI(){
+  const mode = plateMode ? 'plate' : piece;
+  $('segPiece').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.p === mode));
+  const neck = plateMode || PIECES[piece].neck;    // sul piatto c'è anche il dispenser
+  $('secNeck').hidden = !neck;
+  $('plateBox').hidden = !plateMode;
+  $('dl').querySelector('span').textContent = 'Scarica ' + (fmt === '3mf' ? '3MF' : 'STL') + ' ' +
+    (plateMode ? 'del set (2 pezzi)' : PIECES[piece].neck ? 'del dispenser' : 'del portaspazzolino');
+  $('noteTube').hidden = !neck;
+  $('lead').innerHTML = neck
+    ? 'Vaso a guscio sottile con <b>collo filettato esterno (norma GPI)</b> e <b>firma incisa sul fondo</b>. La pompa commerciale porta la vite interna e si avvita sopra, come su una bottiglia. Tutto vincolato a ~44° — <b>senza supporti</b>.'
+    : 'Bicchiere a guscio sottile con <b>bordo aperto</b> e <b>firma incisa sul fondo</b>, dello stesso DNA del dispenser: stesse costole, stessa inclinazione dell\'elica, stesso codice. Tutto vincolato a ~44° — <b>senza supporti</b>.';
+}
+function setPiece(p, animate = true){
+  if (!PIECES[p] || p === piece) return;
+  plateMode = false;
+  piece = p;
+  if (!animate){ pieceK.h = PIECES[p].hK; pieceK.r = PIECES[p].rK; }
+  syncPieceP();
+  buildLogoRaster();
+  syncPieceUI();
+  pending = true;
+}
+$('segPiece').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.p === 'plate'){ plateMode = true; syncPieceUI(); pending = true; return; }
+  plateMode = false;
+  if (b.dataset.p === piece){ syncPieceUI(); pending = true; return; }
+  setPiece(b.dataset.p);
+}));
+function syncSigUI(){
+  const mode = sig.on ? sig.src : 'off';
+  $('segSig').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.g === mode));
+  $('sigGpx').hidden = mode !== 'gpx';
+  $('sigVoce').hidden = mode !== 'voce';
+  $('sigBody').hidden = !(sig.on && sig.q);
+  $('sigMeta').innerHTML = sig.meta || '—';
+  const ring = sig.src === 'voce';
+  $('sigAxis').textContent = ring ? 'giro completo · 0 → 360°' : 'fondo → 80% altezza';
+  const rb = $('segRev').querySelectorAll('button');
+  rb[0].textContent = ring ? 'Antiorario (da sopra)' : 'Inizio in basso';
+  rb[1].textContent = ring ? 'Orario (da sopra)' : 'Inizio in alto';
+  $('vLlab').textContent = ring ? 'Levigatura' : 'Levigatura minima';
+  for (const [id, out, v] of [['sA','vA', sig.amp], ['sL','vL', sig.smooth]]){
+    const inp = $(id); inp.value = Math.round(v * 100); $(out).textContent = inp.value + '%';
+    const pct = (+inp.value - +inp.min) / (+inp.max - +inp.min) * 100;
+    inp.style.background = `linear-gradient(90deg,var(--acc) ${pct}%,#2c2822 ${pct}%)`;
+  }
+  $('segRev').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.r === (sig.rev ? '1' : '0')));
+  $('segInv').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.i === (sig.inv ? '1' : '0')));
+}
+function sigChanged(regrow = true){
+  syncSigTarget(regrow);
+  syncSigUI();
+  buildLogoRaster();              // il raggio reale del fondo può cambiare (riga 0 ristretta)
+  pending = true;
+}
+$('segSig').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  const g = b.dataset.g;
+  if (g === 'off') sig.on = false;
+  else {
+    const d = sigStore[g];                                        // un dato GPX non diventa "voce"
+    sig.on = true; sig.src = g; sig.q = d ? d.q : ''; sig.meta = d ? d.meta : '';
+  }
+  sigChanged();
+}));
+for (const [id, out, key] of [['sA','vA','amp'], ['sL','vL','smooth']]){
+  $(id).addEventListener('input', () => { sig[key] = +$(id).value / 100; sigChanged(false); });
+}
+$('segRev').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { sig.rev = b.dataset.r === '1'; sigChanged(); }));
+$('segInv').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { sig.inv = b.dataset.i === '1'; sigChanged(); }));
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]);
+function loadSignal(src, vals, meta){
+  const q = sigEncode(vals);
+  if (!q) throw new Error(src === 'gpx' ? 'la traccia è piatta: nessuna variazione di quota' : 'la registrazione non ha variazioni di volume');
+  Object.assign(sig, { on:true, src, q, meta });
+  sigStore[src] = { q, meta };
+  sigChanged();
+  toast(src === 'gpx' ? 'Traccia caricata · il profilo del percorso modella il vaso' : 'Voce caricata · il volume della frase modella il vaso');
+}
+
+/* --- GPX: quota ricampionata a passo di distanza costante --- */
+function parseGPX(text){
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('file GPX non leggibile');
+  let pts = [...doc.getElementsByTagNameNS('*', 'trkpt')];
+  if (!pts.length) pts = [...doc.getElementsByTagNameNS('*', 'rtept')];
+  const P = [];
+  for (const p of pts){
+    const lat = parseFloat(p.getAttribute('lat')), lon = parseFloat(p.getAttribute('lon'));
+    const e = p.getElementsByTagNameNS('*', 'ele')[0];
+    const ele = e ? parseFloat(e.textContent) : NaN;
+    if (Number.isFinite(lat) && Number.isFinite(lon) && Number.isFinite(ele)) P.push([lat, lon, ele]);
+  }
+  if (P.length < 8) throw new Error(pts.length ? 'la traccia non contiene quote (tag <ele>)' : 'nessun punto traccia nel file');
+  const R = 6371008.8, rad = Math.PI / 180, dist = new Float64Array(P.length);
+  for (let i = 1; i < P.length; i++){
+    const [la1, lo1] = P[i-1], [la2, lo2] = P[i];
+    const a = Math.sin((la2-la1)*rad/2)**2 + Math.cos(la1*rad)*Math.cos(la2*rad)*Math.sin((lo2-lo1)*rad/2)**2;
+    dist[i] = dist[i-1] + 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+  const D = dist[P.length - 1];
+  const useIdx = !(D > 50);                                   // traccia senza spostamento: passo per punto
+  const X = i => useIdx ? i : dist[i], span = useIdx ? P.length - 1 : D;
+  const vals = new Float64Array(SIG_N);
+  let q = 0;
+  for (let k = 0; k < SIG_N; k++){                            // media sulla finestra del campione
+    const c = (k + .5) / SIG_N * span, hw = span / SIG_N / 2;
+    let acc = 0, cnt = 0;
+    for (let i = 0; i < P.length; i++){ const x = X(i); if (x >= c - hw && x <= c + hw){ acc += P[i][2]; cnt++; } }
+    if (cnt) vals[k] = acc / cnt;
+    else {                                                     // finestra vuota: interpolazione lineare
+      while (q < P.length - 2 && X(q + 1) < c) q++;
+      const f = Math.min(1, Math.max(0, (c - X(q)) / ((X(q + 1) - X(q)) || 1)));
+      vals[k] = P[q][2] + (P[q + 1][2] - P[q][2]) * f;
+    }
+  }
+  let lo = Infinity, hi = -Infinity, gain = 0, prev = null;
+  for (const p of P){ lo = Math.min(lo, p[2]); hi = Math.max(hi, p[2]); }
+  for (const v of vals){ if (prev !== null && v > prev) gain += v - prev; prev = v; }
+  const nameEl = doc.getElementsByTagNameNS('*', 'trk')[0]?.getElementsByTagNameNS('*', 'name')[0]
+              || doc.getElementsByTagNameNS('*', 'name')[0];
+  const name = nameEl ? nameEl.textContent.trim().slice(0, 40) : '';
+  const km = (D / 1000).toLocaleString('it-IT', { maximumFractionDigits: 1 });
+  const meta = (name ? esc(name) + '<br>' : '') +
+    `${useIdx ? P.length + ' punti' : km + ' km'} · D+ ${Math.round(gain)} m <span>(sui 64 punti)</span> · ${Math.round(lo)}–${Math.round(hi)} m`;
+  return { vals, meta };
+}
+$('gpxBtn').addEventListener('click', () => $('gpxFile').click());
+$('gpxFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try{ const r = parseGPX(await f.text()); loadSignal('gpx', r.vals, r.meta); }
+  catch(err){ console.error(err); toast('GPX non caricato · ' + (err.message || err)); }
+});
+
+/* --- voce: inviluppo di volume in dB, silenzi iniziale/finale rimossi --- */
+function envelopeFromBuffer(buf){
+  const sr = buf.sampleRate, len = buf.length, nc = buf.numberOfChannels;
+  const win = Math.max(1, Math.round(sr * .01)), nW = Math.floor(len / win);
+  if (nW < 30) throw new Error('registrazione troppo breve');
+  const chans = []; for (let c = 0; c < nc; c++) chans.push(buf.getChannelData(c));
+  const pw = new Float64Array(nW);
+  for (let w = 0; w < nW; w++){
+    let acc = 0;
+    for (let c = 0; c < nc; c++){ const d = chans[c]; for (let i = w * win, e = i + win; i < e; i++) acc += d[i] * d[i]; }
+    pw[w] = acc / (win * nc);
+  }
+  const dB = p => 10 * Math.log10(p + 1e-12);
+  let peak = -Infinity; for (const p of pw) peak = Math.max(peak, dB(p));
+  if (peak < -60) throw new Error('registrazione silenziosa');
+  const thr = peak - 30;
+  let a = 0, b = nW - 1;
+  while (a < nW && dB(pw[a]) < thr) a++;
+  while (b > a && dB(pw[b]) < thr) b--;
+  if (b - a + 1 < 30) throw new Error('parlato troppo breve: servono almeno 0,3 s sopra il rumore');
+  const vals = new Float64Array(SIG_N), n = b - a + 1;
+  for (let k = 0; k < SIG_N; k++){
+    const i0 = a + Math.floor(k * n / SIG_N), i1 = Math.max(i0 + 1, a + Math.floor((k + 1) * n / SIG_N));
+    let acc = 0; for (let i = i0; i < i1; i++) acc += pw[i];
+    vals[k] = Math.max(peak - 40, dB(acc / (i1 - i0)));        // dinamica utile: 40 dB sotto il picco
+  }
+  return { vals, dur: n * .01 };
+}
+async function loadAudioBytes(bytes, label){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) throw new Error('audio non supportato da questo browser');
+  const ac = new AC();
+  try{
+    const buf = await ac.decodeAudioData(bytes);
+    const { vals, dur } = envelopeFromBuffer(buf);
+    loadSignal('voce', vals, `${esc(label)} · ${dur.toLocaleString('it-IT', { maximumFractionDigits: 1 })} s di parlato <span>(silenzi rimossi)</span>`);
+  } finally { ac.close && ac.close(); }
+}
+$('audBtn').addEventListener('click', () => $('audFile').click());
+$('audFile').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try{ await loadAudioBytes(await f.arrayBuffer(), f.name.slice(0, 32)); }
+  catch(err){ console.error(err); toast('Audio non caricato · ' + (err.message || 'formato non decodificabile')); }
+});
+let rec = null, recBusy = false;       // recBusy: dal primo clic fino alla fine dell'analisi
+function setRecLabel(txt, on){ $('recBtn').querySelector('span').textContent = txt; $('recBtn').classList.toggle('rec', !!on); }
+$('recBtn').addEventListener('click', async () => {
+  if (rec){ if (rec.state === 'recording') rec.stop(); return; }
+  if (recBusy) return;                  // acquisizione del microfono o analisi in corso: ignora
+  recBusy = true;
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined'){
+    recBusy = false; toast('Registrazione non disponibile qui · usa «Carica audio»'); return;
+  }
+  setRecLabel('Attendo il microfono…', false);
+  let stream;
+  try{ stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, autoGainControl:false, noiseSuppression:true } }); }
+  catch(err){
+    recBusy = false; setRecLabel('Registra · max 10 s', false);
+    toast(err && err.name === 'NotAllowedError' ? 'Microfono non autorizzato' : 'Microfono non disponibile'); return;
+  }
+  const chunks = [], mr = new MediaRecorder(stream), t0 = performance.now();
+  rec = mr;
+  const timer = setInterval(() => {
+    const left = Math.max(0, 10 - (performance.now() - t0) / 1000);
+    setRecLabel(`Ferma · ${Math.ceil(left)} s`, true);
+    if (left <= 0 && mr.state === 'recording') mr.stop();
+  }, 200);
+  mr.ondataavailable = ev => { if (ev.data.size) chunks.push(ev.data); };
+  mr.onstop = async () => {
+    clearInterval(timer); stream.getTracks().forEach(t => t.stop()); rec = null;
+    setRecLabel('Analizzo…', false);
+    try{ await loadAudioBytes(await new Blob(chunks, { type: mr.mimeType }).arrayBuffer(), 'Registrazione'); }
+    catch(err){ console.error(err); toast('Voce non caricata · ' + (err.message || err)); }
+    finally{ recBusy = false; setRecLabel('Registra · max 10 s', false); }
+  };
+  mr.start(100);
+  setRecLabel('Ferma · 10 s', true);
+});
+
+/* ================= progettazione inversa ================= */
+let goal = 'fid', searchScope = 0;
+$('segGoal').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  goal = b.dataset.g;
+  $('segGoal').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+}));
+$('segScope').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  searchScope = +b.dataset.x;
+  $('segScope').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+}));
+const numOr0 = id => { const v = +$(id).value; return Number.isFinite(v) && v > 0 ? v : 0; };
+function applyFound(res){
+  Object.assign(tgt, res.v);
+  setProfile(res.prof);
+  setActivePreset('custom');
+  syncControls();
+  buildLogoRaster();
+  pending = true;
+  toast(`Design applicato · ${Math.round(res.exact.capML)} ml · ${Math.round(res.exact.grams)} g · ${(res.exact.minutes/60).toFixed(1)} h`);
+}
+function renderFound(r, opt){
+  const box = $('findRes');
+  box.textContent = '';
+  if (!r.results || !r.results.length){
+    const p = document.createElement('p'); p.className = 'empty'; p.textContent = 'Nessun candidato trovato'; box.append(p); return;
+  }
+  for (const res of r.results){
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = res.ok ? '' : 'ko';
+    const e = res.exact;
+    const line1 = `${res.prof} · h ${res.v.h} · r ${res.v.r} · ${res.v.petals} costole · ${res.v.twist}° · aff. ${Math.round(res.v.sharp*100)}%`;
+    const bits = [`${Math.round(e.capML)} ml`, `${Math.round(e.grams)} g`, `${(e.minutes/60).toFixed(1)} h`,
+      `h ${Math.round(e.Ht)} mm`, `pareti ${e.tilt.toFixed(0)}°`];
+    if (opt.plate) bits.push(e.fits ? `set ${e.layout}` : 'non entra nel piatto');
+    if (res.sig) bits.push(`segnale ${Math.round(res.sig.corr * 100)}% · ${Math.round(res.sig.A * 100)}%`);
+    if (res.engrave === 0) bits.push('firma non entra nel fondo');
+    else if (res.engrave < 1) bits.push('codice non entra nel fondo');
+    b.innerHTML = `<b>${line1}</b><br><i>${bits.join(' · ')}${res.ok ? '' : ' · ' + res.bad.join(' · ')}</i>`;
+    b.addEventListener('click', () => applyFound(res));
+    box.append(b);
+  }
+}
+$('findBtn').addEventListener('click', () => withBusy($('findBtn'), 'Cerco…', async () => {
+  const opt = { goal, plate: !!searchScope, piece, capMin: numOr0('cMin'), hMax: numOr0('cH'),
+    tMax: numOr0('cT'), gMax: numOr0('cG'),
+    logo: { ...logo, serial: logo.sn ? designCode() : '' } };
+  if (goal === 'fid' && !sigActive()) toast('Senza segnale la fedeltà non si applica: cerco la capacità massima');
+  const t0 = performance.now();
+  const r = await exportJob({ kind:'search', P:{ ...tgt }, profKey, opt });
+  if (!r || !r.ok){ toast('Ricerca non riuscita · ' + ((r && r.error) || 'errore')); return; }
+  renderFound(r, opt);
+  const ok = r.results.filter(x => x.ok).length;
+  toast(`${r.evals.toLocaleString('it-IT')} combinazioni in ${((performance.now()-t0)/1000).toFixed(1)} s · ${ok ? ok + ' design entro i limiti' : 'nessuno entro i limiti: i migliori compromessi sotto'}`);
+}));
+
+/* ================= design condivisibile: stato nell'URL =================
+   Formato leggibile e versionato: #v=1&h=185&r=62&...  Ogni valore viene
+   validato e riportato nei limiti degli slider (unica fonte: gli <input>). */
+const STATE_V = '1';
+const rangeOf = id => { const e = $(id); return [+e.min, +e.max]; };
+const numIn = (q, k, id, div, digits) => {
+  if (!q.has(k)) return undefined;
+  const v = Number(q.get(k)); if (!Number.isFinite(v)) return undefined;
+  const [a, b] = rangeOf(id);
+  const x = Math.min(b / div, Math.max(a / div, v));
+  return digits == null ? x : +x.toFixed(digits);
+};
+function encodeState(){
+  const q = new URLSearchParams();
+  q.set('v', STATE_V);
+  q.set('h', tgt.h); q.set('r', tgt.r); q.set('n', tgt.petals); q.set('tw', tgt.twist);
+  q.set('sh', +(tgt.sharp * 100).toFixed(0)); q.set('w', +tgt.w.toFixed(1)); q.set('pf', profKey);
+  q.set('td', +tgt.thD.toFixed(2)); q.set('tp', +tgt.pitch.toFixed(2)); q.set('tg', +tgt.turns.toFixed(1));
+  q.set('lo', logo.on ? 1 : 0); q.set('lt', logo.text); q.set('ls', +logo.size.toFixed(1));
+  q.set('ld', +logo.depth.toFixed(1)); q.set('la', logo.arc ? 1 : 0); q.set('lr', logo.rot);
+  if (sigActive()){
+    q.set('gs', sig.src === 'voce' ? 'v' : 'g'); q.set('gq', sig.q); q.set('ga', Math.round(sig.amp * 100));
+    q.set('gl', Math.round(sig.smooth * 100)); q.set('gr', sig.rev ? 1 : 0); q.set('gi', sig.inv ? 1 : 0);
+  }
+  q.set('sn', logo.sn ? 1 : 0);
+  q.set('pc', plateMode ? 'plate' : piece);
+  return q.toString();
+}
+function decodeState(hash){
+  const q = new URLSearchParams(hash.replace(/^#/, ''));
+  if (q.get('v') !== STATE_V) return null;
+  const s = { P:{}, logo:{} };
+  const put = (o, k, v) => { if (v !== undefined) o[k] = v; };
+  put(s.P, 'h',      numIn(q, 'h',  'sH', 1, 0));
+  put(s.P, 'r',      numIn(q, 'r',  'sR', 1, 0));
+  put(s.P, 'petals', numIn(q, 'n',  'sP', 1, 0));
+  put(s.P, 'twist',  numIn(q, 'tw', 'sT', 1, 0));
+  const sh = numIn(q, 'sh', 'sS', 1, 0); if (sh !== undefined) s.P.sharp = sh / 100;
+  put(s.P, 'w',      numIn(q, 'w',  'sW', 10, 1));
+  put(s.P, 'thD',    numIn(q, 'td', 'sD', 10, 2));
+  put(s.P, 'pitch',  numIn(q, 'tp', 'sP2', 10, 2));
+  put(s.P, 'turns',  numIn(q, 'tg', 'sG', 10, 1));
+  if (PROFILES[q.get('pf')]) s.profile = q.get('pf');
+  if (q.has('lo')) s.logo.on = q.get('lo') === '1';
+  if (q.has('lt')) s.logo.text = q.get('lt').slice(0, +$('logoTxt').maxLength || 30);
+  put(s.logo, 'size',  numIn(q, 'ls', 'sLS', 10, 1));
+  put(s.logo, 'depth', numIn(q, 'ld', 'sLD', 10, 1));
+  if (q.has('la')) s.logo.arc = q.get('la') === '1';
+  const lr = numIn(q, 'lr', 'sLR', 1, 0); if (lr !== undefined) s.logo.rot = Math.round(lr / 5) * 5;
+  /* sn assente = link precedente al codice: non incidere, così la geometria resta quella originale */
+  s.logo.sn = q.get('sn') === '1';
+  s.piece = PIECES[q.get('pc')] ? q.get('pc') : 'disp';
+  s.plate = q.get('pc') === 'plate';
+  /* segnale: assente o non valido = nessuna modulazione (link precedenti invariati) */
+  const gq = q.get('gq');
+  if (gq && VCore.sigValid(gq)){
+    s.sig = { on:true, src: q.get('gs') === 'v' ? 'voce' : 'gpx', q:gq, meta:'Segnale dal link · 64 punti',
+      rev: q.get('gr') === '1', inv: q.get('gi') === '1' };
+    const ga = numIn(q, 'ga', 'sA', 1, 0); s.sig.amp = ga !== undefined ? ga / 100 : .2;
+    const gl = numIn(q, 'gl', 'sL', 1, 0); s.sig.smooth = gl !== undefined ? gl / 100 : .15;
+  } else s.sig = { on:false, q:'', meta:'' };
+  return s;
+}
+function syncControls(){
+  sliders.forEach(s => $(s.id)._sync());
+  logoSliders.forEach(s => $(s.id)._sync());
+  $('seg').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.prof === profKey));
+  $('logoTxt').value = logo.text;
+  $('segLogo').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.l === (logo.on ? 'on' : 'off')));
+  $('segArc').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.a === (logo.arc ? 'arc' : 'line')));
+  $('segSN').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.s === (logo.sn ? 'on' : 'off')));
+  const thr = Object.keys(THREAD_STD).find(k => { const t = THREAD_STD[k];
+    return Math.abs(t.d - tgt.thD) < .01 && Math.abs(t.p - tgt.pitch) < .005 && Math.abs(t.t - tgt.turns) < .01; }) || 'free';
+  $('segThr').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.t === thr));
+  const pre = Object.keys(PRESETS).find(k => { const p = PRESETS[k];
+    return p.h === tgt.h && p.r === tgt.r && p.petals === tgt.petals && p.twist === tgt.twist
+        && Math.abs(p.sharp - tgt.sharp) < 1e-6 && p.profile === profKey; }) || 'custom';
+  setActivePreset(pre);
+  syncSigUI();
+  syncPieceUI();
+}
+function applyState(s, animate){
+  Object.assign(tgt, s.P);
+  Object.assign(logo, s.logo);
+  if (s.piece && s.piece !== piece) setPiece(s.piece, false);
+  if (s.plate !== undefined) plateMode = !!s.plate;
+  if (s.sig){ Object.assign(sig, s.sig); if (sig.on && sig.q) sigStore[sig.src] = { q:sig.q, meta:sig.meta }; syncSigTarget(animate); }
+  if (s.profile && s.profile !== profKey){
+    if (animate) setProfile(s.profile);
+    else { profFrom = profTo = PROFILES[s.profile]; profKey = s.profile; profBlend = 1; }
+  }
+  syncControls();
+  buildLogoRaster();
+  pending = true;
+}
+let lastHash = '';
+function writeHash(){
+  const enc = encodeState();
+  if (enc === lastHash) return;
+  lastHash = enc;
+  try{ history.replaceState(null, '', '#' + enc); }catch(_){ /* file:// ristretti: il link resta copiabile */ }
+}
+/* ================= codice del design =================
+   FNV-1a 32 bit sullo stato canonico (tutto tranne l'interruttore del codice),
+   25 bit in base32 Crockford (niente I L O U: nessuna ambiguità con 1 e 0). */
+const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+function designCode(){
+  const q = new URLSearchParams(encodeState()); q.delete('sn'); q.delete('pc');   // il codice è del SET: identico su tutti i pezzi · l'interruttore del codice non è geometria (l'origine del dato sì: silhouette o anello)
+  const str = q.toString();
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  let c = '';
+  for (let k = 0; k < 5; k++) c += B32[(h >>> (k * 5)) & 31];
+  return 'VRT-' + c;
+}
+function normCode(raw){
+  let c = String(raw).toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (c.startsWith('VRT')) c = c.slice(3);
+  c = c.replace(/O/g, '0').replace(/[IL]/g, '1');
+  return /^[0-9A-HJKMNP-TV-Z]{5}$/.test(c) ? 'VRT-' + c : null;
+}
+function stateTick(){
+  writeHash();
+  const code = designCode();
+  if ($('vSN').textContent !== code) $('vSN').textContent = code;
+  /* il codice cambia con qualsiasi parametro: aggiorna l'incisione in anteprima */
+  if (logo.on && logo.sn && logo.serial !== code){ buildLogoRaster(); pending = true; }
+}
+setInterval(stateTick, 400);                    // coglie qualsiasi modifica senza agganciare ogni controllo
+
+/* ================= archivio locale ================= */
+const ARCH_KEY = 'vortice.archivio.v1', ARCH_MAX = 60;
+function readArch(){
+  try{
+    const a = JSON.parse(localStorage.getItem(ARCH_KEY) || '[]');
+    return Array.isArray(a) ? a.filter(e => e && typeof e.code === 'string' && typeof e.hash === 'string') : [];
+  }catch(_){ return null; }
+}
+function archiveAdd(entry){
+  const a = readArch(); if (!a) return false;
+  const list = [entry, ...a.filter(e => e.code !== entry.code)].slice(0, ARCH_MAX);
+  try{ localStorage.setItem(ARCH_KEY, JSON.stringify(list)); }catch(_){ return false; }
+  renderArch(); return true;
+}
+function renderArch(){
+  const box = $('arch'), a = readArch();
+  box.textContent = '';
+  if (!a || !a.length){
+    const p = document.createElement('p'); p.className = 'empty';
+    p.textContent = a ? 'Nessun STL esportato finora' : 'Archivio non disponibile in questo browser';
+    box.append(p); return;
+  }
+  for (const e of a.slice(0, 8)){
+    const b = document.createElement('button'), c = document.createElement('b'), m = document.createElement('span');
+    b.type = 'button'; b.title = 'Apri questo design';
+    c.textContent = e.code; c.style.fontWeight = '500';
+    m.textContent = `${e.size || ''} · ${new Date(e.t).toLocaleDateString('it-IT')}`;
+    b.append(c, m);
+    b.addEventListener('click', () => openEntry(e));
+    box.append(b);
+  }
+}
+let expectCode = null;
+function openEntry(e){
+  if (location.hash.slice(1) === e.hash || encodeState() === e.hash){ toast(`Design ${e.code} già aperto`); return; }
+  expectCode = e.code;
+  location.hash = e.hash;                       // l'handler hashchange applica e verifica il codice
+}
+function openCode(){
+  const code = normCode($('codeIn').value);
+  if (!code){ toast('Codice non valido · formato VRT-XXXXX'); return; }
+  const a = readArch();
+  const e = a && a.find(x => x.code === code);
+  if (!e){ toast(`${code} non è in questo archivio · apri il link salvato del design`); return; }
+  $('codeIn').value = code;
+  openEntry(e);
+}
+$('codeGo').addEventListener('click', openCode);
+$('codeIn').addEventListener('keydown', ev => { if (ev.key === 'Enter') openCode(); });
+renderArch();
+window.addEventListener('hashchange', () => {
+  if (location.hash.slice(1) === lastHash) return;
+  const s = decodeState(location.hash);
+  if (!s){ expectCode = null; toast('Link non riconosciuto · design invariato'); return; }
+  intro = false;
+  applyState(s, true);
+  lastHash = location.hash.slice(1);            // il prossimo writeHash normalizza i valori fuori range
+  const code = designCode();
+  if (expectCode && expectCode !== code) toast(`Attenzione: codice ricalcolato ${code} diverso da ${expectCode}`);
+  else toast(`Design ${code} caricato`);
+  expectCode = null;
+});
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(_){
+    const ta = document.createElement('textarea'); ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+    let ok = false; try{ ok = document.execCommand('copy'); }catch(_){}
+    ta.remove(); return ok;
+  }
+}
+$('tLink').addEventListener('click', async () => {
+  writeHash();
+  const url = location.href.split('#')[0] + '#' + lastHash;
+  toast(await copyText(url) ? 'Link del design copiato' : 'Copia non riuscita · usa l\'indirizzo nella barra');
+});
+
+/* ================= avvio ================= */
+function resize(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+setActivePreset(presetKey);
+$('segThr').querySelectorAll('button').forEach(x => x.classList.toggle('active', x.dataset.t === THREAD_DEFAULT));
+const tip = () => toast('Suggerimento: orbita SOTTO il vaso per leggere la firma incisa sul fondo');
+{
+  const s = location.hash ? decodeState(location.hash) : null;
+  const msg = s ? 'Design caricato dal link'
+            : location.hash ? 'Link non riconosciuto · caricato il design predefinito' : '';
+  if (s) applyState(s, false);
+  /* toast in sequenza: il secondo timer nasce solo dopo il primo, quindi non si sovrappongono
+     neanche se l'avvio blocca il main thread */
+  if (msg) setTimeout(() => { toast(msg); setTimeout(tip, 4000); }, 600);
+  else setTimeout(tip, 2800);
+}
+/* con hash valido: writeHash lo normalizza (valori riportati nei limiti);
+   con hash non valido lo sostituisce; senza hash l'URL resta pulito finché non modifichi */
+lastHash = location.hash ? location.hash.slice(1) : encodeState();
+buildLogoRaster();
+rebuild(true);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
