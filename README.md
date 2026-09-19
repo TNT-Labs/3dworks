@@ -104,6 +104,13 @@ Backup a server acceso, coerente anche durante una scrittura:
 node scripts/backup.js /percorso/dei/backup
 ```
 
+Verifica di tenuta di un design, misurata sulla mesh che verrebbe esportata:
+
+```bash
+node scripts/tenuta.js                       # i quattro preset
+node scripts/tenuta.js "v=1&h=185&r=62&…"    # un design: la parte dopo il # del link
+```
+
 ---
 
 ## Com'è fatto
@@ -131,7 +138,7 @@ public/
   account.html        dati dell'account e diritti: export, rettifica, cancellazione
   privacy.html · cookie.html   informativa e cookie, riempite da /api/legal
 
-Dockerfile · docker-compose.yml · DEPLOY.md · PRIVACY.md
+Dockerfile · docker-compose.yml · DEPLOY.md · PRIVACY.md · STAMPA.md
 ```
 
 Tre decisioni reggono tutto il resto.
@@ -152,6 +159,21 @@ quindi la CSP non ha bisogno di deroghe.
 una scheda di misure; `stage.js` la disegna; l'interfaccia la scrive. È questa
 separazione che rende possibile una pagina pubblica senza un solo comando di
 modifica — e che permette di testare la geometria in Node, senza browser.
+
+### Tenuta ai liquidi
+
+Un vaso stampato in FDM tiene il liquido solo se ogni strato è abbastanza largo
+da contenere un numero intero di passate di estrusione. La geometria fa la sua
+parte: la mesh esportata è chiusa, sotto l'incisione restano sempre almeno
+1,8 mm di fondo pieno e la parete del corpo misura esattamente il valore
+impostato. Il punto delicato è la **fascia di spalla**, dove il raccordo verso
+il collo può assottigliare la parete fino al minimo strutturale di 0,90 mm:
+succede quando l'affilatura delle costole supera 0,4, e oltre quella soglia
+aumentare lo spessore impostato non serve.
+
+**[STAMPA.md](STAMPA.md)** ha le misure caso per caso, la tabella
+parete/affilatura, le impostazioni dello slicer che decidono la tenuta e il
+protocollo di prova. `node scripts/tenuta.js` misura un design qualsiasi.
 
 ### Sicurezza
 
