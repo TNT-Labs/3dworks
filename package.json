@@ -1,0 +1,21 @@
+{
+  "name": "vortice-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VORTICE · studio generativo web per dispenser e portaspazzolino stampabili in 3D",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "postinstall": "node scripts/vendor-three.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "express": "^4.21.2",
+    "nodemailer": "^6.9.16",
+    "three": "0.160.0"
+  }
+}
