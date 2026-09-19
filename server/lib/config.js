@@ -9,6 +9,20 @@ const str  = (k, d = '') => (process.env[k] ?? d).trim();
 const num  = (k, d) => { const v = Number(process.env[k]); return Number.isFinite(v) ? v : d; };
 const bool = (k, d) => { const v = str(k); return v ? /^(1|true|yes|on)$/i.test(v) : d; };
 
+/* TRUST_PROXY accetta le stesse forme di Express:
+     0/false  nessun proxy (default)
+     1, 2, …  numero di hop fidati davanti all'applicazione
+     true     fidati di tutta la catena (solo in rete chiusa)
+     un elenco di indirizzi o CIDR separati da virgola */
+function trustProxyValue(){
+  const raw = str('TRUST_PROXY');
+  if (!raw) return false;
+  if (/^(0|false|no|off)$/i.test(raw)) return false;
+  if (/^(true|yes|on)$/i.test(raw)) return true;
+  if (/^\d+$/.test(raw)) return Number(raw);
+  return raw.split(',').map(x => x.trim()).filter(Boolean);
+}
+
 const dbPath = str('VORTICE_DB', join(ROOT, 'data', 'vortice.db'));
 const isProd = str('NODE_ENV') === 'production';
 
@@ -21,9 +35,16 @@ export const config = {
   /* indirizzo pubblico del sito: serve nei link delle email e nei link condivisi */
   baseUrl: str('VORTICE_BASE_URL', '').replace(/\/+$/, ''),
 
-  /* il cookie di sessione viaggia solo su HTTPS quando il sito è servito in HTTPS.
-     Dietro un reverse proxy va impostato TRUST_PROXY=1 perché req.secure funzioni. */
-  trustProxy: bool('TRUST_PROXY', false),
+  /* Il cookie di sessione viaggia solo su HTTPS quando il sito è servito in HTTPS.
+     Dietro un reverse proxy o un tunnel Cloudflare TRUST_PROXY va impostato,
+     altrimenti req.secure resta falso e ogni richiesta sembra arrivare dal proxy. */
+  trustProxy: trustProxyValue(),
+
+  /* Con un tunnel Cloudflare TUTTE le richieste arrivano dallo stesso indirizzo
+     (il container cloudflared): senza leggere CF-Connecting-IP il limite sui
+     tentativi di accesso sarebbe condiviso da tutti i visitatori, e il primo che
+     sbaglia la password chiuderebbe fuori gli altri. */
+  cloudflare: bool('CLOUDFLARE', false),
   cookieSecure: bool('COOKIE_SECURE', isProd),
   sessionDays: num('SESSION_DAYS', 30),
 

@@ -1,7 +1,30 @@
-/* Utilità HTTP condivise: cookie, CSRF, rate limit, guardie di accesso. */
+/* Utilità HTTP condivise: indirizzo del client, cookie, CSRF, rate limit,
+   guardie di accesso. */
 import { timingSafeEqual } from 'node:crypto';
+import { extname } from 'node:path';
 import { config } from './config.js';
 import { SESSION_COOKIE, CSRF_COOKIE, CSRF_HEADER, readSession, newToken } from './auth.js';
+
+/* --------------------------- indirizzo del client --------------------------- */
+/*
+ * Dietro un tunnel Cloudflare ogni richiesta arriva dall'indirizzo del
+ * container cloudflared: `req.ip` sarebbe identico per tutti e il limite sui
+ * tentativi di accesso diventerebbe collettivo — il primo che sbaglia la
+ * password bloccherebbe l'intero sito.
+ *
+ * `CF-Connecting-IP` è scritto da Cloudflare e sovrascritto a ogni passaggio,
+ * quindi un client non può falsificarlo *attraverso* Cloudflare. Può però
+ * falsificarlo raggiungendo il container direttamente: lo leggiamo solo quando
+ * il proxy è dichiarato fidato, e la guida di deploy non pubblica la porta
+ * dell'applicazione fuori dalla rete interna di Docker.
+ */
+export function clientIp(req){
+  if (config.trustProxy !== false && config.cloudflare){
+    const cf = req.get('cf-connecting-ip');
+    if (cf && cf.length <= 45) return cf.trim();
+  }
+  return req.ip;
+}
 
 /* ------------------------------ cookie ------------------------------ */
 export function parseCookies(header){
@@ -52,8 +75,12 @@ export function attachSession(req, res, next){
   /* Il token CSRF va dato anche a chi non è ancora entrato: senza, la prima
      registrazione o il primo accesso non avrebbero nulla con cui firmarsi.
      Viene rigenerato all'apertura della sessione, quindi un token raccolto da
-     anonimo non sopravvive all'accesso. */
-  if (!req.cookies[CSRF_COOKIE]){
+     anonimo non sopravvive all'accesso.
+
+     Solo su pagine e API, però: un Set-Cookie su un foglio di stile o su uno
+     script impedirebbe a una CDN di metterli in cache — e se li mettesse
+     comunque, servirebbe a tutti i visitatori il token di uno solo. */
+  if (!req.cookies[CSRF_COOKIE] && needsCsrfCookie(req)){
     const csrf = newToken(16);
     req.cookies[CSRF_COOKIE] = csrf;
     res.append('Set-Cookie', cookieHeader(CSRF_COOKIE, csrf,
@@ -79,6 +106,22 @@ export function requireCsrf(req, res, next){
   next();
 }
 
+/*
+ * Chi deve ricevere il cookie CSRF: le pagine («/», «/p/VRT-…», i .html) e le
+ * API che scrivono. Restano fuori:
+ *   · gli asset (js, css, icone) — un Set-Cookie li renderebbe non cacheabili
+ *     da una CDN, e se venissero comunque messi in cache servirebbero a tutti
+ *     il token di un solo visitatore;
+ *   · /api/public/… — è in sola lettura e non usa il token, ed è l'endpoint che
+ *     più conviene far tenere in cache al bordo per scaricare il server.
+ */
+function needsCsrfCookie(req){
+  if (req.path.startsWith('/api/public/')) return false;
+  if (req.path.startsWith('/api/')) return true;
+  const ext = extname(req.path);
+  return ext === '' || ext === '.html';
+}
+
 export function requireAuth(req, res, next){
   if (!req.user) return res.status(401).json({ error: 'Accesso richiesto', code: 'auth_required' });
   if (config.requireVerification && !req.user.verified_at)
@@ -91,7 +134,7 @@ export function requireAuth(req, res, next){
    dipendenze. Dietro più istanze va sostituito con uno store condiviso. */
 const buckets = new Map();
 
-export function rateLimit({ windowMs, max, key = req => req.ip, message }){
+export function rateLimit({ windowMs, max, key = clientIp, message }){
   return (req, res, next) => {
     const k = key(req);
     if (k == null) return next();

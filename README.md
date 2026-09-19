@@ -72,17 +72,37 @@ node scripts/seed-demo.js http://localhost:3000
 
 ### In produzione
 
+Con Docker — è il modo previsto, e l'unico provato su Raspberry Pi:
+
+```bash
+cp .env.docker.example .env      # ci va il token del tunnel Cloudflare
+docker compose up -d --build
+```
+
+**[DEPLOY.md](DEPLOY.md)** ha la procedura completa per un Raspberry Pi 5 dietro un
+tunnel Cloudflare: creazione del tunnel, impostazioni Cloudflare da controllare
+(Rocket Loader va spento, o lo studio non parte), backup, aggiornamenti e i sintomi
+più comuni con la loro causa.
+
+Senza Docker:
+
 ```bash
 NODE_ENV=production \
-VORTICE_BASE_URL=https://vortice.esempio.it \
-TRUST_PROXY=1 COOKIE_SECURE=1 \
+VORTICE_BASE_URL=https://shopbeautylab.it \
+TRUST_PROXY=1 CLOUDFLARE=1 COOKIE_SECURE=1 \
 VORTICE_DB=/var/lib/vortice/vortice.db \
 npm start
 ```
 
-Dietro un reverse proxy `TRUST_PROXY=1` è necessario, altrimenti il rate limit
-vede l'indirizzo del proxy per tutti. Il backup è la copia del file SQLite (con i
-suoi `-wal` e `-shm`, oppure a server fermo).
+Dietro un proxy `TRUST_PROXY` è necessario, altrimenti il limite sui tentativi di
+accesso vede l'indirizzo del proxy per tutti e blocca i visitatori insieme;
+`CLOUDFLARE=1` fa leggere il vero indirizzo da `CF-Connecting-IP`.
+
+Backup a server acceso, coerente anche durante una scrittura:
+
+```bash
+node scripts/backup.js /percorso/dei/backup
+```
 
 ---
 
@@ -107,6 +127,8 @@ public/
   js/studio.js        interfaccia di creazione
   js/viewer.js        scheda pubblica in sola lettura
   index.html · prodotto.html · studio.html · accedi.html
+
+Dockerfile · docker-compose.yml · DEPLOY.md
 ```
 
 Tre decisioni reggono tutto il resto.

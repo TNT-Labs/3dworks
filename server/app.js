@@ -3,7 +3,7 @@
    possono montare senza aprire una porta. */
 import express from 'express';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { config, ROOT } from './lib/config.js';
 import { attachSession, requireCsrf } from './lib/http.js';
 import { authRouter } from './routes/auth.js';
@@ -60,6 +60,13 @@ export function createApp(){
   app.use(attachSession);
 
   /* ---------------------------- API ---------------------------- */
+  /* Nessuna risposta API va in cache, né nel browser né in una CDN davanti al
+     sito: contengono lo stato della sessione. L'unica eccezione è la scheda
+     pubblica, che si dichiara cacheabile da sé perché è uguale per tutti. */
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
   app.use('/api', requireCsrf);
   app.use('/api/auth', authRouter);
   app.use('/api/designs',
@@ -80,15 +87,23 @@ export function createApp(){
   /* /p/VRT-7K3QX è il link da stampare accanto al codice: leggibile e condivisibile */
   app.get('/p/:code', (req, res) => {
     if (!normCode(req.params.code)) return res.redirect('/?codice=nonvalido');
+    /* la pagina è un guscio identico per ogni codice, ma rivalidarla a ogni
+       visita evita che una CDN serva una versione vecchia dopo un aggiornamento */
+    res.set('Cache-Control', 'no-cache');
     res.sendFile(join(PUBLIC_DIR, 'prodotto.html'));
   });
 
   app.use(express.static(PUBLIC_DIR, {
     extensions: ['html'],
-    setHeaders(res, path){
-      /* i file vendorizzati sono immutabili: portano la versione nel contenuto */
-      if (path.includes(`${'vendor'}${'/'}`)) res.set('Cache-Control', 'public, max-age=31536000, immutable');
-      else if (path.endsWith('.html')) res.set('Cache-Control', 'no-cache');
+    setHeaders(res, filePath){
+      /* le pagine si rivalidano sempre: un aggiornamento deve arrivare subito */
+      if (filePath.endsWith('.html')) return res.set('Cache-Control', 'no-cache');
+      /* Three.js vendorizzato è immutabile: cambia solo cambiando versione */
+      if (filePath.includes(`${sep}vendor${sep}`))
+        return res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      /* il resto (js, css, icona) può stare in cache un'ora e poi rivalidarsi:
+         basta a scaricare il lavoro dal Raspberry senza congelare una versione */
+      res.set('Cache-Control', 'public, max-age=3600, must-revalidate');
     },
   }));
 

@@ -6,7 +6,7 @@ import {
   hashPassword, verifyPassword, createSession, destroySession, destroyAllSessions,
   normEmail, validEmail, passwordProblem, newToken,
 } from '../lib/auth.js';
-import { setSessionCookies, clearSessionCookies, rateLimit, requireAuth, freshCsrf } from '../lib/http.js';
+import { setSessionCookies, clearSessionCookies, rateLimit, requireAuth, freshCsrf, clientIp } from '../lib/http.js';
 import { sendVerifyMail, sendResetMail } from '../lib/mailer.js';
 
 export const authRouter = Router();
@@ -22,7 +22,7 @@ const baseUrl = req => config.baseUrl || `${req.protocol}://${req.get('host')}`;
 
 /* Il limite per indirizzo email va accanto a quello per IP: senza, chi cambia
    IP prova all'infinito su un singolo account. */
-const byIp    = (windowMs, max, message) => rateLimit({ windowMs, max, message, key: r => 'ip:' + r.ip });
+const byIp    = (windowMs, max, message) => rateLimit({ windowMs, max, message, key: r => 'ip:' + clientIp(r) });
 const byEmail = (windowMs, max, message) => rateLimit({ windowMs, max, message,
   key: r => (r.body && typeof r.body.email === 'string') ? 'em:' + normEmail(r.body.email) : null });
 

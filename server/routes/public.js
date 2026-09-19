@@ -3,7 +3,7 @@
    niente identità dell'autore, niente file, nessuna scrittura. */
 import { Router } from 'express';
 import { q } from '../lib/db.js';
-import { rateLimit } from '../lib/http.js';
+import { rateLimit, clientIp } from '../lib/http.js';
 import { normCode, decodeState } from '../../public/js/design-spec.js';
 
 export const publicRouter = Router();
@@ -11,7 +11,7 @@ export const publicRouter = Router();
 /* Il codice ha 33,5 milioni di combinazioni: il limite serve comunque a
    rendere inutile provarle a tappeto. */
 const lookupLimit = rateLimit({
-  windowMs: 60_000, max: 60, key: r => 'code:' + r.ip,
+  windowMs: 60_000, max: 60, key: r => 'code:' + clientIp(r),
   message: 'Troppe ricerche consecutive. Attendi un minuto.',
 });
 

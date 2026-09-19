@@ -6,3 +6,6 @@ data/*.db-shm
 public/vendor/
 .env
 *.log
+
+# configurazione locale del deploy
+docker-compose.override.yml

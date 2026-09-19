@@ -1,8 +1,8 @@
 /* Avvio del server. */
 import { createApp, assertAssets } from './app.js';
-import { config } from './lib/config.js';
+import { config, smtpConfigured } from './lib/config.js';
 import { startJanitor } from './lib/auth.js';
-import { smtpConfigured } from './lib/config.js';
+import { db } from './lib/db.js';
 
 assertAssets();
 startJanitor();
@@ -27,5 +27,18 @@ server.on('error', err => {
   process.exit(1);
 });
 
+/* Docker manda SIGTERM e aspetta: chiudiamo le connessioni e poi il database,
+   così il journal WAL viene consolidato invece di restare a metà. */
+let closing = false;
 for (const sig of ['SIGINT', 'SIGTERM'])
-  process.on(sig, () => server.close(() => process.exit(0)));
+  process.on(sig, () => {
+    if (closing) return;
+    closing = true;
+    console.log(`\nRicevuto ${sig}: chiusura in corso…`);
+    server.close(() => {
+      try{ db.close(); }catch(err){ console.error('chiusura database:', err.message); }
+      process.exit(0);
+    });
+    /* se una richiesta non termina, non restiamo appesi all'infinito */
+    setTimeout(() => { try{ db.close(); }catch{} process.exit(0); }, 8000).unref();
+  });

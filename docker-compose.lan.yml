@@ -1,0 +1,18 @@
+# Apre la porta sulla rete locale, solo per provare il sito dal Pi o da un
+# altro computer di casa prima che il tunnel sia configurato:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d
+#
+# Non usarlo in esercizio: con la porta esposta chiunque sia sulla rete può
+# dichiarare un CF-Connecting-IP falso ed eludere il limite sui tentativi
+# di accesso.
+services:
+  vortice:
+    ports:
+      - "3000:3000"
+    environment:
+      # in LAN non c'è Cloudflare davanti: niente intestazioni da credere
+      TRUST_PROXY: "0"
+      CLOUDFLARE: "0"
+      COOKIE_SECURE: "0"
+      VORTICE_BASE_URL: ""
