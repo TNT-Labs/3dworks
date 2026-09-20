@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 64 test rapidi (spec, geometria, tenuta, API, proxy)
+npm test          # 71 test rapidi (spec, geometria, tenuta, ricetta, API, proxy)
 npm run test:e2e  # 13 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -163,9 +163,21 @@ Nel collo lo spessore lo detta la norma GPI (≈3 mm) e non segue lo slider: il
 passaggio interno è una quota funzionale. Lo spessore misurato è riportato nella
 scheda del pezzo e in quella pubblica, e l'export lo rifiuta sotto la soglia.
 
+**La cucitura Z non si incolonna.** Ogni giro di perimetro deve iniziare e finire
+da qualche parte, e lì l'estrusione si interrompe: resta un grumo o un microvuoto.
+Il default di PrusaSlicer e di Orca è `aligned`, che impila quei punti sulla stessa
+verticale per farli sembrare una riga sola — ordinato a vedersi, ma in un
+contenitore diventa un canale continuo dal fondo al collo. La ricetta incorporata
+nel 3MF impone `seam_position = random` e le cuciture dei perimetri interni
+sfalsate: i difetti restano isolati e lo strato sopra copre quello sotto.
+
+L'STL non trasporta impostazioni, quindi chi lo esporta deve mettere la cucitura
+su «casuale» a mano — lo Studio lo dice sotto il pulsante quando è selezionato.
+
 Resta fuori dal controllo del software ciò che dipende dalla stampante: prima
 aderenza, temperatura, umidità del filamento. La geometria garantisce che i
-perimetri ci stiano — che vengano estrusi bene è un'altra cosa.
+perimetri ci stiano e la ricetta che non si allineino — che vengano estrusi bene
+è un'altra cosa.
 
 ---
 

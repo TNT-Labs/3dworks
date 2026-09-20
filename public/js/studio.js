@@ -358,7 +358,9 @@ let format = 'stl';
 $('segFmt').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
   format = b.dataset.f;
   setActive('segFmt', 'f', format);
-  $('fmtNote').hidden = format !== '3mf';
+  /* l'STL non trasporta la ricetta: chi lo sceglie deve saperlo */
+  $('note3mf').hidden = format !== '3mf';
+  $('noteStl').hidden = format === '3mf';
   syncPieceUI();
 }));
 

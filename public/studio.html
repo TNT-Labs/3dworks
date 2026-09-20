@@ -321,14 +321,21 @@
       <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v">4 perimetri</span></div>
       <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v">piena, 3–4 mm</span></div>
       <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6%</span></div>
+      <div class="row"><span class="k">Cucitura Z</span><span class="dots"></span><span class="v">casuale (antiperdita)</span></div>
       <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
       <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v">PLA prova · PETG bagno</span></div>
     </div>
     <p class="note">La tenuta al liquido la fanno i <b>perimetri</b>, non il riempimento:
     sono loro a formare una parete continua. Con 4 perimetri da 0,45 mm servono
     <b>1,8 mm</b> di guscio perché si chiudano, e la geometria non scende mai sotto
-    questa misura. Il gyroid al 6% serve solo a sostenere la spalla. Con il 3MF la
-    ricetta è già dentro il file.</p>
+    questa misura. Il gyroid al 6% serve solo a sostenere la spalla.<br><br>
+    <b>Cucitura Z.</b> Ogni giro di perimetro deve iniziare e finire da qualche parte,
+    e lì l'estrusione si interrompe. Il default degli slicer è <i>allineata</i>: impila
+    quei punti sulla stessa verticale per farli sembrare una riga sola — ordinato a
+    vedersi, ma in un contenitore quei microvuoti si incolonnano in un canale continuo
+    dal fondo al collo. La ricetta la mette <b>casuale</b>: i difetti restano isolati e
+    lo strato sopra copre quello sotto. In cambio resta una punteggiatura fine sulla
+    superficie, quasi invisibile su un vaso a costole ritorte.</p>
   </section>
 
   <!-- ====================== export ====================== -->
@@ -342,9 +349,11 @@
       <span>Scarica STL del dispenser</span>
     </button>
     <p class="fine" style="text-align:center;margin-top:10px">
-      <span id="fmtNote" hidden>3MF: geometria + ricetta di stampa incorporata, letta da PrusaSlicer
-      e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
-      STL binario watertight · vaso cavo + collo filettato + firma e codice incisi<br>
+      <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano la cucitura Z
+      su «casuale»</b> nello slicer, o il pezzo rischia di perdere<br></span>
+      <span id="note3mf" hidden>3MF: geometria <b>e ricetta</b>, cucitura compresa · letta da
+      PrusaSlicer e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
+      mesh chiusa e verificata · vaso cavo + collo filettato + firma e codice incisi<br>
       Z-up · base a 0 mm · elaborato nel browser</p>
   </footer>
 </aside>

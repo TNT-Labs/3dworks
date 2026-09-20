@@ -1087,17 +1087,39 @@ function model3MF(parts, title){
   return L.join('\n');
 }
 /* ricetta di stampa: stessi valori della scheda */
-const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6, pattern:'gyroid' };
+/*
+ * Ricetta di stampa incorporata nel 3MF.
+ *
+ * `seam` merita una riga di spiegazione. Ogni giro di perimetro deve iniziare e
+ * finire da qualche parte, e in quel punto l'estrusione si interrompe: resta un
+ * grumo o un microvuoto. Il default di PrusaSlicer e di Orca è `aligned`, che
+ * impila di proposito tutte le cuciture sulla stessa verticale per farle sembrare
+ * una riga sola — bello a vedersi, pessimo in un contenitore, perché quei
+ * microvuoti si incolonnano e formano un canale continuo dal fondo al collo.
+ * Con `random` ogni strato parte da un angolo diverso: i difetti restano isolati
+ * e lo strato sopra copre quello sotto. Non esiste piu' un percorso continuo.
+ *
+ * Nota: la cucitura casuale lascia una punteggiatura fine sulla superficie. Su un
+ * vaso a costole ritorte è praticamente invisibile, e comunque la tenuta viene
+ * prima dell'estetica in un pezzo che deve contenere sapone.
+ */
+const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6,
+                 pattern:'gyroid', seam:'random' };
 const slic3rConfig = () => [
   '; ricetta VORTICE — tenuta al liquido affidata ai perimetri',
   `layer_height = ${RECIPE.layer}`, `first_layer_height = ${RECIPE.first}`,
   `perimeters = ${RECIPE.walls}`, `top_solid_layers = ${RECIPE.top}`, `bottom_solid_layers = ${RECIPE.bottom}`,
   `fill_density = ${RECIPE.infill}%`, `fill_pattern = ${RECIPE.pattern}`,
+  '; cucitura sparsa: i punti di partenza non si incolonnano in un canale',
+  `seam_position = ${RECIPE.seam}`,
+  '; e le cuciture dei perimetri interni non cadono sopra quella esterna',
+  'staggered_inner_seams = 1',
   'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + RECIPE.nozzle, ''].join('\n');
 const orcaConfig = () => JSON.stringify({
   layer_height: String(RECIPE.layer), initial_layer_print_height: String(RECIPE.first),
   wall_loops: String(RECIPE.walls), top_shell_layers: String(RECIPE.top), bottom_shell_layers: String(RECIPE.bottom),
   sparse_infill_density: RECIPE.infill + '%', sparse_infill_pattern: RECIPE.pattern,
+  seam_position: RECIPE.seam,
   enable_support: '0', brim_type: 'no_brim', version: '1.0.0', from: 'VORTICE',
 }, null, 1);
 function build3MF(parts, title){
