@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 71 test rapidi (spec, geometria, tenuta, ricetta, API, proxy)
+npm test          # 74 test rapidi (spec, geometria, tenuta, ricetta, API, proxy)
 npm run test:e2e  # 13 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -173,6 +173,22 @@ sfalsate: i difetti restano isolati e lo strato sopra copre quello sotto.
 
 L'STL non trasporta impostazioni, quindi chi lo esporta deve mettere la cucitura
 su «casuale» a mano — lo Studio lo dice sotto il pulsante quando è selezionato.
+
+**Il fondo è pieno per tutto il suo spessore.** Il fondo è alto 3–4 mm di geometria
+piena, ma con i soli strati solidi di ricetta ne venivano stampati pieni appena
+2,0 mm: in mezzo restava riempimento al 6%, e il vero sbarramento sotto il liquido
+erano gli strati solidi superiori — 1 mm steso sopra il vuoto. È la costruzione
+normale di qualsiasi stampa e di solito tiene, ma qui sotto c'è sapone.
+`bottom_solid_min_thickness = 4` lo riempie per intero. Costa **+9–14% di materiale
+e 1,5–2,2 ore**.
+
+Effetto collaterale utile: così il pezzo non ha più alcuna zona a riempimento rado
+— la parete era già tutta perimetri — e **il materiale torna a essere il volume
+esatto della geometria**. Prima il fondo valeva 0,672 del suo volume, un rapporto
+misurato su 8 slicing reali ma uno solo, mentre quello vero dipende dall'altezza
+(0,68 a h 120, 0,54 a h 235). Quell'errore sistematico non esiste più. La stima del
+tempo resta quella tarata e ora tende a sovrastimare di qualche punto, perché il
+pieno si stampa più in fretta dei perimetri: si ritara con un solo slicing reale.
 
 Resta fuori dal controllo del software ciò che dipende dalla stampante: prima
 aderenza, temperatura, umidità del filamento. La geometria garantisce che i

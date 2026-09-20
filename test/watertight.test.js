@@ -162,3 +162,32 @@ test("l'export rifiuta una mesh che non sia chiusa e manifold", () => {
   /* nessun bordo aperto e nessun bordo doppio: è la definizione di watertight */
   assert.ok(!r.check.errors.some(e => /aperti|manifold/.test(e)));
 });
+
+test('il materiale è il volume esatto della geometria, senza coefficienti', () => {
+  /* Con il fondo pieno e la parete tutta perimetri non resta alcuna zona a
+     riempimento rado: il coefficiente che approssimava il fondo non serve più,
+     e con esso sparisce l'errore che dipendeva dall'altezza del pezzo. */
+  const P = par();
+  const raster = V.buildLogoRaster(LOGO, V.targetR95(P, 'clessidra'));
+  const ctx = V.makeExportCtx(P, 'clessidra', raster, .8);
+  const pos = new Float32Array(V.vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+  const st = V.fillVessel(pos, ctx);
+  assert.equal(V.matVolOf(st), st.wallV + st.solidV,
+    'materiale = volume del guscio + volume del fondo, punto');
+});
+
+test('la tenuta del fondo dichiarata è quella davvero stampata piena', () => {
+  /* Prima la scheda mostrava lo spessore geometrico mentre lo slicer ne rendeva
+     solidi 2 mm: il numero era ottimistico. Ora coincidono. */
+  for (const h of [120, 185, 235]){
+    const s = defaultState();
+    s.P.h = h;
+    const m = new DesignModel({ animate:false });
+    m.applyState(s, false);
+    m.build(true);
+    const pavimento = m.metrics.seal + m.logo.depth;
+    assert.ok(pavimento <= V.RECIPE.floorSolid + .01,
+      `h ${h}: il fondo è ${pavimento.toFixed(2)} mm, la ricetta ne rende pieni ${V.RECIPE.floorSolid}`);
+    assert.equal(m.metrics.sealOk, true);
+  }
+});

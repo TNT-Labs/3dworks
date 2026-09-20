@@ -75,6 +75,23 @@ test('la cucitura è sparsa, non incolonnata — OrcaSlicer', async () => {
   assert.equal(cfg.seam_position, 'random');
 });
 
+test('il fondo è pieno per tutto lo spessore, non solo nei primi strati', async () => {
+  /* senza questa impostazione restano ~2 mm solidi su 3-4 mm di fondo, e il
+     vero sbarramento sotto il liquido è 1 mm stampato sopra riempimento rado */
+  const { files } = await build();
+  assert.match(files.get('Metadata/Slic3r_PE.config'), /^bottom_solid_min_thickness = 4$/m);
+  const orca = JSON.parse(files.get('Metadata/project_settings.config'));
+  assert.equal(orca.bottom_shell_thickness, '4');
+
+  /* lo spessore imposto deve coprire il fondo più alto che la geometria produce */
+  const { PE, exportFloorRow } = V;
+  let massimo = 0;
+  for (let h = 120; h <= 235; h += 5)
+    massimo = Math.max(massimo, h * exportFloorRow(h) / (PE.nB - 1));
+  assert.ok(V.RECIPE.floorSolid >= massimo,
+    `il fondo arriva a ${massimo.toFixed(2)} mm, la ricetta ne impone ${V.RECIPE.floorSolid}`);
+});
+
 test('i perimetri che fanno la tenuta sono nella ricetta', async () => {
   const { files } = await build();
   const cfg = files.get('Metadata/Slic3r_PE.config');

@@ -1103,8 +1103,21 @@ function model3MF(parts, title){
  * vaso a costole ritorte è praticamente invisibile, e comunque la tenuta viene
  * prima dell'estetica in un pezzo che deve contenere sapone.
  */
+/*
+ * `floorSolid` merita anch'essa una spiegazione. Il fondo e' alto 3-4 mm di
+ * geometria piena, ma con i soli `bottom`/`top` strati solidi ne venivano
+ * stampati pieni appena 2,0 mm: in mezzo restava riempimento al 6%, e il vero
+ * sbarramento sotto il liquido erano gli strati solidi superiori, 1 mm stampato
+ * sopra il vuoto. E' la costruzione normale di qualsiasi stampa e di solito
+ * tiene, ma qui sotto c'e' sapone e non vale la pena rischiarlo: il fondo va
+ * pieno per tutto il suo spessore.
+ *
+ * Effetto collaterale utile: cosi' il pezzo non ha piu' alcuna zona a
+ * riempimento rado (la parete e' gia' tutta perimetri), quindi il materiale
+ * torna a essere esattamente il volume della geometria.
+ */
 const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6,
-                 pattern:'gyroid', seam:'random' };
+                 pattern:'gyroid', seam:'random', floorSolid:4 };
 const slic3rConfig = () => [
   '; ricetta VORTICE — tenuta al liquido affidata ai perimetri',
   `layer_height = ${RECIPE.layer}`, `first_layer_height = ${RECIPE.first}`,
@@ -1114,12 +1127,15 @@ const slic3rConfig = () => [
   `seam_position = ${RECIPE.seam}`,
   '; e le cuciture dei perimetri interni non cadono sopra quella esterna',
   'staggered_inner_seams = 1',
+  '; fondo pieno per tutto lo spessore: sotto il liquido non resta riempimento rado',
+  `bottom_solid_min_thickness = ${RECIPE.floorSolid}`,
   'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + RECIPE.nozzle, ''].join('\n');
 const orcaConfig = () => JSON.stringify({
   layer_height: String(RECIPE.layer), initial_layer_print_height: String(RECIPE.first),
   wall_loops: String(RECIPE.walls), top_shell_layers: String(RECIPE.top), bottom_shell_layers: String(RECIPE.bottom),
   sparse_infill_density: RECIPE.infill + '%', sparse_infill_pattern: RECIPE.pattern,
   seam_position: RECIPE.seam,
+  bottom_shell_thickness: String(RECIPE.floorSolid),
   enable_support: '0', brim_type: 'no_brim', version: '1.0.0', from: 'VORTICE',
 }, null, 1);
 function build3MF(parts, title){
@@ -1196,7 +1212,18 @@ function discFolds(pos, ind, ctx){
    Il termine in Q coglie il rallentamento su costole, torsione e affilatura: la
    portata reale scende da 2,5 a 1,1 mm³/s. Errore sui casi di taratura: medio 8%,
    massimo 14%. Il modello volumetrico precedente sbagliava fino a −60%. */
-const MAT_BASE_K = .672, T_V = .394, T_Q = .353;
+/*
+ * Materiale. Con il fondo pieno e la parete gia' tutta perimetri il pezzo non ha
+ * piu' zone a riempimento rado: il materiale e' esattamente il volume della
+ * geometria, senza coefficienti.
+ *
+ * Prima il fondo valeva 0,672 del suo volume, un rapporto misurato affettando
+ * 8 design — ma un rapporto solo, mentre quello vero dipende dall'altezza
+ * (0,68 a h 120, 0,54 a h 235, perche' il fondo si ingrossa e la parte a
+ * riempimento cresce). Quell'errore sistematico adesso non esiste piu'.
+ */
+const MAT_BASE_K = 1;
+const T_V = .394, T_Q = .353;
 const matVolOf = st => st.wallV + MAT_BASE_K * st.solidV;
 const printSeconds = (matVol, Q) => matVol * (T_V + T_Q * Math.max(0, (Q || 1) - 1));
 /* ondulazione: lunghezza del contorno esterno diviso quella del cerchio equivalente */

@@ -279,9 +279,11 @@
     segue lo slider. Overhang = massimo tra crescita esterna e restringimento della cavità,
     elica delle costole e inviluppo della spalla inclusi. «Tenuta fondo» = pieno minimo
     tra il fondo delle lettere e il serbatoio. La tenuta al liquido la fanno i <b>perimetri</b>
-    (4), non l'infill. «Tempo stimato» e «Filamento» sono tarati su 8 design affettati con
-    PrusaSlicer (0,2 mm, 4 perimetri, gyroid 6%): errore medio 8%, massimo 14% sul tempo e
-    2% sul materiale. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
+    (4), non l'infill. Con il fondo pieno e la parete tutta perimetri il pezzo non ha zone
+    a riempimento rado, quindi <b>«Filamento» è ora il volume esatto della geometria</b>,
+    senza coefficienti. «Tempo stimato» resta tarato su 8 design affettati con PrusaSlicer
+    (0,2 mm, 4 perimetri): errore medio 8%, massimo 14%, e da quando il fondo è pieno tende
+    a sovrastimare di qualche punto, perché il pieno si stampa più in fretta dei perimetri. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
     della cavità: con la pompa avvitata, taglia la cannuccia 2–3 mm più corta.</span></p>
   </section>
 
@@ -319,8 +321,8 @@
     <div class="rows">
       <div class="row"><span class="k">Ugello · layer</span><span class="dots"></span><span class="v">0.4 · 0.20 mm</span></div>
       <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v">4 perimetri</span></div>
-      <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v">piena, 3–4 mm</span></div>
-      <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6%</span></div>
+      <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v">piena per tutto lo spessore</span></div>
+      <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6% · non usato</span></div>
       <div class="row"><span class="k">Cucitura Z</span><span class="dots"></span><span class="v">casuale (antiperdita)</span></div>
       <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
       <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v">PLA prova · PETG bagno</span></div>
@@ -335,7 +337,11 @@
     vedersi, ma in un contenitore quei microvuoti si incolonnano in un canale continuo
     dal fondo al collo. La ricetta la mette <b>casuale</b>: i difetti restano isolati e
     lo strato sopra copre quello sotto. In cambio resta una punteggiatura fine sulla
-    superficie, quasi invisibile su un vaso a costole ritorte.</p>
+    superficie, quasi invisibile su un vaso a costole ritorte.<br><br>
+    <b>Fondo.</b> È pieno per tutto il suo spessore, non solo nei primi strati: sotto
+    il liquido non resta riempimento rado. Di conseguenza il pezzo non ha più alcuna
+    zona a riempimento — la parete è tutta perimetri e il fondo tutto pieno — e il
+    <b>gyroid al 6% resta nella ricetta ma non viene usato</b>.</p>
   </section>
 
   <!-- ====================== export ====================== -->
