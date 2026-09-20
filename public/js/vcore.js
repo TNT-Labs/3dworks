@@ -265,7 +265,13 @@ function neckSpec(P){
   const ridgeH     = Math.min(1.5, Math.max(.9, P.thD * .044));
   const crestR     = P.thD / 2;
   const rootR      = crestR - ridgeH;
-  const neckBoreR  = Math.max(6, rootR - 3);
+  /* Il collo è la parte che la pompa stringe, e con la parete oltre i 3 mm non
+     ha senso che resti l'unico punto sottile del pezzo: l'alesaggio rientra
+     quel tanto che basta perché il collo segua lo slider. Fino a 3 mm non
+     cambia nulla, e il minimo di 6 mm di raggio resta a proteggere i filetti
+     più piccoli. Il passaggio per la cannuccia perde al massimo 0,4 mm di Ø. */
+  const wallMin    = Math.max(3, Number.isFinite(P.w) ? P.w : 3);
+  const neckBoreR  = Math.max(6, rootR - wallMin);
   const entry      = Math.max(1.4, ridgeH / .6);
   const land       = 2.4;
   const Hn         = entry + P.turns * P.pitch + land;

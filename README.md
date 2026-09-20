@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 74 test rapidi (spec, geometria, tenuta, ricetta, API, proxy)
+npm test          # 77 test rapidi (spec, geometria, tenuta, ricetta, API, proxy)
 npm run test:e2e  # 13 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -159,9 +159,17 @@ la stessa ampiezza sui due lati. Lo spessore è esatto per costruzione:
 | faccia esterna | — | **invariata su 3888/3888 design** |
 | overhang | — | **nessun peggioramento** |
 
-Nel collo lo spessore lo detta la norma GPI (≈3 mm) e non segue lo slider: il
-passaggio interno è una quota funzionale. Lo spessore misurato è riportato nella
-scheda del pezzo e in quella pubblica, e l'export lo rifiuta sotto la soglia.
+La fascia più colpita era proprio quella **sotto l'attacco della pompa**, dove il
+pezzo viene sollecitato avvitandolo: lì la parete scendeva a 0,90–1,26 mm, in sei
+strisce verticali, e il 65% dei design aveva quel tratto sotto 1,8 mm. Il collo
+filettato in sé è sempre stato 3,00 mm — non era lui il punto debole, era la spalla
+che ci arriva. Lo spessore ora cresce senza avvallamenti dal corpo al collo, e due
+test sorvegliano quel tratto separatamente.
+
+Nel collo lo spessore lo detta la norma GPI (3 mm) e sopra i 3 mm segue lo slider,
+rientrando l'alesaggio quel tanto che basta: il passaggio per la cannuccia perde al
+massimo 0,4 mm di diametro. Lo spessore misurato è riportato nella scheda del pezzo
+e in quella pubblica, e l'export lo rifiuta sotto la soglia.
 
 **La cucitura Z non si incolonna.** Ogni giro di perimetro deve iniziare e finire
 da qualche parte, e lì l'estrusione si interrompe: resta un grumo o un microvuoto.

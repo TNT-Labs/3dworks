@@ -24,6 +24,9 @@ function exportWall(P, profKey){
   return V.fillVessel(pos, ctx);
 }
 
+/** Ø minimo del passaggio nel collo perché la cannuccia della pompa ci passi. */
+const PASS_MIN_BORE = 12;
+
 const par = (over = {}) => ({ h:185, r:62, petals:6, twist:60, sharp:.36, w:2.4,
   thD:28.2, pitch:3.18, turns:1.5, amp:0, piece:'disp', ...over });
 
@@ -190,4 +193,64 @@ test('la tenuta del fondo dichiarata è quella davvero stampata piena', () => {
       `h ${h}: il fondo è ${pavimento.toFixed(2)} mm, la ricetta ne rende pieni ${V.RECIPE.floorSolid}`);
     assert.equal(m.metrics.sealOk, true);
   }
+});
+
+/*
+ * La fascia spalla→collo è quella che la pompa sollecita avvitandosi, ed era
+ * l'epicentro del difetto: la parete vi scendeva a 0,90-1,26 mm mentre la
+ * scheda ne dichiarava 2,4. Questi test la sorvegliano separatamente, perché
+ * una regressione lì non si vede finché un pezzo non cede in mano.
+ */
+test('la fascia sotto l\'attacco della pompa non si assottiglia', () => {
+  const guasti = [];
+  for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
+    for (const h of [120, 185, 235])
+      for (const r of [30, 62, 100])
+        for (const petals of [3, 6, 9])
+          for (const twist of [0, 180, 360])
+            for (const sharp of [0, .5, 1]){
+              const P = par({ h, r, petals, twist, sharp });
+              const raster = V.buildLogoRaster(LOGO, V.targetR95(P, profKey));
+              const ctx = V.makeExportCtx(P, profKey, raster, .8);
+              /* dalla spalla in su, collo filettato compreso */
+              let worst = Infinity;
+              for (let j = ctx.jB + 1; j < ctx.zs.length; j++){
+                if (ctx.zs[j] / P.h < .6) continue;
+                worst = Math.min(worst, ctx.Bo[j] - ctx.Bi[j]);
+              }
+              if (worst < P.w - .01)
+                guasti.push(`${profKey} h${h} r${r} n${petals} tw${twist} sh${sharp}: ${worst.toFixed(2)} mm`);
+            }
+  assert.deepEqual(guasti.slice(0, 5), [],
+    `${guasti.length} design con la fascia spalla→collo sotto il nominale`);
+});
+
+test('lo spessore cresce dal corpo al collo, senza avvallamenti', () => {
+  /* un minimo locale in mezzo sarebbe un punto di rottura anche restando
+     sopra la soglia: la transizione deve essere monotòna */
+  for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo']){
+    const P = par();
+    const ctx = V.makeExportCtx(P, profKey, V.buildLogoRaster(LOGO, V.targetR95(P, profKey)), .8);
+    let prec = -Infinity, cali = 0;
+    for (let j = ctx.jB + 1; j < ctx.zs.length; j++){
+      const w = ctx.Bo[j] - ctx.Bi[j];
+      if (w < prec - .01) cali++;
+      prec = w;
+    }
+    assert.equal(cali, 0, `${profKey}: ${cali} punti in cui la parete torna ad assottigliarsi`);
+  }
+});
+
+test('il collo segue lo slider della parete quando questa supera i 3 mm', () => {
+  const neck = w => {
+    const n = V.neckSpec({ thD:28.2, pitch:3.18, turns:1.5, w, piece:'disp' });
+    return { parete: n.rootR - n.neckBoreR, passaggio: n.neckBoreR * 2 };
+  };
+  /* fino a 3 mm il collo resta quello della norma GPI: nessun design cambia */
+  for (const w of [2.0, 2.4, 3.0]) assert.ok(Math.abs(neck(w).parete - 3) < 1e-9, `w ${w}`);
+  /* oltre, il collo non deve restare l'unico punto sottile del pezzo */
+  assert.ok(Math.abs(neck(3.2).parete - 3.2) < 1e-9);
+  /* e il passaggio per la cannuccia non deve stringersi in modo sensibile */
+  assert.ok(neck(3.2).passaggio > neck(2.4).passaggio - .5);
+  assert.ok(neck(3.2).passaggio >= PASS_MIN_BORE, 'resta ben oltre il minimo utile');
 });
