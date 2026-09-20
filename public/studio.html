@@ -264,6 +264,8 @@
         <span class="v"><i class="dot ok" id="passDot"></i><span id="mPass">—</span></span></div>
       <div class="row"><span class="k">Overhang pareti</span><span class="dots"></span>
         <span class="v"><i class="dot ok" id="tiltDot"></i><span id="mTilt">—</span></span></div>
+      <div class="row"><span class="k">Parete reale (tenuta)</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="wallDot"></i><span id="mWall">—</span></span></div>
       <div class="row"><span class="k">Tenuta fondo</span><span class="dots"></span>
         <span class="v"><i class="dot ok" id="sealDot"></i><span id="mSeal">—</span></span></div>
       <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v" id="mVol">—</span></div>
@@ -271,7 +273,10 @@
       <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="mTime">—</span></div>
       <div class="row"><span class="k">Mesh esportata</span><span class="dots"></span><span class="v" id="mTri">—</span></div>
     </div>
-    <p class="note">Overhang = massimo tra crescita esterna e restringimento della cavità,
+    <p class="note"><b>«Parete reale»</b> è lo spessore minimo misurato sul guscio, non quello
+    richiesto: è ciò che decide la tenuta al liquido. Sotto 1,8 mm i 4 perimetri della ricetta
+    non si chiudono e il pezzo perde. Nel collo lo spessore lo detta la norma GPI (≈3 mm) e non
+    segue lo slider. Overhang = massimo tra crescita esterna e restringimento della cavità,
     elica delle costole e inviluppo della spalla inclusi. «Tenuta fondo» = pieno minimo
     tra il fondo delle lettere e il serbatoio. La tenuta al liquido la fanno i <b>perimetri</b>
     (4), non l'infill. «Tempo stimato» e «Filamento» sono tarati su 8 design affettati con
@@ -306,6 +311,24 @@
       <span>Cerca il design</span>
     </button>
     <div id="findRes" class="find-res"></div>
+  </section>
+
+  <!-- ====================== ricetta ====================== -->
+  <section>
+    <h2 class="sec">Ricetta di stampa · PLA</h2>
+    <div class="rows">
+      <div class="row"><span class="k">Ugello · layer</span><span class="dots"></span><span class="v">0.4 · 0.20 mm</span></div>
+      <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v">4 perimetri</span></div>
+      <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v">piena, 3–4 mm</span></div>
+      <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6%</span></div>
+      <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
+      <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v">PLA prova · PETG bagno</span></div>
+    </div>
+    <p class="note">La tenuta al liquido la fanno i <b>perimetri</b>, non il riempimento:
+    sono loro a formare una parete continua. Con 4 perimetri da 0,45 mm servono
+    <b>1,8 mm</b> di guscio perché si chiudano, e la geometria non scende mai sotto
+    questa misura. Il gyroid al 6% serve solo a sostenere la spalla. Con il 3MF la
+    ricetta è già dentro il file.</p>
   </section>
 
   <!-- ====================== export ====================== -->

@@ -21,6 +21,7 @@ const {
   r95Of, SIG_SPAN, SIG_SIGMA_MAX, sigRaw, smoothNorm, shapeAt, sigWeight, fitSignal,
   fitProfile, fitRing, ringTable, shapeCirc, normZero, baseCtx, firstInnerRow,
   exportFloorRow, matVolOf, printSeconds, rippleQ, pieceRows, buildLogoRaster,
+  WALL_FLOOR,
 } = V;
 
 export const PLATE_PIECES = ['disp', 'tooth'];
@@ -29,6 +30,15 @@ export const BED = 220;
 export const PASS_MIN = 10;      // Ø minimo del passaggio interno perché la cannuccia arrivi al fondo
 export const FID_MIN = .5;       // sotto questa correlazione il dato non si riconosce più
 export const TILT_MAX = 45;      // oltre questa pendenza servirebbero i supporti
+
+/* Tenuta al liquido: la fanno i perimetri, non il riempimento. Con ugello 0,4
+   la larghezza di estrusione è ~0,45 mm, quindi servono almeno quattro cordoli
+   pieni perché la parete si chiuda davvero. Sotto questa misura lo slicer non
+   riesce a completarli e il pezzo perde. */
+export const EXTRUSION_W = .45;
+export const PERIMETERS = 4;
+export const WALL_SEAL_MIN = EXTRUSION_W * PERIMETERS;   // 1,80 mm
+export { WALL_FLOOR };
 
 const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
 const pct = x => Math.round(x * 100) + '%';
@@ -388,6 +398,11 @@ export class DesignModel {
     const seal = this.engraved ? floorZ - this.logo.depth : floorZ;
     const pass = st.minRi * 2;
 
+    /* Spessore reale del guscio, misurato sulla geometria invece che
+       dichiarato: è ciò che decide se il pezzo tiene il liquido. */
+    const wall = st.minWall;
+    const wallOk = wall >= WALL_SEAL_MIN - 1e-6;
+
     const signal = this.#signalReadout();
 
     const issues = [];
@@ -397,6 +412,9 @@ export class DesignModel {
     if (tilt > TILT_MAX) issues.push(`pareti a ${tilt.toFixed(0)}° — ` + tiltHint(this.cur, st.maxWz, st.maxWall));
     if (pass < PASS_MIN)
       issues.push(`strozzatura interna Ø ${pass.toFixed(0)} mm — la cannuccia rischia di non arrivare al fondo; riduci l'intensità del segnale o la parete`);
+    if (!wallOk)
+      issues.push(`parete di soli ${wall.toFixed(1)} mm in qualche punto — sotto i ${WALL_SEAL_MIN.toFixed(1)} mm ` +
+        `i ${PERIMETERS} perimetri non si chiudono e il pezzo può perdere; aumenta la parete del guscio`);
     const R = this.logoRaster;
     if (this.logo.on && this.logo.sn && R && (R.ok || R.blank) && !R.serialOk)
       issues.push('il codice non entra nel fondo e verrà omesso — riduci il corpo testo o aumenta il raggio base');
@@ -423,6 +441,7 @@ export class DesignModel {
       piece: this.piece,
       plateMode: this.plateMode,
       diameter, height, capML, tilt, pass, seal,
+      wall, wallOk, wallNominal: P.w, wallPerimeters: Math.floor(wall / EXTRUSION_W + 1e-6),
       depth: height - floorZ,
       matVol, grams: matVol * 1.24e-3, meters: matVol / 2405, seconds,
       tris: vesselTriCount(pieceRows(P, PE), PE.nTh, exportFloorRow(P.h),

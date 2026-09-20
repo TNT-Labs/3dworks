@@ -279,6 +279,17 @@ function neckSpec(P){
    corpo; nei primi SIG_BASE la modulazione sale da 0 (appoggio, firma e
    stabilità restano governati dal raggio base). */
 const SIG_N = 64, SIG_SPAN = .8, SIG_BASE = .08;
+
+/* Fondo scala assoluto dello spessore del guscio: sotto questa misura nessuno
+   slicer riesce a chiudere la parete e il pezzo perde. Con la cavita' derivata
+   dalla faccia esterna non dovrebbe mai entrare in funzione; resta come rete di
+   sicurezza, e quando entra viene contato e riportato. */
+const WALL_FLOOR = 1.2;
+
+/* Soglia di tenuta: larghezza di estrusione (~0,45 mm con ugello 0,4) per i
+   4 perimetri della ricetta. Sotto questa misura i perimetri non si chiudono
+   e nessuna impostazione dello slicer recupera la perdita. */
+const WALL_SEAL_MIN = .45 * 4;
 const B64U = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 function sigValid(q){
   if (typeof q !== 'string' || q.length !== SIG_N) return false;
@@ -602,7 +613,21 @@ function clampProfile(P, n, prof, zs, Rc, Bo, Bi, vr, diag){
     }
   };
   sweep(Bo, false); cone(Bo, false);
-  sweep(Bi, true);  cone(Bi, true);
+
+  /* La cavita' non e' una seconda superficie limitata per conto suo: e' la
+     faccia esterna meno lo spessore voluto. Limitandole separatamente, il
+     vincolo dei 44° poteva stringere Bo senza stringere Bi (o viceversa) e lo
+     spessore reale scendeva fino al fondo scala di sicurezza anche con 2,4 mm
+     richiesti — il difetto da cui nasce una perdita. Derivandola, lo spessore
+     e' esatto per costruzione e la faccia esterna resta identica: Bo non viene
+     toccato da questa riga in poi. */
+  for (let j = 0; j < rows; j++){
+    const t = Math.min(1, zs[j] / P.h);
+    const u = Math.min(1, Math.max(0, (t - .6) / .4));
+    const sBlend = open ? 0 : u*u*(3 - 2*u);
+    /* lo spessore passa dolcemente da quello del corpo a quello del collo */
+    Bi[j] = Bo[j] - (P.w * (1 - sBlend) + (n.rootR - n.neckBoreR) * sBlend);
+  }
 }
 
 
@@ -677,6 +702,7 @@ function fillVessel(pos, ctx){
   const pA = ctx.sA, pO = ctx.sM, pI = ctx.sI, qO = ctx.prevM, qI = ctx.prevI;
   const ridgeH = n.ridgeH, entry = n.entry, zTop = ctx.Ht - n.land;
   let maxR = 0, maxW = 0, maxWz = 0, maxWall = 0, capV = 0, wallV = 0, solidV = 0, prevZ = zs[0], minRi = 1e9;
+  let minWall = 1e9, floored = 0;              // spessore reale del guscio e quante volte ha toccato il fondo scala
 
   for (let j = 0; j < rows; j++){
     const z = zs[j], dz = Math.max(1e-6, z - prevZ); prevZ = z;
@@ -711,9 +737,18 @@ function fillVessel(pos, ctx){
       let k = (j * nTh + i) * 3;
       pos[k] = ro * Math.cos(th); pos[k+1] = ro * Math.sin(th); pos[k+2] = z;
       if (j >= jB){
-        let ri = Bi[j] + modAmp * f * fade;
+        /* Stessa ampiezza di costola dentro e fuori: e' cio' che rende lo
+           spessore costante attorno alla circonferenza. Con l'ampiezza interna
+           elevata al quadrato (come nella V3) le due onde si disallineavano
+           nella fascia di raccordo della spalla e la parete oscillava fino a
+           dimezzarsi, formando una striscia sottile per ogni costola. */
+        let ri = Bi[j] + modAmp * f;
         if (ri < 2.5) ri = 2.5;
-        if (ri > ro0 - .9) ri = ro0 - .9;
+        /* fondo scala di sicurezza: non deve piu' entrare in funzione, ma se
+           entra va saputo, non subito in silenzio */
+        if (ri > ro0 - WALL_FLOOR){ ri = ro0 - WALL_FLOOR; floored++; }
+        const wallHere = ro0 - ri;
+        if (wallHere < minWall) minWall = wallHere;
         pI[i] = ri;
         if (j > jB && ri < minRi) minRi = ri;                  // cerchio inscritto minimo della cavità
         k = (rows * nTh + (j - jB) * nTh + i) * 3;
@@ -762,7 +797,8 @@ function fillVessel(pos, ctx){
   let kc = Cf * 3;
   pos[kc] = 0; pos[kc+1] = 0; pos[kc+2] = engr ? logoDepth(ctx.raster, ctx.depth, 0, 0, r95) : 0;
   pos[C1*3] = 0; pos[C1*3+1] = 0; pos[C1*3+2] = zs[jB];
-  return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi };
+  return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi,
+           minWall: minWall === 1e9 ? 0 : minWall, floored };
 }
 
 /* ================= topologia: vertici, triangoli, indici =================
@@ -1412,21 +1448,31 @@ function runExport(job){
   const check = validateMesh(pos, ind, job.kind === 'ring' ? 0 : st.solidV + st.wallV);
   const folds = discFolds(pos, ind, ctx);
   if (folds){ check.ok = false; check.errors.push(folds + ' triangoli del fondo ripiegati (disco oltre la parete)'); }
+  /* La mesh puo' essere chiusa e il pezzo perdere lo stesso: un guscio piu'
+     sottile di quanto lo slicer riesce a chiudere non tiene il liquido.
+     Vale solo per i pezzi cavi; lo spool di prova del filetto e' pieno. */
+  if (job.kind !== 'ring' && st.minWall > 0 && st.minWall < WALL_SEAL_MIN - .01){
+    check.ok = false;
+    check.errors.push(`parete di soli ${st.minWall.toFixed(2)} mm ` +
+      `(servono ${WALL_SEAL_MIN.toFixed(2)} mm perche' i perimetri si chiudano)`);
+  }
+  check.minWall = st.minWall;
   if (!check.ok) return { ok:false, error:'mesh non valida: ' + check.errors.join(' · '), check };
   if (job.format === '3mf'){
     const name = (job.logo && job.logo.serial ? job.logo.serial + ' · ' : '') + pieceOf(P).name;
     return build3MF([{ name, pos, ind, x:0, y:0 }], label).then(buffer => ({
-      ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi,
+      ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, minWall: st.minWall,
       tilt: Math.atan(st.maxW) * 180 / Math.PI, depth: ctx.Ht - ctx.zs[ctx.jB],
       serialOk: !!(raster && raster.serialOk), format:'3mf',
     }));
   }
   const buffer = buildSTLBuffer(pos, ind, label);
-  return { ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, tilt: Math.atan(st.maxW) * 180 / Math.PI,
+  return { ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, minWall: st.minWall,
+           tilt: Math.atan(st.maxW) * 180 / Math.PI,
            depth: ctx.Ht - ctx.zs[ctx.jB], serialOk: !!(raster && raster.serialOk) };
 }
 
-G.VCore = { TAU, sstep, clamp, PROFILES, RRES, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
+G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
   buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, layoutSerial, fillVessel, vesselVerts, vesselTriCount,
   writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow,
   makeExportCtx, makeRingCtx, buildSTLBuffer, validateMesh, discFolds, r95Of, runExport, PIECES, pieceOf, piecePar, pieceRows,

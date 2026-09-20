@@ -12,7 +12,7 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "postinstall": "node scripts/vendor-three.js",
-    "test": "node --test test/design-spec.test.js test/design-model.test.js test/api.test.js test/proxy.test.js",
+    "test": "node --test test/design-spec.test.js test/design-model.test.js test/api.test.js test/proxy.test.js test/watertight.test.js",
     "test:e2e": "node --test --test-timeout=600000 test/browser.test.js",
     "test:all": "npm test && npm run test:e2e"
   },

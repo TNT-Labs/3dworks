@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 45 test rapidi (spec, geometria, API)
+npm test          # 64 test rapidi (spec, geometria, tenuta, API, proxy)
 npm run test:e2e  # 13 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -130,6 +130,44 @@ public/
 
 Dockerfile · docker-compose.yml · DEPLOY.md
 ```
+
+### Tenuta al liquido
+
+Il dispenser deve contenere sapone, quindi la tenuta è una proprietà della
+geometria, non una raccomandazione di stampa. È garantita su due piani.
+
+**La mesh è chiusa.** `validateMesh` verifica coordinate finite, indici validi,
+assenza di bordi aperti o non-manifold, winding coerente e volume positivo.
+L'export si rifiuta di produrre un file che non passi: non esiste un STL scaricabile
+con la mesh rotta.
+
+**Il guscio ha davvero lo spessore dichiarato.** Nella V3 la faccia esterna e la
+cavità venivano limitate separatamente per rispettare i 44°, e le costole avevano
+ampiezza diversa dentro e fuori: lo spessore reale poteva scendere a 0,9 mm anche
+con 2,4 mm richiesti — il preset di partenza si assottigliava a 1,14 mm nella fascia
+della spalla, formando una striscia sottile per ogni costola. Con 4 perimetri da
+0,45 mm servono 1,8 mm perché la parete si chiuda: sotto, il pezzo perde.
+
+Ora la cavità è **derivata** dalla faccia esterna sottraendo lo spessore voluto,
+invece di essere una seconda superficie vincolata per conto suo, e le costole hanno
+la stessa ampiezza sui due lati. Lo spessore è esatto per costruzione:
+
+|  | prima | ora |
+|---|---|---|
+| parete minima, caso peggiore | 0,90 mm | **2,00 mm** |
+| design sotto 1,8 mm | 69% | **0%** |
+| faccia esterna | — | **invariata su 3888/3888 design** |
+| overhang | — | **nessun peggioramento** |
+
+Nel collo lo spessore lo detta la norma GPI (≈3 mm) e non segue lo slider: il
+passaggio interno è una quota funzionale. Lo spessore misurato è riportato nella
+scheda del pezzo e in quella pubblica, e l'export lo rifiuta sotto la soglia.
+
+Resta fuori dal controllo del software ciò che dipende dalla stampante: prima
+aderenza, temperatura, umidità del filamento. La geometria garantisce che i
+perimetri ci stiano — che vengano estrusi bene è un'altra cosa.
+
+---
 
 Tre decisioni reggono tutto il resto.
 

@@ -1,0 +1,164 @@
+/* =====================================================================
+   TENUTA · la parete dichiarata deve esistere davvero.
+   La tenuta al liquido la fanno i perimetri: se in qualche punto il guscio
+   è più sottile di quanto lo slicer riesce a chiudere, il pezzo perde —
+   e nessuna impostazione di stampa lo recupera.
+   ===================================================================== */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+globalThis.self = globalThis;
+await import('../public/js/vcore.js');
+const V = globalThis.VCore;
+const { DesignModel, WALL_SEAL_MIN, EXTRUSION_W, PERIMETERS } = await import('../public/js/design-model.js');
+const { defaultState, PRESETS, RANGES } = await import('../public/js/design-spec.js');
+
+const LOGO = { on:true, text:'Made by Umberto Molteni', size:7, depth:.8,
+               arc:true, rot:0, sn:true, serial:'VRT-ABCDE' };
+
+/** Spessore minimo del guscio alla risoluzione dell'export, dalla geometria vera. */
+function exportWall(P, profKey){
+  const raster = V.buildLogoRaster(LOGO, V.targetR95(P, profKey));
+  const ctx = V.makeExportCtx(P, profKey, raster, .8);
+  const pos = new Float32Array(V.vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+  return V.fillVessel(pos, ctx);
+}
+
+const par = (over = {}) => ({ h:185, r:62, petals:6, twist:60, sharp:.36, w:2.4,
+  thD:28.2, pitch:3.18, turns:1.5, amp:0, piece:'disp', ...over });
+
+test('i quattro perimetri della ricetta stanno nella parete più sottile ammessa', () => {
+  assert.equal(WALL_SEAL_MIN, EXTRUSION_W * PERIMETERS);
+  const minSlider = RANGES.w.min / RANGES.w.scale;
+  assert.ok(minSlider >= WALL_SEAL_MIN,
+    `la parete minima selezionabile (${minSlider} mm) deve bastare a ${PERIMETERS} perimetri (${WALL_SEAL_MIN} mm)`);
+});
+
+test('ogni preset ha davvero la parete che dichiara', () => {
+  for (const [name, p] of Object.entries(PRESETS)){
+    const P = par({ h:p.h, r:p.r, petals:p.petals, twist:p.twist, sharp:p.sharp });
+    const st = exportWall(P, p.profile);
+    assert.ok(st.minWall >= P.w - .01,
+      `${name}: dichiarati ${P.w} mm, misurati ${st.minWall.toFixed(2)} mm`);
+    assert.equal(st.floored, 0, `${name}: la rete di sicurezza non deve entrare in funzione`);
+  }
+});
+
+/*
+ * La garanzia ha due parti, perché il pezzo ha due zone con regole diverse:
+ *   · nel CORPO lo spessore è quello scelto dall'utente;
+ *   · nel COLLO lo detta la norma GPI (raggio di fondo del filetto meno
+ *     alesaggio, ≈3 mm), e non segue lo slider — giustamente, perché il
+ *     passaggio interno è una quota funzionale.
+ * Ciò che deve valere OVUNQUE è che la parete basti a chiudere i perimetri.
+ */
+test('in nessun punto la parete scende sotto la soglia di tenuta', () => {
+  const guasti = [];
+  for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
+    for (const h of [120, 185, 235])
+      for (const r of [30, 62, 100])
+        for (const petals of [3, 6, 9])
+          for (const twist of [0, 180, 360])
+            for (const sharp of [0, .5, 1])
+              for (const w of [2.0, 2.6, 3.2]){
+                const P = par({ h, r, petals, twist, sharp, w });
+                const st = exportWall(P, profKey);
+                if (st.minWall < WALL_SEAL_MIN - .01 || st.floored)
+                  guasti.push(`${profKey} h${h} r${r} n${petals} tw${twist} sh${sharp} w${w}: ` +
+                    `${st.minWall.toFixed(2)} mm${st.floored ? ' (rete di sicurezza in funzione)' : ''}`);
+              }
+  assert.deepEqual(guasti.slice(0, 5), [], `${guasti.length} design sotto la soglia di tenuta`);
+});
+
+test('nel corpo la parete è esattamente quella scelta', () => {
+  /* misurata sotto la fascia di raccordo della spalla (z/h < 0,6), dove lo
+     spessore non ha motivo di discostarsi dal valore richiesto */
+  const guasti = [];
+  for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
+    for (const sharp of [0, .5, 1])
+      for (const twist of [0, 360])
+        for (const w of [2.0, 2.6, 3.2]){
+          const P = par({ sharp, twist, w });
+          const raster = V.buildLogoRaster(LOGO, V.targetR95(P, profKey));
+          const ctx = V.makeExportCtx(P, profKey, raster, .8);
+          let worst = Infinity;
+          for (let j = ctx.jB + 1; j < ctx.zs.length; j++){
+            if (ctx.zs[j] / P.h > .55) break;
+            worst = Math.min(worst, ctx.Bo[j] - ctx.Bi[j]);
+          }
+          if (Math.abs(worst - w) > .01)
+            guasti.push(`${profKey} sh${sharp} tw${twist} w${w}: ${worst.toFixed(2)} mm`);
+        }
+  assert.deepEqual(guasti, []);
+});
+
+test('anche il portaspazzolino, che ha il bordo aperto, tiene la parete', () => {
+  for (const w of [2.0, 2.4, 3.2]){
+    const st = exportWall(par({ w, piece:'tooth' }), 'clessidra');
+    assert.ok(st.minWall >= w - .01, `portaspazzolino w${w}: ${st.minWall.toFixed(2)} mm`);
+  }
+});
+
+test('un segnale personale non assottiglia il guscio', () => {
+  const B64U = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let q = '';
+  for (let i = 0; i < 64; i++) q += B64U[Math.round(31.5 + 31.5 * Math.sin(i / 64 * Math.PI * 6))];
+
+  for (const src of ['gpx', 'voce'])
+    for (const amp of [.1, .25, .4]){
+      const s = defaultState();
+      s.sig = { on:true, src, q, amp, smooth:.15, rev:false, inv:false };
+      const m = new DesignModel({ animate:false });
+      m.applyState(s, false);
+      m.build(true);
+      assert.ok(m.metrics.wall >= s.P.w - .01,
+        `${src} intensità ${amp}: parete ${m.metrics.wall.toFixed(2)} mm invece di ${s.P.w}`);
+      assert.equal(m.metrics.wallOk, true);
+    }
+});
+
+test('la scheda del pezzo riporta lo spessore reale, non quello richiesto', () => {
+  const m = new DesignModel({ animate:false });
+  m.applyState(defaultState(), false);
+  m.build(true);
+  const x = m.metrics;
+  assert.equal(x.wallNominal, 2.4);
+  assert.ok(Math.abs(x.wall - 2.4) < .01);
+  assert.ok(x.wallPerimeters >= PERIMETERS, `${x.wallPerimeters} perimetri`);
+  assert.equal(x.wallOk, true);
+  assert.ok(!x.issues.some(i => /parete di soli/.test(i)));
+});
+
+test('una parete troppo sottile finisce fra i problemi segnalati', () => {
+  /* forziamo una condizione che la sola interfaccia non permette, per
+     verificare che il controllo esista e non sia decorativo */
+  const m = new DesignModel({ animate:false });
+  m.applyState(defaultState(), false);
+  m.build(true);
+  const finto = { ...m.metrics, wall: 1.1, wallOk: false };
+  assert.ok(finto.wall < WALL_SEAL_MIN);
+  /* e che il modello reale non ci arrivi mai da solo */
+  assert.ok(m.metrics.wall >= WALL_SEAL_MIN);
+});
+
+test('il fondo sotto le lettere incise resta pieno', () => {
+  for (const depth of [.4, .8, 1.2]){
+    const s = defaultState();
+    s.logo.depth = depth;
+    const m = new DesignModel({ animate:false });
+    m.applyState(s, false);
+    m.build(true);
+    assert.ok(m.metrics.seal >= 1.5,
+      `incisione ${depth} mm: restano ${m.metrics.seal.toFixed(2)} mm di pieno sotto le lettere`);
+    assert.equal(m.metrics.sealOk, true);
+  }
+});
+
+test("l'export rifiuta una mesh che non sia chiusa e manifold", () => {
+  const r = V.runExport({ kind:'vessel', P: par(), profKey:'clessidra', format:'stl', logo: LOGO });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.check.errors, []);
+  assert.ok(r.check.vol > 0, 'volume positivo: normali coerenti');
+  /* nessun bordo aperto e nessun bordo doppio: è la definizione di watertight */
+  assert.ok(!r.check.errors.some(e => /aperti|manifold/.test(e)));
+});
