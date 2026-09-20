@@ -161,7 +161,31 @@ if (link){
     s.profile = pre.profile;
     stampa(`preset · ${nome}`, analizza(s, { larghezza }), larghezza);
   }
+  scansioneAffilatura(larghezza);
+}
+
+/* L'affilatura è il cursore che più mette alla prova la spalla: la conclusione
+   va MISURATA a ogni esecuzione, non scritta qui una volta per tutte — una
+   frase codificata a mano sopravvive alla correzione del difetto che descrive
+   e finisce per raccontare il contrario del vero. */
+function scansioneAffilatura(larghezza){
   const lim = RANGES.sharp;
-  console.log(`\nL'affilatura va da ${lim.min/lim.scale} a ${lim.max/lim.scale}: oltre 0,4 la spalla`
-    + ' si assottiglia fino al minimo strutturale di 0,90 mm, qualunque sia la parete impostata.');
+  const lo = lim.min / lim.scale, hi = lim.max / lim.scale;
+  console.log(`\nAffilatura da ${lo} a ${hi}, sul preset aureo · parete nominale e misurata:`);
+  let peggiore = Infinity, peggioreA = null;
+  for (let a = lo; a <= hi + 1e-9; a += (hi - lo) / 5){
+    const s = defaultState();
+    Object.assign(s.P, { h:PRESETS.aureo.h, r:PRESETS.aureo.r, petals:PRESETS.aureo.petals,
+                         twist:PRESETS.aureo.twist, sharp:+a.toFixed(2) });
+    s.profile = PRESETS.aureo.profile;
+    const an = analizza(s, { larghezza });
+    const np = an.parete.passate;
+    if (an.parete.minima < peggiore){ peggiore = an.parete.minima; peggioreA = +a.toFixed(2); }
+    console.log(`  affilatura ${a.toFixed(2)} → ${an.parete.minima.toFixed(2)} mm`
+      + ` = ${np.toFixed(1)} passate da ${larghezza}`
+      + `  ${np >= SOGLIA_SICURA - TOLL ? g('passa') : np >= SOGLIA_MIN - TOLL ? y('limite') : r('non passa')}`);
+  }
+  console.log(peggiore >= SOGLIA_SICURA * larghezza - TOLL
+    ? `La spalla regge su tutta la corsa: minimo ${peggiore.toFixed(2)} mm con affilatura ${peggioreA}.`
+    : `Attenzione: con affilatura ${peggioreA} la spalla scende a ${peggiore.toFixed(2)} mm.`);
 }

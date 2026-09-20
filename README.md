@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 70 test rapidi (spec, geometria, API, GDPR)
+npm test          # 121 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
 npm run test:e2e  # 15 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -141,6 +141,80 @@ public/
 Dockerfile · docker-compose.yml · DEPLOY.md · PRIVACY.md · STAMPA.md
 ```
 
+### Tenuta al liquido
+
+Il dispenser deve contenere sapone, quindi la tenuta è una proprietà della
+geometria, non una raccomandazione di stampa. È garantita su due piani.
+
+**La mesh è chiusa.** `validateMesh` verifica coordinate finite, indici validi,
+assenza di bordi aperti o non-manifold, winding coerente e volume positivo.
+L'export si rifiuta di produrre un file che non passi: non esiste un STL scaricabile
+con la mesh rotta.
+
+**Il guscio ha davvero lo spessore dichiarato.** Nella V3 la faccia esterna e la
+cavità venivano limitate separatamente per rispettare i 44°, e le costole avevano
+ampiezza diversa dentro e fuori: lo spessore reale poteva scendere a 0,9 mm anche
+con 2,4 mm richiesti — il preset di partenza si assottigliava a 1,14 mm nella fascia
+della spalla, formando una striscia sottile per ogni costola. Con 4 perimetri da
+0,45 mm servono 1,8 mm perché la parete si chiuda: sotto, il pezzo perde.
+
+Ora la cavità è **derivata** dalla faccia esterna sottraendo lo spessore voluto,
+invece di essere una seconda superficie vincolata per conto suo, e le costole hanno
+la stessa ampiezza sui due lati. Lo spessore è esatto per costruzione:
+
+|  | prima | ora |
+|---|---|---|
+| parete minima, caso peggiore | 0,90 mm | **2,00 mm** |
+| design sotto 1,8 mm | 69% | **0%** |
+| faccia esterna | — | **invariata su 3888/3888 design** |
+| overhang | — | **nessun peggioramento** |
+
+La fascia più colpita era proprio quella **sotto l'attacco della pompa**, dove il
+pezzo viene sollecitato avvitandolo: lì la parete scendeva a 0,90–1,26 mm, in sei
+strisce verticali, e il 65% dei design aveva quel tratto sotto 1,8 mm. Il collo
+filettato in sé è sempre stato 3,00 mm — non era lui il punto debole, era la spalla
+che ci arriva. Lo spessore ora cresce senza avvallamenti dal corpo al collo, e due
+test sorvegliano quel tratto separatamente.
+
+Nel collo lo spessore lo detta la norma GPI (3 mm) e sopra i 3 mm segue lo slider,
+rientrando l'alesaggio quel tanto che basta: il passaggio per la cannuccia perde al
+massimo 0,4 mm di diametro. Lo spessore misurato è riportato nella scheda del pezzo
+e in quella pubblica, e l'export lo rifiuta sotto la soglia.
+
+**La cucitura Z non si incolonna.** Ogni giro di perimetro deve iniziare e finire
+da qualche parte, e lì l'estrusione si interrompe: resta un grumo o un microvuoto.
+Il default di PrusaSlicer e di Orca è `aligned`, che impila quei punti sulla stessa
+verticale per farli sembrare una riga sola — ordinato a vedersi, ma in un
+contenitore diventa un canale continuo dal fondo al collo. La ricetta incorporata
+nel 3MF impone `seam_position = random` e le cuciture dei perimetri interni
+sfalsate: i difetti restano isolati e lo strato sopra copre quello sotto.
+
+L'STL non trasporta impostazioni, quindi chi lo esporta deve mettere la cucitura
+su «casuale» a mano — lo Studio lo dice sotto il pulsante quando è selezionato.
+
+**Il fondo è pieno per tutto il suo spessore.** Il fondo è alto 3–4 mm di geometria
+piena, ma con i soli strati solidi di ricetta ne venivano stampati pieni appena
+2,0 mm: in mezzo restava riempimento al 6%, e il vero sbarramento sotto il liquido
+erano gli strati solidi superiori — 1 mm steso sopra il vuoto. È la costruzione
+normale di qualsiasi stampa e di solito tiene, ma qui sotto c'è sapone.
+`bottom_solid_min_thickness = 4` lo riempie per intero. Costa **+9–14% di materiale
+e 1,5–2,2 ore**.
+
+Effetto collaterale utile: così il pezzo non ha più alcuna zona a riempimento rado
+— la parete era già tutta perimetri — e **il materiale torna a essere il volume
+esatto della geometria**. Prima il fondo valeva 0,672 del suo volume, un rapporto
+misurato su 8 slicing reali ma uno solo, mentre quello vero dipende dall'altezza
+(0,68 a h 120, 0,54 a h 235). Quell'errore sistematico non esiste più. La stima del
+tempo resta quella tarata e ora tende a sovrastimare di qualche punto, perché il
+pieno si stampa più in fretta dei perimetri: si ritara con un solo slicing reale.
+
+Resta fuori dal controllo del software ciò che dipende dalla stampante: prima
+aderenza, temperatura, umidità del filamento. La geometria garantisce che i
+perimetri ci stiano e la ricetta che non si allineino — che vengano estrusi bene
+è un'altra cosa.
+
+---
+
 Tre decisioni reggono tutto il resto.
 
 **Una sola definizione dei parametri.** `public/js/design-spec.js` è un modulo ES
@@ -160,20 +234,21 @@ una scheda di misure; `stage.js` la disegna; l'interfaccia la scrive. È questa
 separazione che rende possibile una pagina pubblica senza un solo comando di
 modifica — e che permette di testare la geometria in Node, senza browser.
 
-### Tenuta ai liquidi
+### Misurare la tenuta
 
-Un vaso stampato in FDM tiene il liquido solo se ogni strato è abbastanza largo
-da contenere un numero intero di passate di estrusione. La geometria fa la sua
-parte: la mesh esportata è chiusa, sotto l'incisione restano sempre almeno
-1,8 mm di fondo pieno e la parete del corpo misura esattamente il valore
-impostato. Il punto delicato è la **fascia di spalla**, dove il raccordo verso
-il collo può assottigliare la parete fino al minimo strutturale di 0,90 mm:
-succede quando l'affilatura delle costole supera 0,4, e oltre quella soglia
-aumentare lo spessore impostato non serve.
+Le garanzie della sezione precedente non vanno prese sulla parola:
 
-**[STAMPA.md](STAMPA.md)** ha le misure caso per caso, la tabella
-parete/affilatura, le impostazioni dello slicer che decidono la tenuta e il
-protocollo di prova. `node scripts/tenuta.js` misura un design qualsiasi.
+```bash
+node scripts/tenuta.js          # i quattro preset, più una scansione dell'affilatura
+```
+
+Costruisce la stessa mesh dell'export, misura i tre spessori da cui dipende la
+tenuta e li legge in **passate di estrusione**, che è ciò che decide se lo
+slicer chiude la parete o ci lascia una fessura.
+
+**[STAMPA.md](STAMPA.md)** raccoglie le misure caso per caso, le impostazioni
+dello slicer in ordine di importanza, il protocollo di prova con acqua in
+pressione — e una nota su cosa resta una scelta aperta, la cucitura Z.
 
 ### Sicurezza
 

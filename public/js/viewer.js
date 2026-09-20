@@ -116,6 +116,7 @@ function fillPanel(product, state, model){
   set('mDepth', `≈ ${Math.round(m.depth)} mm`);
   set('mPass',  `Ø min ${m.pass.toFixed(0)} mm`);
   set('mTilt',  `${m.tilt.toFixed(0)}° max`);
+  set('mWall',  `${m.wall.toFixed(2)} mm · ${m.wallPerimeters} perimetri`);
   set('mSeal',  `≥ ${m.seal.toFixed(1)} mm pieni`);
   set('mVol',   `≈ ${Math.round(m.matVol / 1000)} cm³`);
   set('mFil',   `${Math.round(m.grams)} g · ${Math.round(m.meters)} m`);
@@ -123,6 +124,7 @@ function fillPanel(product, state, model){
   dot('mPass', m.passOk);
   dot('mTilt', m.tilt <= TILT_MAX);
   dot('mSeal', m.sealOk);
+  dot('mWall', m.wallOk);
 
   /* collo filettato: solo sui pezzi che ce l'hanno */
   const hasNeck = state.piece !== 'tooth';

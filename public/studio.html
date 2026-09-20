@@ -266,6 +266,8 @@
         <span class="v"><i class="dot ok" id="passDot"></i><span id="mPass">—</span></span></div>
       <div class="row"><span class="k">Overhang pareti</span><span class="dots"></span>
         <span class="v"><i class="dot ok" id="tiltDot"></i><span id="mTilt">—</span></span></div>
+      <div class="row"><span class="k">Parete reale (tenuta)</span><span class="dots"></span>
+        <span class="v"><i class="dot ok" id="wallDot"></i><span id="mWall">—</span></span></div>
       <div class="row"><span class="k">Tenuta fondo</span><span class="dots"></span>
         <span class="v"><i class="dot ok" id="sealDot"></i><span id="mSeal">—</span></span></div>
       <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v" id="mVol">—</span></div>
@@ -273,12 +275,17 @@
       <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="mTime">—</span></div>
       <div class="row"><span class="k">Mesh esportata</span><span class="dots"></span><span class="v" id="mTri">—</span></div>
     </div>
-    <p class="note">Overhang = massimo tra crescita esterna e restringimento della cavità,
+    <p class="note"><b>«Parete reale»</b> è lo spessore minimo misurato sul guscio, non quello
+    richiesto: è ciò che decide la tenuta al liquido. Sotto 1,8 mm i 4 perimetri della ricetta
+    non si chiudono e il pezzo perde. Nel collo lo spessore lo detta la norma GPI (≈3 mm) e non
+    segue lo slider. Overhang = massimo tra crescita esterna e restringimento della cavità,
     elica delle costole e inviluppo della spalla inclusi. «Tenuta fondo» = pieno minimo
     tra il fondo delle lettere e il serbatoio. La tenuta al liquido la fanno i <b>perimetri</b>
-    (4), non l'infill. «Tempo stimato» e «Filamento» sono tarati su 8 design affettati con
-    PrusaSlicer (0,2 mm, 4 perimetri, gyroid 6%): errore medio 8%, massimo 14% sul tempo e
-    2% sul materiale. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
+    (4), non l'infill. Con il fondo pieno e la parete tutta perimetri il pezzo non ha zone
+    a riempimento rado, quindi <b>«Filamento» è ora il volume esatto della geometria</b>,
+    senza coefficienti. «Tempo stimato» resta tarato su 8 design affettati con PrusaSlicer
+    (0,2 mm, 4 perimetri): errore medio 8%, massimo 14%, e da quando il fondo è pieno tende
+    a sovrastimare di qualche punto, perché il pieno si stampa più in fretta dei perimetri. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
     della cavità: con la pompa avvitata, taglia la cannuccia 2–3 mm più corta.</span></p>
   </section>
 
@@ -310,6 +317,35 @@
     <div id="findRes" class="find-res"></div>
   </section>
 
+  <!-- ====================== ricetta ====================== -->
+  <section>
+    <h2 class="sec">Ricetta di stampa · PLA</h2>
+    <div class="rows">
+      <div class="row"><span class="k">Ugello · layer</span><span class="dots"></span><span class="v">0.4 · 0.20 mm</span></div>
+      <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v">4 perimetri</span></div>
+      <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v">piena per tutto lo spessore</span></div>
+      <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6% · non usato</span></div>
+      <div class="row"><span class="k">Cucitura Z</span><span class="dots"></span><span class="v">casuale (antiperdita)</span></div>
+      <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
+      <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v">PLA prova · PETG bagno</span></div>
+    </div>
+    <p class="note">La tenuta al liquido la fanno i <b>perimetri</b>, non il riempimento:
+    sono loro a formare una parete continua. Con 4 perimetri da 0,45 mm servono
+    <b>1,8 mm</b> di guscio perché si chiudano, e la geometria non scende mai sotto
+    questa misura. Il gyroid al 6% serve solo a sostenere la spalla.<br><br>
+    <b>Cucitura Z.</b> Ogni giro di perimetro deve iniziare e finire da qualche parte,
+    e lì l'estrusione si interrompe. Il default degli slicer è <i>allineata</i>: impila
+    quei punti sulla stessa verticale per farli sembrare una riga sola — ordinato a
+    vedersi, ma in un contenitore quei microvuoti si incolonnano in un canale continuo
+    dal fondo al collo. La ricetta la mette <b>casuale</b>: i difetti restano isolati e
+    lo strato sopra copre quello sotto. In cambio resta una punteggiatura fine sulla
+    superficie, quasi invisibile su un vaso a costole ritorte.<br><br>
+    <b>Fondo.</b> È pieno per tutto il suo spessore, non solo nei primi strati: sotto
+    il liquido non resta riempimento rado. Di conseguenza il pezzo non ha più alcuna
+    zona a riempimento — la parete è tutta perimetri e il fondo tutto pieno — e il
+    <b>gyroid al 6% resta nella ricetta ma non viene usato</b>.</p>
+  </section>
+
   <!-- ====================== export ====================== -->
   <footer>
     <div class="seg mb-10" id="segFmt">
@@ -321,9 +357,11 @@
       <span>Scarica STL del dispenser</span>
     </button>
     <p class="fine center mt-10">
-      <span id="fmtNote" hidden>3MF: geometria + ricetta di stampa incorporata, letta da PrusaSlicer
-      e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
-      STL binario watertight · vaso cavo + collo filettato + firma e codice incisi<br>
+      <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano la cucitura Z
+      su «casuale»</b> nello slicer, o il pezzo rischia di perdere<br></span>
+      <span id="note3mf" hidden>3MF: geometria <b>e ricetta</b>, cucitura compresa · letta da
+      PrusaSlicer e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
+      mesh chiusa e verificata · vaso cavo + collo filettato + firma e codice incisi<br>
       Z-up · base a 0 mm · elaborato nel browser</p>
     <p class="fine center mt-10">
       <a href="/account.html">I tuoi dati</a> · <a href="/privacy.html">Privacy</a> ·

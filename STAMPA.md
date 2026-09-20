@@ -18,17 +18,18 @@ stampare i pezzi perché tengano davvero.
 | Mesh esportata | **chiusa** in tutti i casi provati, anche agli estremi dei cursori | 0 bordi aperti, 0 spigoli non-manifold, volume coerente allo 0,2 % |
 | Fondo sotto l'incisione | **tiene con margine** | ≥ 1,8 mm pieni nel caso peggiore (incisione 1,2 mm su fondo 3,0 mm) |
 | Parete del corpo | **tiene**, è esattamente quella impostata | 2,0–3,2 mm dal fondo fino al 70 % dell'altezza |
-| **Fascia di spalla** | **è il punto debole** | scende fino a **0,90 mm**, il minimo strutturale del motore |
+| Fascia di spalla | **tiene**, dopo la correzione della geometria | 2,00–3,20 mm, esattamente la parete impostata (era 0,90 mm) |
 | Collo filettato | **tiene** | parete 3,0 mm costanti, battuta di tenuta piana larga 3,0 mm |
 | Inclinazione massima | entro i 45° sui preset | 36–42°, lo studio segnala in rosso oltre 45° |
 
-**In una riga:** i pezzi sono a tenuta se l'affilatura delle costole resta
-**entro 0,4** e la parete **almeno 2,4 mm**; sopra quella soglia la spalla si
-assottiglia fino a due sole passate di estrusione, e due passate che si toccano
-sono una scommessa, non una tenuta.
+**In una riga:** i pezzi sono a tenuta su tutta la corsa dei cursori. La parete
+misurata è ovunque quella impostata, cioè almeno cinque passate di estrusione.
 
-Dei quattro preset di listino, **Aureo** e **Marea** passano; **Tempesta**
-(affilatura 0,50) e **Fiamma** (0,38) hanno una fascia di spalla al limite.
+Tutti e quattro i preset di listino passano. Non era così: la prima misura
+(vedi sotto) aveva trovato la fascia di spalla a 0,90 mm su metà dello spazio
+dei parametri, e **Tempesta** e **Fiamma** erano fra i design difettosi. La
+geometria è stata corretta e `node scripts/tenuta.js` lo riverifica a ogni
+esecuzione, affilatura per affilatura.
 
 ---
 
@@ -65,6 +66,11 @@ di materiale pieno — nove strati. Lo studio lo mostra come «≥ x mm pieni» 
 un vincolo di costruzione, non una raccomandazione: i cursori non permettono di
 violarlo.
 
+Dal fondo pieno nella ricetta (`bottom_solid_min_thickness = 4`) quei
+millimetri sono anche **stampati** pieni, non solo geometricamente: prima ne
+venivano solidi 2,0 e in mezzo restava reticolo al 6 %, col vero sbarramento
+affidato a 1 mm di strati pieni stesi sopra il vuoto.
+
 L'incisione, poi, non è una cava a fondo piatto ma una **conca a sezione
 parabolica larga 1,5 mm**: ogni strato chiude un po' più del precedente e
 l'ultimo attraversa sei decimi di millimetro. Nessun ponte, nessuna superficie
@@ -76,15 +82,19 @@ Dal fondo fino a circa il 70 % dell'altezza la parete misura **esattamente** il
 valore del cursore: 2,40 mm richiesti, 2,40 mm misurati. Il motore tiene
 costante lo spessore anche dove le costole entrano ed escono.
 
-### La fascia di spalla — dove si perde
+### La fascia di spalla — il difetto che c'era
 
-Nel raccordo verso il collo, le due superfici smettono di essere parallele: la
-esterna si piega verso il collo, l'interna verso il foro, e ciascuna viene
-limitata per conto suo dal vincolo dei 44°. Quando le costole sono profonde le
-due limitazioni divergono e la parete si chiude fino al **minimo strutturale di
-0,90 mm** previsto dal motore (`ri > ro0 - .9` in `vcore.js`).
+Era il punto debole del pezzo, ed è anche quello che si sentiva in mano:
+avvitando la pompa, il vaso cedeva proprio lì.
 
-Spessore minimo reale della parete, in millimetri:
+Nel raccordo verso il collo le due superfici smettevano di essere parallele — la
+esterna si piega verso il collo, l'interna verso il foro — e **ciascuna veniva
+limitata per conto suo** dal vincolo dei 44°. In più le costole avevano ampiezza
+diversa dentro e fuori, così le due onde si disallineavano e lo spessore
+oscillava attorno alla circonferenza, formando una striscia sottile per costola.
+La parete si chiudeva fino al minimo strutturale di 0,90 mm.
+
+Spessore minimo reale della parete, in millimetri, **prima della correzione**:
 
 | parete impostata | affilatura 0 | 0,25 | 0,36 | 0,50 | 0,75 | 1,00 |
 |---|---|---|---|---|---|---|
@@ -93,9 +103,17 @@ Spessore minimo reale della parete, in millimetri:
 | 2,8 | 2,80 | 1,95 | 1,51 | **0,90** | **0,90** | **0,90** |
 | 3,2 | 3,00 | 2,19 | 1,75 | 1,16 | **0,90** | **0,90** |
 
-Si legge in un colpo solo: **oltre 0,4 di affilatura, aumentare la parete non
-serve a niente** — la spalla arriva comunque a 0,90 mm. La fascia interessata è
-alta 15–35 mm, sempre nella stessa zona, sempre subito sotto la spalla.
+**Dopo la correzione ogni casella di quella tabella vale la parete impostata**
+(e 3,00 nella riga da 3,2, perché lì comanda il collo a norma GPI). La cavità
+non è più una seconda superficie vincolata per conto suo: è la faccia esterna
+meno lo spessore voluto, e le costole hanno la stessa ampiezza sui due lati. La
+faccia esterna non è cambiata di un micron su nessuno dei 3888 design provati.
+
+Lo si riverifica senza fidarsi di questa pagina:
+
+```bash
+node scripts/tenuta.js          # i preset, più una scansione dell'affilatura
+```
 
 Il segnale personale (GPX o voce) non peggiora la situazione: alla massima
 intensità toglie 0,06 mm al minimo, il limitatore assorbe il resto.
@@ -137,14 +155,13 @@ I valori che decidono la tenuta, in ordine di importanza.
 
 | Impostazione | Valore | Perché |
 |---|---|---|
-| **Generatore di perimetri** | **Arachne** | È il parametro che conta più di ogni altro. Adatta la larghezza delle singole passate allo spessore che trova: la fascia di spalla da 0,90–1,26 mm viene riempita senza fessure invece di lasciare un vuoto continuo. Con il generatore classico quella fascia è il punto da cui si perde. PrusaSlicer 2.6+ e OrcaSlicer ce l'hanno di serie. |
-| **Larghezza di estrusione** | **0,40 mm** | Le pareti che lo studio propone (2,0 · 2,4 · 2,8 · 3,2) sono tutte multipli esatti di 0,40: i perimetri le riempiono senza avanzi. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
-| **Perimetri** | **4** | Quattro per lato coprono 3,2 mm, cioè esattamente la parete massima dell'applicazione: la parete è fatta solo di perimetri, il riempimento non la tocca mai. Sotto i 4 si perde il perimetro centrale di sicurezza. |
+| **Generatore di perimetri** *(già nel 3MF)* | **Arachne** | È il parametro che conta più di ogni altro. Adatta la larghezza delle singole passate allo spessore che trova, senza lasciare avanzi. Serviva soprattutto a salvare la vecchia fascia di spalla da 0,90–1,26 mm; ora che la parete è ovunque quella impostata resta comunque la scelta migliore. PrusaSlicer 2.6+ e OrcaSlicer ce l'hanno di serie. |
+| **Larghezza di estrusione** *(già nel 3MF)* | **0,40 mm** | Le pareti che lo studio propone (2,0 · 2,4 · 2,8 · 3,2) sono tutte multipli esatti di 0,40: i perimetri le riempiono senza avanzi. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
+| **Perimetri** *(già nel 3MF)* | **4** | Quattro per lato coprono 3,2 mm, cioè esattamente la parete massima dell'applicazione: la parete è fatta solo di perimetri, il riempimento non la tocca mai. Sotto i 4 si perde il perimetro centrale di sicurezza. |
 | **Ventola** | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. |
 | **Temperatura ugello** | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
-| **Strati pieni sopra e sotto** | **6 / 6** | Il fondo è l'unica zona con riempimento: sei strati pieni da ciascun lato lasciano meno di mezzo millimetro di reticolo in mezzo ai 3 mm di pavimento. |
-| **Riempimento** | **gyroid 20 %** | Riguarda solo il pavimento: passare dal 6 % al 20 % costa circa 3 g e due minuti, e chiude il punto in cui gli strati pieni potrebbero non sigillare sopra un reticolo troppo rado. |
-| **Cucitura (Z-seam)** | **a becco di flauto** (*scarf joint*) se c'è, altrimenti **allineata** | La cucitura è la fila verticale di partenze e arresti: è lì che si formano i micro-fori. Quella «casuale» sparge il difetto su tutto il pezzo invece di concentrarlo; è la scelta peggiore per un contenitore. Allineata, mettila in un solco fra due costole. |
+| **Fondo pieno** *(già nel 3MF)* | `bottom_solid_min_thickness = 4` | Sostituisce sia i «6 / 6 strati pieni» sia l'aumento del riempimento: il pavimento viene pieno per tutti i suoi 3–4 mm, quindi sotto il liquido non resta reticolo. Costa +9–14 % di materiale. Di conseguenza il pezzo non ha più alcuna zona a riempimento rado e il valore del gyroid è ininfluente. |
+| **Cucitura (Z-seam)** *(nel 3MF: `random`)* | **a becco di flauto** (*scarf joint*) dove c'è; altrimenti vedi la nota qui sotto | La cucitura è la fila di partenze e arresti dei perimetri: è lì che si formano i micro-fori. Sul *scarf joint* non c'è discussione — rampa l'estrusione e il difetto non si forma proprio: se il tuo slicer ce l'ha, usalo. Su cosa fare quando non c'è, questo documento e la ricetta incorporata **non concordano**: vedi «Cucitura: una scelta aperta». |
 | **Strato** | 0,20 mm, primo 0,24 mm | Più fine non aiuta la tenuta e raddoppia il tempo. |
 | **Compensazione zampa d'elefante** | 0,15 mm | Senza, la base svasa e il codice inciso si chiude. |
 | **Stiratura** *(ironing)* | attiva sulle superfici superiori | Le uniche superfici superiori sono la battuta del collo e il pavimento della cavità: lisciarle costa pochi secondi e la guarnizione della pompa appoggia su una superficie piana invece che su righe. |
@@ -157,6 +174,35 @@ e `project_settings.config`) porta già strato, perimetri, strati pieni,
 riempimento e assenza di supporti. Larghezza di estrusione, generatore di
 perimetri, temperature e ventola dipendono dalla stampante e dal filo: vanno
 impostate nel profilo dello slicer.
+
+#### Cucitura: una scelta aperta
+
+Due analisi indipendenti di questo repository sono arrivate a conclusioni
+opposte, e vale la pena che resti scritto invece di sparire in un merge.
+
+**Per l'allineata.** La cucitura è un difetto: concentrarlo in una riga sola
+lascia pulito tutto il resto del pezzo, e quella riga si può nascondere in un
+solco fra due costole. Sparpagliarlo significa averne uno ovunque.
+
+**Per la casuale.** Allineare significa impilare le interruzioni sulla stessa
+verticale: se l'estrusione parte male in modo sistematico — filamento umido,
+ritrazione tarata larga, un ugello che cola — quel difetto diventa un canale
+continuo dal fondo al collo. Sparpagliandolo, ogni difetto è coperto dallo
+strato sopra e sotto.
+
+**Cosa si può dire con certezza.** Con la parete fatta di cinque o sei passate
+e le cuciture dei perimetri interni sfalsate (`staggered_inner_seams`), nessuna
+delle due crea un passaggio che attraversi la parete: servirebbe che la fessura
+bucasse tutte le passate nello stesso punto. La differenza riguarda il margine
+contro l'imprevisto, non un difetto dimostrato.
+
+La ricetta incorporata usa `random` perché sbaglia in modo più innocuo: un
+problema sistematico resta sparso invece di diventare una riga. Se preferisci
+l'aspetto pulito dell'allineata, cambiala nello slicer — la geometria non ne
+risente. Il modo di chiudere la questione è una prova con acqua in pressione
+(sotto) su due pezzi identici, uno per scelta.
+
+---
 
 ### Elegoo Neptune 3 Pro
 

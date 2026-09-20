@@ -265,7 +265,13 @@ function neckSpec(P){
   const ridgeH     = Math.min(1.5, Math.max(.9, P.thD * .044));
   const crestR     = P.thD / 2;
   const rootR      = crestR - ridgeH;
-  const neckBoreR  = Math.max(6, rootR - 3);
+  /* Il collo è la parte che la pompa stringe, e con la parete oltre i 3 mm non
+     ha senso che resti l'unico punto sottile del pezzo: l'alesaggio rientra
+     quel tanto che basta perché il collo segua lo slider. Fino a 3 mm non
+     cambia nulla, e il minimo di 6 mm di raggio resta a proteggere i filetti
+     più piccoli. Il passaggio per la cannuccia perde al massimo 0,4 mm di Ø. */
+  const wallMin    = Math.max(3, Number.isFinite(P.w) ? P.w : 3);
+  const neckBoreR  = Math.max(6, rootR - wallMin);
   const entry      = Math.max(1.4, ridgeH / .6);
   const land       = 2.4;
   const Hn         = entry + P.turns * P.pitch + land;
@@ -279,6 +285,17 @@ function neckSpec(P){
    corpo; nei primi SIG_BASE la modulazione sale da 0 (appoggio, firma e
    stabilità restano governati dal raggio base). */
 const SIG_N = 64, SIG_SPAN = .8, SIG_BASE = .08;
+
+/* Fondo scala assoluto dello spessore del guscio: sotto questa misura nessuno
+   slicer riesce a chiudere la parete e il pezzo perde. Con la cavita' derivata
+   dalla faccia esterna non dovrebbe mai entrare in funzione; resta come rete di
+   sicurezza, e quando entra viene contato e riportato. */
+const WALL_FLOOR = 1.2;
+
+/* Soglia di tenuta: larghezza di estrusione (~0,45 mm con ugello 0,4) per i
+   4 perimetri della ricetta. Sotto questa misura i perimetri non si chiudono
+   e nessuna impostazione dello slicer recupera la perdita. */
+const WALL_SEAL_MIN = .45 * 4;
 const B64U = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 function sigValid(q){
   if (typeof q !== 'string' || q.length !== SIG_N) return false;
@@ -602,7 +619,21 @@ function clampProfile(P, n, prof, zs, Rc, Bo, Bi, vr, diag){
     }
   };
   sweep(Bo, false); cone(Bo, false);
-  sweep(Bi, true);  cone(Bi, true);
+
+  /* La cavita' non e' una seconda superficie limitata per conto suo: e' la
+     faccia esterna meno lo spessore voluto. Limitandole separatamente, il
+     vincolo dei 44° poteva stringere Bo senza stringere Bi (o viceversa) e lo
+     spessore reale scendeva fino al fondo scala di sicurezza anche con 2,4 mm
+     richiesti — il difetto da cui nasce una perdita. Derivandola, lo spessore
+     e' esatto per costruzione e la faccia esterna resta identica: Bo non viene
+     toccato da questa riga in poi. */
+  for (let j = 0; j < rows; j++){
+    const t = Math.min(1, zs[j] / P.h);
+    const u = Math.min(1, Math.max(0, (t - .6) / .4));
+    const sBlend = open ? 0 : u*u*(3 - 2*u);
+    /* lo spessore passa dolcemente da quello del corpo a quello del collo */
+    Bi[j] = Bo[j] - (P.w * (1 - sBlend) + (n.rootR - n.neckBoreR) * sBlend);
+  }
 }
 
 
@@ -677,6 +708,7 @@ function fillVessel(pos, ctx){
   const pA = ctx.sA, pO = ctx.sM, pI = ctx.sI, qO = ctx.prevM, qI = ctx.prevI;
   const ridgeH = n.ridgeH, entry = n.entry, zTop = ctx.Ht - n.land;
   let maxR = 0, maxW = 0, maxWz = 0, maxWall = 0, capV = 0, wallV = 0, solidV = 0, prevZ = zs[0], minRi = 1e9;
+  let minWall = 1e9, floored = 0;              // spessore reale del guscio e quante volte ha toccato il fondo scala
 
   for (let j = 0; j < rows; j++){
     const z = zs[j], dz = Math.max(1e-6, z - prevZ); prevZ = z;
@@ -711,9 +743,18 @@ function fillVessel(pos, ctx){
       let k = (j * nTh + i) * 3;
       pos[k] = ro * Math.cos(th); pos[k+1] = ro * Math.sin(th); pos[k+2] = z;
       if (j >= jB){
-        let ri = Bi[j] + modAmp * f * fade;
+        /* Stessa ampiezza di costola dentro e fuori: e' cio' che rende lo
+           spessore costante attorno alla circonferenza. Con l'ampiezza interna
+           elevata al quadrato (come nella V3) le due onde si disallineavano
+           nella fascia di raccordo della spalla e la parete oscillava fino a
+           dimezzarsi, formando una striscia sottile per ogni costola. */
+        let ri = Bi[j] + modAmp * f;
         if (ri < 2.5) ri = 2.5;
-        if (ri > ro0 - .9) ri = ro0 - .9;
+        /* fondo scala di sicurezza: non deve piu' entrare in funzione, ma se
+           entra va saputo, non subito in silenzio */
+        if (ri > ro0 - WALL_FLOOR){ ri = ro0 - WALL_FLOOR; floored++; }
+        const wallHere = ro0 - ri;
+        if (wallHere < minWall) minWall = wallHere;
         pI[i] = ri;
         if (j > jB && ri < minRi) minRi = ri;                  // cerchio inscritto minimo della cavità
         k = (rows * nTh + (j - jB) * nTh + i) * 3;
@@ -762,7 +803,8 @@ function fillVessel(pos, ctx){
   let kc = Cf * 3;
   pos[kc] = 0; pos[kc+1] = 0; pos[kc+2] = engr ? logoDepth(ctx.raster, ctx.depth, 0, 0, r95) : 0;
   pos[C1*3] = 0; pos[C1*3+1] = 0; pos[C1*3+2] = zs[jB];
-  return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi };
+  return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi,
+           minWall: minWall === 1e9 ? 0 : minWall, floored };
 }
 
 /* ================= topologia: vertici, triangoli, indici =================
@@ -1051,17 +1093,71 @@ function model3MF(parts, title){
   return L.join('\n');
 }
 /* ricetta di stampa: stessi valori della scheda */
-const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6, pattern:'gyroid' };
+/*
+ * Ricetta di stampa incorporata nel 3MF.
+ *
+ * `seam` merita una riga di spiegazione. Ogni giro di perimetro deve iniziare e
+ * finire da qualche parte, e in quel punto l'estrusione si interrompe: resta un
+ * grumo o un microvuoto. Il default di PrusaSlicer e di Orca è `aligned`, che
+ * impila di proposito tutte le cuciture sulla stessa verticale per farle sembrare
+ * una riga sola — bello a vedersi, pessimo in un contenitore, perché quei
+ * microvuoti si incolonnano e formano un canale continuo dal fondo al collo.
+ * Con `random` ogni strato parte da un angolo diverso: i difetti restano isolati
+ * e lo strato sopra copre quello sotto. Non esiste piu' un percorso continuo.
+ *
+ * Nota: la cucitura casuale lascia una punteggiatura fine sulla superficie. Su un
+ * vaso a costole ritorte è praticamente invisibile, e comunque la tenuta viene
+ * prima dell'estetica in un pezzo che deve contenere sapone.
+ */
+/*
+ * `floorSolid` merita anch'essa una spiegazione. Il fondo e' alto 3-4 mm di
+ * geometria piena, ma con i soli `bottom`/`top` strati solidi ne venivano
+ * stampati pieni appena 2,0 mm: in mezzo restava riempimento al 6%, e il vero
+ * sbarramento sotto il liquido erano gli strati solidi superiori, 1 mm stampato
+ * sopra il vuoto. E' la costruzione normale di qualsiasi stampa e di solito
+ * tiene, ma qui sotto c'e' sapone e non vale la pena rischiarlo: il fondo va
+ * pieno per tutto il suo spessore.
+ *
+ * Effetto collaterale utile: cosi' il pezzo non ha piu' alcuna zona a
+ * riempimento rado (la parete e' gia' tutta perimetri), quindi il materiale
+ * torna a essere esattamente il volume della geometria.
+ */
+const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6,
+                 pattern:'gyroid', seam:'random', floorSolid:4,
+                 /* Le pareti che lo studio propone (2,0 · 2,4 · 2,8 · 3,2) sono
+                    multipli esatti di 0,40: i perimetri le riempiono senza
+                    avanzi. Col default di PrusaSlicer per un ugello da 0,4
+                    (0,45) una parete da 2,4 lascerebbe una fessura che corre
+                    per tutta l'altezza del pezzo. */
+                 width:.4, generator:'arachne' };
 const slic3rConfig = () => [
   '; ricetta VORTICE — tenuta al liquido affidata ai perimetri',
   `layer_height = ${RECIPE.layer}`, `first_layer_height = ${RECIPE.first}`,
   `perimeters = ${RECIPE.walls}`, `top_solid_layers = ${RECIPE.top}`, `bottom_solid_layers = ${RECIPE.bottom}`,
   `fill_density = ${RECIPE.infill}%`, `fill_pattern = ${RECIPE.pattern}`,
+  '; cucitura sparsa: i punti di partenza non si incolonnano in un canale',
+  `seam_position = ${RECIPE.seam}`,
+  '; e le cuciture dei perimetri interni non cadono sopra quella esterna',
+  'staggered_inner_seams = 1',
+  '; fondo pieno per tutto lo spessore: sotto il liquido non resta riempimento rado',
+  `bottom_solid_min_thickness = ${RECIPE.floorSolid}`,
+  '; larghezza di estrusione che divide esattamente le pareti proposte',
+  `extrusion_width = ${RECIPE.width}`,
+  `perimeter_extrusion_width = ${RECIPE.width}`,
+  `external_perimeter_extrusion_width = ${RECIPE.width}`,
+  '; adatta la larghezza delle singole passate allo spessore che trova',
+  `perimeter_generator = ${RECIPE.generator}`,
   'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + RECIPE.nozzle, ''].join('\n');
 const orcaConfig = () => JSON.stringify({
   layer_height: String(RECIPE.layer), initial_layer_print_height: String(RECIPE.first),
   wall_loops: String(RECIPE.walls), top_shell_layers: String(RECIPE.top), bottom_shell_layers: String(RECIPE.bottom),
   sparse_infill_density: RECIPE.infill + '%', sparse_infill_pattern: RECIPE.pattern,
+  seam_position: RECIPE.seam,
+  bottom_shell_thickness: String(RECIPE.floorSolid),
+  line_width: String(RECIPE.width),
+  inner_wall_line_width: String(RECIPE.width),
+  outer_wall_line_width: String(RECIPE.width),
+  wall_generator: RECIPE.generator,
   enable_support: '0', brim_type: 'no_brim', version: '1.0.0', from: 'VORTICE',
 }, null, 1);
 function build3MF(parts, title){
@@ -1138,7 +1234,18 @@ function discFolds(pos, ind, ctx){
    Il termine in Q coglie il rallentamento su costole, torsione e affilatura: la
    portata reale scende da 2,5 a 1,1 mm³/s. Errore sui casi di taratura: medio 8%,
    massimo 14%. Il modello volumetrico precedente sbagliava fino a −60%. */
-const MAT_BASE_K = .672, T_V = .394, T_Q = .353;
+/*
+ * Materiale. Con il fondo pieno e la parete gia' tutta perimetri il pezzo non ha
+ * piu' zone a riempimento rado: il materiale e' esattamente il volume della
+ * geometria, senza coefficienti.
+ *
+ * Prima il fondo valeva 0,672 del suo volume, un rapporto misurato affettando
+ * 8 design — ma un rapporto solo, mentre quello vero dipende dall'altezza
+ * (0,68 a h 120, 0,54 a h 235, perche' il fondo si ingrossa e la parte a
+ * riempimento cresce). Quell'errore sistematico adesso non esiste piu'.
+ */
+const MAT_BASE_K = 1;
+const T_V = .394, T_Q = .353;
 const matVolOf = st => st.wallV + MAT_BASE_K * st.solidV;
 const printSeconds = (matVol, Q) => matVol * (T_V + T_Q * Math.max(0, (Q || 1) - 1));
 /* ondulazione: lunghezza del contorno esterno diviso quella del cerchio equivalente */
@@ -1412,21 +1519,31 @@ function runExport(job){
   const check = validateMesh(pos, ind, job.kind === 'ring' ? 0 : st.solidV + st.wallV);
   const folds = discFolds(pos, ind, ctx);
   if (folds){ check.ok = false; check.errors.push(folds + ' triangoli del fondo ripiegati (disco oltre la parete)'); }
+  /* La mesh puo' essere chiusa e il pezzo perdere lo stesso: un guscio piu'
+     sottile di quanto lo slicer riesce a chiudere non tiene il liquido.
+     Vale solo per i pezzi cavi; lo spool di prova del filetto e' pieno. */
+  if (job.kind !== 'ring' && st.minWall > 0 && st.minWall < WALL_SEAL_MIN - .01){
+    check.ok = false;
+    check.errors.push(`parete di soli ${st.minWall.toFixed(2)} mm ` +
+      `(servono ${WALL_SEAL_MIN.toFixed(2)} mm perche' i perimetri si chiudano)`);
+  }
+  check.minWall = st.minWall;
   if (!check.ok) return { ok:false, error:'mesh non valida: ' + check.errors.join(' · '), check };
   if (job.format === '3mf'){
     const name = (job.logo && job.logo.serial ? job.logo.serial + ' · ' : '') + pieceOf(P).name;
     return build3MF([{ name, pos, ind, x:0, y:0 }], label).then(buffer => ({
-      ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi,
+      ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, minWall: st.minWall,
       tilt: Math.atan(st.maxW) * 180 / Math.PI, depth: ctx.Ht - ctx.zs[ctx.jB],
       serialOk: !!(raster && raster.serialOk), format:'3mf',
     }));
   }
   const buffer = buildSTLBuffer(pos, ind, label);
-  return { ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, tilt: Math.atan(st.maxW) * 180 / Math.PI,
+  return { ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, minWall: st.minWall,
+           tilt: Math.atan(st.maxW) * 180 / Math.PI,
            depth: ctx.Ht - ctx.zs[ctx.jB], serialOk: !!(raster && raster.serialOk) };
 }
 
-G.VCore = { TAU, sstep, clamp, PROFILES, RRES, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
+G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
   buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, layoutSerial, fillVessel, vesselVerts, vesselTriCount,
   writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow,
   makeExportCtx, makeRingCtx, buildSTLBuffer, validateMesh, discFolds, r95Of, runExport, PIECES, pieceOf, piecePar, pieceRows,

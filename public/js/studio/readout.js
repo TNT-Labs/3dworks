@@ -40,6 +40,7 @@ export function renderReadout(m, model){
   text('mDepth', `≈ ${Math.round(m.depth)} mm`);
   text('mPass',  `Ø min ${m.pass.toFixed(0)} mm`);
   text('mTilt',  `${m.tilt.toFixed(0)}° max`);
+  text('mWall',  `${m.wall.toFixed(2)} mm · ${m.wallPerimeters} perimetri`);
   text('mSeal',  `≥ ${m.seal.toFixed(1)} mm pieni`);
   text('mVol',   `≈ ${Math.round(m.matVol / 1000)} cm³`);
   text('mFil',   `${Math.round(m.grams)} g · ${Math.round(m.meters)} m`);
@@ -49,6 +50,7 @@ export function renderReadout(m, model){
   dot('passDot', m.passOk ? 'ok' : 'bad');
   dot('tiltDot', m.tiltOk ? 'ok' : 'bad');
   dot('sealDot', m.sealOk ? 'ok' : 'bad');
+  dot('wallDot', m.wallOk ? 'ok' : 'bad');
 
   /* ------------------------------ segnale ------------------------------ */
   renderSignal(m.signal, model);
