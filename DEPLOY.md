@@ -62,6 +62,36 @@ cp .env.docker.example .env
 Il `docker-compose.yml` è già impostato per `shopbeautylab.it`. Resta da mettere il
 token del tunnel nel `.env`, che ottieni al passo seguente.
 
+### L'indirizzo del sito va dichiarato, non dedotto
+
+`VORTICE_BASE_URL` nel `docker-compose.yml` è il dominio vero del sito ed è su
+quello che vengono costruiti i link dentro le email. Se lo cambi, cambialo lì:
+l'unica altra fonte sarebbe l'intestazione `Host`, che la scrive chi chiama, e
+una richiesta di reimpostazione password con un `Host` altrui farebbe arrivare
+alla vittima un link che porta il suo token su un altro dominio.
+
+Per questo, quando `VORTICE_BASE_URL` è vuoto, l'applicazione costruisce link
+solo per i nomi locali (`localhost`, `127.x`, `10.x`, `192.168.x`, `*.local`) e
+per quelli elencati in `VORTICE_ALLOWED_HOSTS`: su qualunque altro nome l'email
+non parte e il log dice perché.
+
+### Il titolare del trattamento va dichiarato
+
+Nello stesso `.env` vanno i recapiti che compaiono nell'informativa privacy del sito:
+
+```dotenv
+PRIVACY_CONTROLLER=Nome o ragione sociale di chi gestisce il sito
+PRIVACY_CONTACT_EMAIL=privacy@shopbeautylab.it
+PRIVACY_CONTROLLER_ADDRESS=Via …, Città
+PRIVACY_CONTROLLER_VAT=IT01234567890
+PRIVACY_HOSTING=Raspberry Pi presso la sede del titolare
+```
+
+Finché restano vuoti, `/privacy.html` mostra un avviso che dichiara l'informativa
+incompleta — ed è voluto: un sito pubblico senza titolare indicato non è a norma.
+La lista completa di ciò che deve fare chi installa è in
+[PRIVACY.md](PRIVACY.md).
+
 ---
 
 ## 3 · Creare il tunnel Cloudflare
@@ -76,6 +106,16 @@ Nel pannello **Cloudflare → Zero Trust → Networks → Tunnels**:
    ```
    TUNNEL_TOKEN=eyJhIjoi…
    ```
+
+   Va incollato **solo il valore**: niente `--token` davanti, niente virgolette,
+   nessuna andata a capo in mezzo (è una sola riga lunga qualche centinaio di
+   caratteri). All'avvio il token viene controllato prima che il tunnel parta: se
+   è copiato male, `docker compose up` si ferma dicendo esattamente cosa manca
+   invece di riprovare all'infinito.
+
+   Se il tunnel esisteva già, il token si recupera aprendolo e scegliendo
+   **Configure**; `Refresh token` ne genera uno nuovo e **invalida il precedente**,
+   quindi dopo averlo premuto va aggiornato anche il `.env`.
 
 3. Scheda **Public Hostnames** → **Add a public hostname**:
 
@@ -109,8 +149,18 @@ dipendenze.
 
 ```bash
 docker compose ps          # vortice deve risultare "healthy"
-docker compose logs -f     # log di entrambi i container
+docker compose logs -f     # log dei container
 ```
+
+Se l'avvio si ferma con `service "tunnel-check" didn't complete successfully`,
+è il controllo del token: `docker compose up -d` non ne mostra il motivo, che
+si legge con
+
+```bash
+docker compose logs tunnel-check
+```
+
+Corretto il `.env`, `docker compose run --rm tunnel-check` lo riprova subito.
 
 Poi apri **https://shopbeautylab.it**.
 
@@ -125,6 +175,9 @@ docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d vortice
 
 Quel file è **solo per le prove**: con la porta esposta chiunque sia sulla rete locale
 può dichiarare un `CF-Connecting-IP` falso ed eludere il limite sui tentativi di accesso.
+(Il valore viene accettato solo se è davvero un indirizzo IP, quindi non serve più a
+moltiplicare i contatori all'infinito — ma resta il modo di presentarsi come un altro
+visitatore, e per questo la porta in esercizio non va pubblicata.)
 
 ---
 
@@ -142,6 +195,11 @@ Facoltativi: **Brotli** acceso va benissimo. **Bot Fight Mode** può inserire un
 JavaScript nelle pagine — se noti comportamenti strani nello studio, prova a spegnerlo.
 **Auto Minify** (se la tua zona lo mostra ancora) va spento: il codice è già compatto e
 la minificazione automatica ha una lunga storia di script rotti.
+
+Cloudflare vede l'indirizzo IP di ogni visitatore, quindi con `CLOUDFLARE=1`
+diventa un **responsabile del trattamento** (art. 28): va nominato con un accordo —
+Cloudflare ne pubblica uno standard — e l'informativa del sito lo elenca da sola
+fra i destinatari.
 
 La cache non va configurata: le risposte portano già le intestazioni giuste.
 Gli asset e la scheda pubblica sono cacheabili al bordo — è ciò che tiene basso il
@@ -185,6 +243,13 @@ Ogni notte alle 3, con `crontab -e` sul Pi:
 
 Portale anche fuori dal Pi: un disco che muore si porta via anche i backup che ci stanno sopra.
 
+Il backup **contiene tutti i dati personali** — indirizzi email, hash delle password,
+creazioni — quindi va custodito come il database originale: cifrato se lascia la
+macchina, con gli stessi tempi di conservazione, e cancellato davvero quando scade.
+Se lo copi su un servizio di terzi, quel servizio diventa un responsabile del
+trattamento da nominare e da indicare nell'informativa (`PRIVACY_HOSTING` o una voce
+aggiunta a mano in `/privacy.html`).
+
 ### Aggiornare
 
 ```bash
@@ -209,6 +274,8 @@ docker compose down -v       # ATTENZIONE: cancella anche il database
 |---|---|
 | **Error 502** da Cloudflare | Il container non è ancora `healthy`, oppure nel Public Hostname hai messo `localhost:3000` invece di `vortice:3000`: dentro `cloudflared`, `localhost` è `cloudflared` stesso. |
 | **Error 1033** | Il tunnel non è connesso: `docker compose logs cloudflared`. Di solito è il `TUNNEL_TOKEN` copiato male. |
+| **`Provided Tunnel token is not valid`** e `vortice-tunnel` che riparte in continuazione | Il token è stato rifiutato da Cloudflare. Il controllo all'avvio (`vortice-tunnel-check`) intercetta i casi di copia-incolla: se invece l'ha lasciato passare, il formato è giusto ma il token non vale più — il tunnel è stato cancellato o qualcuno ha premuto *Refresh token*. Rigenera il token dal pannello (§3), aggiorna il `.env` e `docker compose up -d`. |
+| **`service "tunnel-check" didn't complete successfully: exit 1`** | Non è un guasto: è il controllo del token che ha fermato l'avvio del tunnel. Con `up -d` il motivo non compare a schermo — leggilo con **`docker compose logs tunnel-check`**. Corretto il `.env`, `docker compose run --rm tunnel-check` lo riprova in un istante senza avviare nulla. Il sito intanto gira: manca solo l'accesso da fuori. |
 | L'accesso riesce ma **torna subito alla pagina di login** | I cookie sono `Secure` e il sito è stato raggiunto in HTTP. Accendi *Always Use HTTPS*. |
 | **«Nucleo geometrico non caricato»** nello studio | Rocket Loader acceso (§5). |
 | **«Impossibile caricare la libreria 3D»** | La cartella `public/vendor` non è finita nell'immagine: ricostruisci con `docker compose build --no-cache`. |

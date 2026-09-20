@@ -52,5 +52,10 @@ publicRouter.get('/design/:code/preview.png', lookupLimit, (req, res) => {
   if (!row) return res.status(404).end();
   const blob = q.previewOf.get(row.id)?.preview;
   if (!blob) return res.status(404).end();
-  res.type('png').set('Cache-Control', 'public, max-age=300').send(Buffer.from(blob));
+  /* è l'unica risorsa pensata per essere vista anche fuori dal sito: chi
+     condivide un codice può mostrarne l'anteprima altrove */
+  res.type('png')
+    .set('Cache-Control', 'public, max-age=300')
+    .set('Cross-Origin-Resource-Policy', 'cross-origin')
+    .send(Buffer.from(blob));
 });

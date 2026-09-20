@@ -16,6 +16,10 @@ services:
   vortice:
     build: .
     image: vortice:latest
+    # L'immagine è nostra e non sta su nessun registro: senza questo, `up`
+    # prova comunque a scaricarla e sporca il log con un «pull access denied»
+    # che non è un errore ma lo sembra.
+    pull_policy: build
     container_name: vortice
     restart: unless-stopped
     environment:
@@ -39,6 +43,21 @@ services:
       ALLOW_REGISTRATION: "1"
       REQUIRE_EMAIL_VERIFICATION: "0"
 
+      # Titolare del trattamento: compare nell'informativa privacy servita
+      # dal sito. Senza questi due valori la pagina dichiara di essere
+      # incompleta — vanno compilati prima di aprire al pubblico.
+      PRIVACY_CONTROLLER: ${PRIVACY_CONTROLLER:-}
+      PRIVACY_CONTACT_EMAIL: ${PRIVACY_CONTACT_EMAIL:-}
+      PRIVACY_CONTROLLER_ADDRESS: ${PRIVACY_CONTROLLER_ADDRESS:-}
+      PRIVACY_CONTROLLER_VAT: ${PRIVACY_CONTROLLER_VAT:-}
+      # Dietro Cloudflare c'è un responsabile in più da dichiarare: con
+      # CLOUDFLARE=1 l'informativa lo elenca da sola.
+      PRIVACY_HOSTING: ${PRIVACY_HOSTING:-}
+
+      # Cancellazione automatica degli account mai confermati (solo con
+      # REQUIRE_EMAIL_VERIFICATION=1). 0 disattiva.
+      UNVERIFIED_ACCOUNT_DAYS: "30"
+
       # Invio email: facoltativo. Da una linea domestica la posta in uscita
       # è quasi sempre bloccata, quindi conviene un servizio transazionale.
       # SMTP_HOST: smtp.esempio.it
@@ -55,6 +74,27 @@ services:
     # Nessun `ports:`: di proposito. Per raggiungerlo dalla LAN durante le
     # prove usa il file docker-compose.lan.yml (vedi DEPLOY.md).
 
+  # Controlla il token prima che cloudflared ci provi. L'immagine di
+  # cloudflared è distroless — nessuna shell dentro — e a token sbagliato
+  # stampa solo «Provided Tunnel token is not valid» riavviandosi all'infinito.
+  # Questo passaggio dura un istante, non contatta nessuno e dice invece *cosa*
+  # c'è che non va; se fallisce, cloudflared non parte affatto.
+  #
+  # Con `up -d` il motivo non compare a schermo: compose stampa solo che il
+  # servizio è fallito. Per leggerlo:  docker compose logs tunnel-check
+  # oppure, per rifarlo al volo dopo aver corretto il .env:
+  #   docker compose run --rm tunnel-check
+  # (niente container_name proprio perché `run` non lo accetta).
+  tunnel-check:
+    build: .
+    image: vortice:latest
+    pull_policy: build
+    restart: "no"
+    network_mode: none
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    command: ["node", "scripts/check-tunnel-token.js"]
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: vortice-tunnel
@@ -63,10 +103,12 @@ services:
     environment:
       # Token del tunnel creato nel pannello Cloudflare (Zero Trust →
       # Networks → Tunnels). Sta nel file .env accanto a questo compose.
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?manca TUNNEL_TOKEN nel file .env}
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
     depends_on:
       vortice:
         condition: service_healthy
+      tunnel-check:
+        condition: service_completed_successfully
     networks: [interna]
 
 volumes:

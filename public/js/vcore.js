@@ -1123,7 +1123,13 @@ function model3MF(parts, title){
  * torna a essere esattamente il volume della geometria.
  */
 const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6,
-                 pattern:'gyroid', seam:'random', floorSolid:4 };
+                 pattern:'gyroid', seam:'random', floorSolid:4,
+                 /* Le pareti che lo studio propone (2,0 · 2,4 · 2,8 · 3,2) sono
+                    multipli esatti di 0,40: i perimetri le riempiono senza
+                    avanzi. Col default di PrusaSlicer per un ugello da 0,4
+                    (0,45) una parete da 2,4 lascerebbe una fessura che corre
+                    per tutta l'altezza del pezzo. */
+                 width:.4, generator:'arachne' };
 const slic3rConfig = () => [
   '; ricetta VORTICE — tenuta al liquido affidata ai perimetri',
   `layer_height = ${RECIPE.layer}`, `first_layer_height = ${RECIPE.first}`,
@@ -1135,6 +1141,12 @@ const slic3rConfig = () => [
   'staggered_inner_seams = 1',
   '; fondo pieno per tutto lo spessore: sotto il liquido non resta riempimento rado',
   `bottom_solid_min_thickness = ${RECIPE.floorSolid}`,
+  '; larghezza di estrusione che divide esattamente le pareti proposte',
+  `extrusion_width = ${RECIPE.width}`,
+  `perimeter_extrusion_width = ${RECIPE.width}`,
+  `external_perimeter_extrusion_width = ${RECIPE.width}`,
+  '; adatta la larghezza delle singole passate allo spessore che trova',
+  `perimeter_generator = ${RECIPE.generator}`,
   'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + RECIPE.nozzle, ''].join('\n');
 const orcaConfig = () => JSON.stringify({
   layer_height: String(RECIPE.layer), initial_layer_print_height: String(RECIPE.first),
@@ -1142,6 +1154,10 @@ const orcaConfig = () => JSON.stringify({
   sparse_infill_density: RECIPE.infill + '%', sparse_infill_pattern: RECIPE.pattern,
   seam_position: RECIPE.seam,
   bottom_shell_thickness: String(RECIPE.floorSolid),
+  line_width: String(RECIPE.width),
+  inner_wall_line_width: String(RECIPE.width),
+  outer_wall_line_width: String(RECIPE.width),
+  wall_generator: RECIPE.generator,
   enable_support: '0', brim_type: 'no_brim', version: '1.0.0', from: 'VORTICE',
 }, null, 1);
 function build3MF(parts, title){

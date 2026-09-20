@@ -50,7 +50,10 @@ const del  = (p, o)    => request('DELETE', p, undefined, o);
 export const api = {
   auth: {
     me:       ()        => get('/api/auth/me'),
-    register: (email, password) => post('/api/auth/register', { email, password }),
+    /* acceptPrivacy accompagna sempre la registrazione: il server rifiuta
+       l'account senza la presa visione dell'informativa */
+    register: (email, password, acceptPrivacy) =>
+      post('/api/auth/register', { email, password, acceptPrivacy: acceptPrivacy === true }),
     login:    (email, password) => post('/api/auth/login', { email, password }),
     logout:   ()        => post('/api/auth/logout'),
     logoutAll:()        => post('/api/auth/logout-all'),
@@ -58,6 +61,11 @@ export const api = {
     reset:    (token, password) => post('/api/auth/reset', { token, password }),
     changePassword: (current, password) => post('/api/auth/change-password', { current, password }),
     resendVerification: () => post('/api/auth/resend-verification'),
+    /* diritti dell'interessato: rettifica, cancellazione, accesso/portabilità */
+    changeEmail:   (password, email) => post('/api/auth/change-email', { password, email }),
+    deleteAccount: password => post('/api/auth/delete-account', { password }),
+    acceptPrivacy: () => post('/api/auth/accept-privacy'),
+    exportUrl:     '/api/auth/export',
   },
   designs: {
     list:      (limit = 50, offset = 0) => get(`/api/designs?limit=${limit}&offset=${offset}`),
@@ -74,4 +82,7 @@ export const api = {
     byCode:     code => get(`/api/public/design/${encodeURIComponent(code)}`),
     previewUrl: code => `/api/public/design/${encodeURIComponent(code)}/preview.png`,
   },
+  /* titolare, cookie, tempi di conservazione e diritti: nessun dato personale,
+     è la stessa risposta per chiunque */
+  legal: () => get('/api/legal'),
 };

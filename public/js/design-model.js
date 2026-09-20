@@ -31,11 +31,12 @@ export const PASS_MIN = 10;      // Ø minimo del passaggio interno perché la c
 export const FID_MIN = .5;       // sotto questa correlazione il dato non si riconosce più
 export const TILT_MAX = 45;      // oltre questa pendenza servirebbero i supporti
 
-/* Tenuta al liquido: la fanno i perimetri, non il riempimento. Con ugello 0,4
-   la larghezza di estrusione è ~0,45 mm, quindi servono almeno quattro cordoli
-   pieni perché la parete si chiuda davvero. Sotto questa misura lo slicer non
-   riesce a completarli e il pezzo perde. */
-export const EXTRUSION_W = .45;
+/* Tenuta al liquido: la fanno i perimetri, non il riempimento. La ricetta impone
+   una larghezza di estrusione di 0,40 mm — che divide esattamente tutte le pareti
+   proposte — quindi servono almeno quattro cordoli pieni perché la parete si
+   chiuda. Sotto questa misura lo slicer non riesce a completarli e il pezzo perde.
+   Lo stesso numero lo usa scripts/tenuta.js per contare le passate. */
+export const EXTRUSION_W = .4;
 export const PERIMETERS = 4;
 export const WALL_SEAL_MIN = EXTRUSION_W * PERIMETERS;   // 1,80 mm
 export { WALL_FLOOR };

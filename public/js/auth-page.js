@@ -11,8 +11,10 @@ let registrationOpen = true;
 const params = new URLSearchParams(location.search);
 const next = (() => {
   const raw = params.get('next');
-  /* solo percorsi interni: un "next" assoluto porterebbe l'utente altrove */
-  return raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/studio.html';
+  /* Solo percorsi interni: un "next" assoluto porterebbe l'utente altrove.
+     La barra rovesciata conta come una barra per il browser, quindi "/\altro"
+     diventerebbe "//altro", cioè un altro sito. */
+  return /^\/(?![/\\])/.test(raw ?? '') ? raw : '/studio.html';
 })();
 
 function setMode(m){
@@ -31,12 +33,16 @@ function setMode(m){
   $('password').setAttribute('autocomplete', reg ? 'new-password' : 'current-password');
   $('pwHint').hidden = !reg;
   $('forgotBtn').hidden = reg;
+  /* la presa visione dell'informativa riguarda solo chi sta aprendo un
+     account: a chi rientra non si richiede di riaccettare nulla */
+  $('privacyCheck').hidden = !reg;
+  if (!reg) $('acceptPrivacy').checked = false;
   clearErrors();
   history.replaceState(null, '', reg ? '?modo=registrazione' : location.pathname);
 }
 
 function clearErrors(){
-  for (const id of ['formErr', 'formOk', 'emailErr', 'passwordErr']) $(id).hidden = true;
+  for (const id of ['formErr', 'formOk', 'emailErr', 'passwordErr', 'privacyErr']) $(id).hidden = true;
   for (const id of ['email', 'password']) $(id).removeAttribute('aria-invalid');
 }
 
@@ -46,8 +52,10 @@ function showError(err){
   if (field && $(field + 'Err')){
     $(field + 'Err').textContent = msg;
     $(field + 'Err').hidden = false;
-    $(field).setAttribute('aria-invalid', 'true');
-    $(field).focus();
+    /* «privacy» è una casella con un id diverso dal nome del campo: il
+       messaggio ha comunque il suo posto, l'evidenziazione no */
+    const input = $(field);
+    if (input){ input.setAttribute('aria-invalid', 'true'); input.focus(); }
   } else {
     $('formErr').textContent = msg;
     $('formErr').hidden = false;
@@ -73,6 +81,12 @@ form.addEventListener('submit', async ev => {
 
   if (!email){ showError(new ApiError('Inserisci il tuo indirizzo email', { field:'email' })); return; }
   if (!password){ showError(new ApiError('Inserisci la password', { field:'password' })); return; }
+  if (mode === 'register' && !$('acceptPrivacy').checked){
+    showError(new ApiError('Per creare l\'account devi prendere visione dell\'informativa privacy.',
+      { field:'privacy' }));
+    $('acceptPrivacy').focus();
+    return;
+  }
 
   const btn = $('submitBtn');
   btn.classList.add('busy');
@@ -82,7 +96,7 @@ form.addEventListener('submit', async ev => {
 
   try{
     const r = mode === 'register'
-      ? await api.auth.register(email, password)
+      ? await api.auth.register(email, password, $('acceptPrivacy').checked)
       : await api.auth.login(email, password);
 
     if (r.needsVerification){
@@ -121,7 +135,8 @@ $('forgotBtn').addEventListener('click', async () => {
 /* messaggi che arrivano dal link di conferma email */
 const verify = params.get('verify');
 if (verify === 'ok') showOk('Indirizzo confermato. Ora puoi accedere.');
-else if (verify === 'nonvalido') showError(new ApiError('Link di conferma scaduto o già usato.'));
+else if (verify === 'scaduto') showError(new ApiError('Link di conferma scaduto: accedi e chiedine uno nuovo.'));
+else if (verify === 'nonvalido') showError(new ApiError('Link di conferma non valido o già usato.'));
 
 /* chi è già dentro non deve vedere il modulo di accesso */
 api.auth.me().then(({ user, registrationOpen: open }) => {

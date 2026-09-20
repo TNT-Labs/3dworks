@@ -9,10 +9,17 @@ import { attachSession, requireCsrf } from './lib/http.js';
 import { authRouter } from './routes/auth.js';
 import { designsRouter } from './routes/designs.js';
 import { publicRouter } from './routes/public.js';
+import { legalRouter } from './routes/legal.js';
 import { normCode } from '../public/js/design-spec.js';
 
 const PUBLIC_DIR = join(ROOT, 'public');
 const THREE_CORE = join(PUBLIC_DIR, 'vendor', 'three', 'build', 'three.module.js');
+const FONTS_CSS = join(PUBLIC_DIR, 'vendor', 'fonts', 'fonts.css');
+
+/** I caratteri sono vendorizzati come Three.js, ma la loro assenza non è
+    fatale: senza, la pagina usa quelli di sistema — e soprattutto continua a
+    non chiedere nulla a nessuno, che è il motivo per cui stanno lì. */
+export const fontsVendored = () => existsSync(FONTS_CSS);
 
 /* Three.js è vendorizzato da `npm install` (scripts/vendor-three.js). Se manca,
    fermarsi qui con un messaggio chiaro è meglio di una pagina bianca. */
@@ -24,7 +31,10 @@ export function assertAssets(){
 export function createApp(){
   const app = express();
   app.disable('x-powered-by');
-  if (config.trustProxy) app.set('trust proxy', 1);
+  /* il valore va passato com'è: con due proxy davanti, `1` farebbe leggere
+     come indirizzo del visitatore quello del primo proxy — e il limite sui
+     tentativi tornerebbe a essere collettivo */
+  if (config.trustProxy !== false) app.set('trust proxy', config.trustProxy);
 
   /* ---------------------------- sicurezza ---------------------------- */
   app.use((req, res, next) => {
@@ -33,16 +43,23 @@ export function createApp(){
       'Referrer-Policy': 'same-origin',
       'X-Frame-Options': 'DENY',
       'Cross-Origin-Opener-Policy': 'same-origin',
+      /* nessuna risorsa del sito è incorporabile altrove: le anteprime dei
+         pezzi pubblicati fanno eccezione e lo dichiarano da sé */
+      'Cross-Origin-Resource-Policy': 'same-origin',
       'Permissions-Policy': 'geolocation=(), camera=(), microphone=(self)',
       /* Nessuno script inline: gli import di Three.js sono risolti in locale,
          quindi non serve né importmap né 'unsafe-inline'.
-         I font Google sono l'unica risorsa esterna e restano facoltativi. */
+         Nessuna origine esterna, nemmeno per i font: caricarli da Google
+         comunicherebbe l'indirizzo IP di ogni visitatore a un terzo fuori
+         dall'Unione senza alcuna base giuridica. Sono vendorizzati in locale
+         (scripts/vendor-fonts.js), e la CSP lo rende una regola, non un
+         proposito: 'self' e basta. */
       'Content-Security-Policy': [
         "default-src 'self'",
         "script-src 'self'",
         "worker-src 'self' blob:",
-        "style-src 'self' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
+        "style-src 'self'",
+        "font-src 'self'",
         "img-src 'self' data: blob:",
         "connect-src 'self'",
         "object-src 'none'",
@@ -74,6 +91,8 @@ export function createApp(){
     express.raw({ type: 'image/png', limit: config.maxPreviewBytes }),
     designsRouter);
   app.use('/api/public', publicRouter);
+  /* informativa e cookie come dati: nessun dato personale, uguale per tutti */
+  app.use('/api/legal', legalRouter);
 
   app.get('/api/health', (req, res) => res.json({
     ok: true,
@@ -119,7 +138,10 @@ export function createApp(){
       return res.status(413).json({ error: 'Richiesta troppo grande' });
     if (err?.type === 'entity.parse.failed')
       return res.status(400).json({ error: 'Richiesta non leggibile' });
-    console.error('[errore]', req.method, req.originalUrl, err);
+    /* originalUrl porterebbe nel log il token di conferma o di reimpostazione
+       (è una credenziale) e l'eventuale codice cercato: si registra il solo
+       percorso, che basta a capire dove si è rotto qualcosa. */
+    console.error('[errore]', req.method, req.path, err);
     if (res.headersSent) return;
     res.status(500).json({ error: 'Errore interno del server' });
   });
