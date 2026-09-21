@@ -128,7 +128,7 @@ function stampa(nome, a, larghezza){
      invece che una scatola di reticolo: ogni perimetro vale due passate. */
   const coperto = a.ricetta.walls * 2 * V.RECIPE.width;
   console.log(`  ricetta       ${esito(coperto >= a.P.w - 1e-9)} · ${a.ricetta.walls} perimetri`
-    + ` = ${coperto.toFixed(1)} mm coperti su ${a.P.w} di parete`
+    + ` × 2 × ${V.RECIPE.width} = ${coperto.toFixed(1)} mm coperti su ${a.P.w} di parete`
     + ` · fondo pieno ${a.ricetta.floorSolid} mm su ${a.fondo.totale.toFixed(2)}`);
   if (a.strozzato)
     console.log(`                ${r('la parete richiesta non entra nel pezzo')}: la cavità si richiude`);

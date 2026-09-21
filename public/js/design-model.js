@@ -21,7 +21,7 @@ const {
   r95Of, SIG_SPAN, SIG_SIGMA_MAX, sigRaw, smoothNorm, shapeAt, sigWeight, fitSignal,
   fitProfile, fitRing, ringTable, shapeCirc, normZero, baseCtx, firstInnerRow,
   exportFloorRow, exportFloorZ, matVolOf, printSeconds, rippleQ, pieceRows, buildLogoRaster,
-  WALL_FLOOR, recipeFor,
+  WALL_FLOOR, recipeFor, RECIPE,
 } = V;
 
 export const PLATE_PIECES = ['disp', 'tooth'];
@@ -40,7 +40,14 @@ export const TILT_MAX = 45;      // oltre questa pendenza servirebbero i support
    il conto lo fa VCore.recipeFor, perché il guscio resti tutto cordoli pieni. */
 export const EXTRUSION_W = .4;
 export const PERIMETERS = 4;
-export const WALL_SEAL_MIN = EXTRUSION_W * PERIMETERS;   // 1,80 mm
+/* Soglia di tenuta: UNA sola, quella dell'export. Qui valeva EXTRUSION_W ×
+   PERIMETERS = 1,60 mm mentre VCore rifiuta il file sotto 1,80 (la stessa
+   parete slicciata alla larghezza di default di PrusaSlicer, 0,45): fra i due
+   numeri c'era una fascia in cui la scheda diceva che andava bene e poi
+   l'export si rifiutava di produrre il file, senza che nulla lo avesse
+   annunciato. I testi dell'interfaccia dicevano 1,8 già da prima: era il
+   numero giusto, ed è quello che ora la scheda usa davvero. */
+export const WALL_SEAL_MIN = V.WALL_SEAL_MIN;            // 1,80 mm
 export { WALL_FLOOR };
 
 const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
@@ -395,6 +402,7 @@ export class DesignModel {
     const capML = st.capV / 1000;
 
     const floorZ = exportFloorZ(P);
+    const recipe = recipeFor(P);
     const matVol = this.#fixBase(st, ctx);
     const q = rippleQ(this.slots[0].pos, ctx);
     const seconds = printSeconds(matVol, q);
@@ -423,7 +431,7 @@ export class DesignModel {
        spessore lo detta la norma GPI e resta sotto lo slider per progetto,
        senza che la rete di sicurezza entri mai in funzione. */
     const wallStarved = st.floored > 0 || st.pinched > 0;
-    if (!wallOk && wallStarved)
+    if (wallStarved)
       issues.push(`la parete da ${P.w.toFixed(1)} mm non entra nel pezzo: la cavità si richiude e ` +
         `del guscio restano ${wall.toFixed(1)} mm — riduci la parete o allarga raggio e altezza`);
     else if (!wallOk)
@@ -458,7 +466,10 @@ export class DesignModel {
       wall, wallOk, wallNominal: P.w, wallPerimeters: Math.floor(wall / EXTRUSION_W + 1e-6),
       /* perimetri che la ricetta del 3MF impone a questo design: sotto questo
          numero la parete in eccesso diventerebbe riempimento rado */
-      recipeWalls: recipeFor(P).walls, floor: floorZ,
+      recipeWalls: recipe.walls, recipeFloor: recipe.floorSolid,
+      /* millimetri di parete che quei perimetri riempiono di cordoli pieni:
+         deve restare ≥ della parete, o l'eccedenza diventa riempimento rado */
+      recipeCover: recipe.walls * 2 * RECIPE.width, floor: floorZ,
       depth: height - floorZ,
       matVol, grams: matVol * 1.24e-3, meters: matVol / 2405, seconds,
       tris: vesselTriCount(pieceRows(P, PE), PE.nTh, exportFloorRow(P.h, P),

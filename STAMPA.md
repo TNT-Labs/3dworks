@@ -59,17 +59,18 @@ Legge la parete in *passate di estrusione*, che è ciò che decide la tenuta:
 
 ### Il fondo — il pezzo più robusto
 
-Il pavimento della cavità sta a **3,0–3,9 mm** dal piano (la prima riga della
-mesh oltre i 3 mm; cresce con l'altezza del pezzo). L'incisione arriva al
-massimo a **1,2 mm**, quindi sotto il liquido restano sempre **almeno 1,8 mm**
-di materiale pieno — nove strati. Lo studio lo mostra come «≥ x mm pieni» ed è
-un vincolo di costruzione, non una raccomandazione: i cursori non permettono di
-violarlo.
+Il pavimento della cavità sta a **3,0–3,9 mm** dal piano con le pareti fino a
+3 mm (la prima riga della mesh oltre i 3 mm; cresce con l'altezza del pezzo), e
+**segue la parete** quando questa sale: 6,2 mm con una parete da 6, fino a
+8,5 mm con una da 8. L'incisione arriva al massimo a **1,2 mm**, quindi sotto il
+liquido restano sempre **almeno 1,8 mm** di materiale pieno — nove strati. Lo
+studio lo mostra come «≥ x mm pieni» ed è un vincolo di costruzione, non una
+raccomandazione: i cursori non permettono di violarlo.
 
-Dal fondo pieno nella ricetta (`bottom_solid_min_thickness = 4`) quei
-millimetri sono anche **stampati** pieni, non solo geometricamente: prima ne
-venivano solidi 2,0 e in mezzo restava reticolo al 6 %, col vero sbarramento
-affidato a 1 mm di strati pieni stesi sopra il vuoto.
+Dal fondo pieno nella ricetta (`bottom_solid_min_thickness`, 4 mm o quanto serve
+al fondo di quel design) quei millimetri sono anche **stampati** pieni, non solo
+geometricamente: prima ne venivano solidi 2,0 e in mezzo restava reticolo al
+6 %, col vero sbarramento affidato a 1 mm di strati pieni stesi sopra il vuoto.
 
 L'incisione, poi, non è una cava a fondo piatto ma una **conca a sezione
 parabolica larga 1,5 mm**: ogni strato chiude un po' più del precedente e
@@ -200,7 +201,7 @@ I valori che decidono la tenuta, in ordine di importanza.
 | Impostazione | Valore | Perché |
 |---|---|---|
 | **Generatore di perimetri** *(già nel 3MF)* | **Arachne** | È il parametro che conta più di ogni altro. Adatta la larghezza delle singole passate allo spessore che trova, senza lasciare avanzi. Serviva soprattutto a salvare la vecchia fascia di spalla da 0,90–1,26 mm; ora che la parete è ovunque quella impostata resta comunque la scelta migliore. PrusaSlicer 2.6+ e OrcaSlicer ce l'hanno di serie. |
-| **Larghezza di estrusione** *(già nel 3MF)* | **0,40 mm** | Le pareti che lo studio propone (2,0 · 2,4 · 2,8 · 3,2) sono tutte multipli esatti di 0,40: i perimetri le riempiono senza avanzi. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
+| **Larghezza di estrusione** *(già nel 3MF)* | **0,40 mm** | Divide esattamente le pareti «tonde» (2,0 · 2,4 · 2,8 · 3,2 · 4,0 · 4,8 · 5,6 · 6,4 · 7,2 · 8,0): lì i perimetri riempiono senza avanzi. Il cursore si muove di 0,1 mm, quindi le misure intermedie un avanzo ce l'hanno — è esattamente ciò che Arachne assorbe allargando le passate, e il numero di perimetri è arrotondato per eccesso perché l'avanzo resti dentro i cordoli e non diventi riempimento. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
 | **Perimetri** *(già nel 3MF)* | **4 o più, li scrive lo studio** | Quattro per lato coprono 3,2 mm: bastavano finché la parete massima era 3,2. Ora la parete arriva a 8 mm e il numero lo calcola l'export (`recipeFor`), perché il guscio resti fatto **solo** di perimetri. Vedi «La parete spessa» qui sotto: è il punto in cui una parete grossa può diventare più debole di una sottile. Sotto i 4 si perde comunque il perimetro centrale di sicurezza. |
 | **Ventola** | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. |
 | **Temperatura ugello** | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |

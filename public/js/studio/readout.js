@@ -46,6 +46,21 @@ export function renderReadout(m, model){
   text('mFil',   `${Math.round(m.grams)} g · ${Math.round(m.meters)} m`);
   text('mTime',  '≈ ' + fmtTime(m.seconds));
   text('mTri',   `≈ ${Math.round(m.tris / 1000)} mila triangoli`);
+
+  /* la ricetta incorporata nel 3MF non è fissa: perimetri e fondo pieno seguono
+     la parete del design, altrimenti il guscio spesso resterebbe vuoto dentro */
+  text('rcWalls', `${m.recipeWalls} perimetri · ${m.recipeCover.toFixed(1)} mm coperti`);
+  text('rcBase',  `piena · ${m.recipeFloor} mm su ${m.floor.toFixed(1)} di fondo`);
+
+  /* Chi scarica l'STL non riceve la ricetta: la cucitura gliela ricordiamo
+     sempre, i perimetri solo quando la parete ne chiede più dei 4 di default —
+     altrimenti il guscio spesso esce vuoto dentro e l'avviso non si vede. */
+  const nw = $('noteStlWalls');
+  if (nw){
+    nw.hidden = m.recipeWalls <= 4;
+    if (!nw.hidden) nw.textContent = ` · e porta i perimetri a ${m.recipeWalls}`
+      + `, o la parete da ${m.wallNominal.toFixed(1)} mm resta vuota dentro`;
+  }
   dot('fitDot',  m.fitsBed ? 'ok' : 'bad');
   dot('passDot', m.passOk ? 'ok' : 'bad');
   dot('tiltDot', m.tiltOk ? 'ok' : 'bad');
