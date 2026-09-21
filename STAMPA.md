@@ -17,7 +17,7 @@ stampare i pezzi perché tengano davvero.
 |---|---|---|
 | Mesh esportata | **chiusa** in tutti i casi provati, anche agli estremi dei cursori | 0 bordi aperti, 0 spigoli non-manifold, volume coerente allo 0,2 % |
 | Fondo sotto l'incisione | **tiene con margine** | ≥ 1,8 mm pieni nel caso peggiore (incisione 1,2 mm su fondo 3,0 mm) |
-| Parete del corpo | **tiene**, è esattamente quella impostata | 2,0–3,2 mm dal fondo fino al 70 % dell'altezza |
+| Parete del corpo | **tiene**, è esattamente quella impostata | 2,0–8,0 mm dal fondo fino al 70 % dell'altezza |
 | Fascia di spalla | **tiene**, dopo la correzione della geometria | 2,00–3,20 mm, esattamente la parete impostata (era 0,90 mm) |
 | Collo filettato | **tiene** | parete 3,0 mm costanti, battuta di tenuta piana larga 3,0 mm |
 | Inclinazione massima | entro i 45° sui preset | 36–42°, lo studio segnala in rosso oltre 45° |
@@ -81,6 +81,50 @@ sospesa. È il tipo di incisione che si stampa bene.
 Dal fondo fino a circa il 70 % dell'altezza la parete misura **esattamente** il
 valore del cursore: 2,40 mm richiesti, 2,40 mm misurati. Il motore tiene
 costante lo spessore anche dove le costole entrano ed escono.
+
+### La parete spessa — e la trappola dei perimetri fissi
+
+Il cursore arriva a **8 mm**. Serve a un pezzo che si deve poter stringere in
+mano: un vaso alto con 2,4 mm di PLA è a tenuta ma flette, e su un primo strato
+sottoestruso o su uno spigolo si buca. Con 4–5 mm il pezzo diventa rigido.
+
+Ingrossare la parete però **non basta**, e se si sbaglia il seguito si ottiene
+l'opposto. La parete di un vaso ha due contorni — la faccia esterna e quella
+della cavità — quindi ogni perimetro della ricetta vale **due passate**, una per
+lato. Con i 4 perimetri fissi di prima si coprono 3,2 mm; il resto di una parete
+da 6 mm non sarebbe guscio pieno ma **gyroid al 6 % chiuso dentro la parete**:
+più spessa, più pesante, più lenta — e più fragile di una da 2,4, perché una
+scatola vuota cede alla prima pressione e il liquido corre lungo il reticolo.
+
+Per questo il numero di perimetri nel 3MF ora lo scrive l'export a partire dal
+design: `perimetri = max(4, ⌈parete / 0,8⌉)`. Una parete da 6 mm esce con 8
+perimetri, una da 8 mm con 10. Se slicci l'**STL** invece del 3MF questa
+impostazione non viaggia con il file: alzala a mano, o il guscio spesso resta
+vuoto dentro.
+
+Il **fondo** segue la parete per la stessa ragione (minimo 3 mm come prima,
+tetto a un quinto dell'altezza), e `bottom_solid_min_thickness` lo segue a sua
+volta: un guscio da 6 mm su un pavimento da 3 mm avrebbe il punto debole proprio
+dove il liquido preme e dove il vaso appoggia.
+
+Cosa costa, su un Aureo (185 × Ø124):
+
+| parete | capacità | materiale | filamento | tempo | perimetri nel 3MF |
+|---|---|---|---|---|---|
+| 2,4 mm | 903 ml | 148 cm³ | 183 g | ≈18 h | 4 |
+| 4,0 mm | 823 ml | 228 cm³ | 283 g | ≈29 h | 5 |
+| 6,0 mm | 729 ml | 323 cm³ | 400 g | ≈40 h | 8 |
+| 8,0 mm | 639 ml | 412 cm³ | 511 g | ≈52 h | 10 |
+
+Il collo non segue lo slider oltre i ~3 mm: lì comanda la norma GPI e
+l'alesaggio non può stringersi oltre Ø12. Su una parete spessa **il collo resta
+quindi il punto più sottile del pezzo**, ed è quello che la scheda riporta come
+«parete reale».
+
+Su un pezzo piccolo — il portaspazzolino ai minimi dei cursori — una parete da
+6–8 mm non ci sta: la cavità si richiude e del guscio resta la scaglia del fondo
+scala. Lo studio lo dice («la parete da 8,0 mm non entra nel pezzo») e l'export
+si rifiuta di produrre il file.
 
 ### La fascia di spalla — il difetto che c'era
 
@@ -157,7 +201,7 @@ I valori che decidono la tenuta, in ordine di importanza.
 |---|---|---|
 | **Generatore di perimetri** *(già nel 3MF)* | **Arachne** | È il parametro che conta più di ogni altro. Adatta la larghezza delle singole passate allo spessore che trova, senza lasciare avanzi. Serviva soprattutto a salvare la vecchia fascia di spalla da 0,90–1,26 mm; ora che la parete è ovunque quella impostata resta comunque la scelta migliore. PrusaSlicer 2.6+ e OrcaSlicer ce l'hanno di serie. |
 | **Larghezza di estrusione** *(già nel 3MF)* | **0,40 mm** | Le pareti che lo studio propone (2,0 · 2,4 · 2,8 · 3,2) sono tutte multipli esatti di 0,40: i perimetri le riempiono senza avanzi. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
-| **Perimetri** *(già nel 3MF)* | **4** | Quattro per lato coprono 3,2 mm, cioè esattamente la parete massima dell'applicazione: la parete è fatta solo di perimetri, il riempimento non la tocca mai. Sotto i 4 si perde il perimetro centrale di sicurezza. |
+| **Perimetri** *(già nel 3MF)* | **4 o più, li scrive lo studio** | Quattro per lato coprono 3,2 mm: bastavano finché la parete massima era 3,2. Ora la parete arriva a 8 mm e il numero lo calcola l'export (`recipeFor`), perché il guscio resti fatto **solo** di perimetri. Vedi «La parete spessa» qui sotto: è il punto in cui una parete grossa può diventare più debole di una sottile. Sotto i 4 si perde comunque il perimetro centrale di sicurezza. |
 | **Ventola** | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. |
 | **Temperatura ugello** | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
 | **Fondo pieno** *(già nel 3MF)* | `bottom_solid_min_thickness = 4` | Sostituisce sia i «6 / 6 strati pieni» sia l'aumento del riempimento: il pavimento viene pieno per tutti i suoi 3–4 mm, quindi sotto il liquido non resta reticolo. Costa +9–14 % di materiale. Di conseguenza il pezzo non ha più alcuna zona a riempimento rado e il valore del gyroid è ininfluente. |

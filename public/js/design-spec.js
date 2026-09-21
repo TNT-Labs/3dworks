@@ -36,7 +36,11 @@ export const RANGES = {
   petals: { key:'petals', q:'n',   slider:'sP',  min:3,   max:9,   step:1, scale:1,   digits:0 },
   twist:  { key:'twist',  q:'tw',  slider:'sT',  min:0,   max:360, step:5, scale:1,   digits:0 },
   sharp:  { key:'sharp',  q:'sh',  slider:'sS',  min:0,   max:100, step:1, scale:100, digits:2, pct:true },
-  w:      { key:'w',      q:'w',   slider:'sW',  min:20,  max:32,  step:1, scale:10,  digits:1 },
+  /* Parete: fino a 8 mm. Il tetto di 3,2 era il limite dei 4 perimetri fissi
+     della ricetta; ora la ricetta segue la parete, quindi il limite vero e'
+     quello del pezzo. Un guscio da 5-6 mm e' cio' che rende un vaso stampato
+     robusto in mano invece che fragile appena nato. */
+  w:      { key:'w',      q:'w',   slider:'sW',  min:20,  max:80,  step:1, scale:10,  digits:1 },
   thD:    { key:'thD',    q:'td',  slider:'sD',  min:180, max:320, step:1, scale:10,  digits:2 },
   pitch:  { key:'pitch',  q:'tp',  slider:'sP2', min:24,  max:50,  step:1, scale:10,  digits:2 },
   turns:  { key:'turns',  q:'tg',  slider:'sG',  min:10,  max:30,  step:5, scale:10,  digits:1 },

@@ -296,6 +296,21 @@ const WALL_FLOOR = 1.2;
    4 perimetri della ricetta. Sotto questa misura i perimetri non si chiudono
    e nessuna impostazione dello slicer recupera la perdita. */
 const WALL_SEAL_MIN = .45 * 4;
+
+/* ====================== spessore del fondo ======================
+   Il fondo seguiva una costante di 3 mm mentre la parete arrivava a 3,2: con
+   la parete che ora sale fino a 8 mm quel pavimento resterebbe il punto debole
+   del pezzo proprio dove il liquido preme e dove il vaso appoggia quando lo
+   posi. Il fondo segue quindi la parete, con 3 mm come minimo storico (sotto i
+   3 mm nessun design cambia di un micron) e un quinto dell'altezza come tetto,
+   perche' su un pezzo basso il pavimento non mangi la cavita'. */
+const FLOOR_MIN = 3;
+function floorMin(P){
+  const w = P && Number.isFinite(P.w) ? P.w : FLOOR_MIN;
+  const h = P && Number.isFinite(P.h) ? P.h : 120;
+  return clamp(Math.max(FLOOR_MIN, w), FLOOR_MIN, Math.max(FLOOR_MIN, h * .2));
+}
+
 const B64U = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 function sigValid(q){
   if (typeof q !== 'string' || q.length !== SIG_N) return false;
@@ -708,7 +723,7 @@ function fillVessel(pos, ctx){
   const pA = ctx.sA, pO = ctx.sM, pI = ctx.sI, qO = ctx.prevM, qI = ctx.prevI;
   const ridgeH = n.ridgeH, entry = n.entry, zTop = ctx.Ht - n.land;
   let maxR = 0, maxW = 0, maxWz = 0, maxWall = 0, capV = 0, wallV = 0, solidV = 0, prevZ = zs[0], minRi = 1e9;
-  let minWall = 1e9, floored = 0;              // spessore reale del guscio e quante volte ha toccato il fondo scala
+  let minWall = 1e9, floored = 0, pinched = 0; // spessore reale del guscio, e i due clamp che lo alterano
 
   for (let j = 0; j < rows; j++){
     const z = zs[j], dz = Math.max(1e-6, z - prevZ); prevZ = z;
@@ -749,7 +764,10 @@ function fillVessel(pos, ctx){
            nella fascia di raccordo della spalla e la parete oscillava fino a
            dimezzarsi, formando una striscia sottile per ogni costola. */
         let ri = Bi[j] + modAmp * f;
-        if (ri < 2.5) ri = 2.5;
+        /* la cavita' si e' richiusa: la parete richiesta non ci sta. Va contato,
+           perche' il rimedio (parete piu' sottile, pezzo piu' grande) e'
+           l'opposto di quello di una parete sottile per distrazione. */
+        if (ri < 2.5){ ri = 2.5; pinched++; }
         /* fondo scala di sicurezza: non deve piu' entrare in funzione, ma se
            entra va saputo, non subito in silenzio */
         if (ri > ro0 - WALL_FLOOR){ ri = ro0 - WALL_FLOOR; floored++; }
@@ -804,7 +822,7 @@ function fillVessel(pos, ctx){
   pos[kc] = 0; pos[kc+1] = 0; pos[kc+2] = engr ? logoDepth(ctx.raster, ctx.depth, 0, 0, r95) : 0;
   pos[C1*3] = 0; pos[C1*3+1] = 0; pos[C1*3+2] = zs[jB];
   return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi,
-           minWall: minWall === 1e9 ? 0 : minWall, floored };
+           minWall: minWall === 1e9 ? 0 : minWall, floored, pinched };
 }
 
 /* ================= topologia: vertici, triangoli, indici =================
@@ -880,15 +898,22 @@ function baseCtx(P, nTh, K){
   return { P, nTh, nD:nTh, K, ring:false, open:false, vr:null, engrave:true, jB:1, zBase:0, Ht:10, n:null, r95:10,
     raster:null, depth:0, radK:new Float64Array(Math.max(1, K-1)), ...mkScratch(nTh) };
 }
-function firstInnerRow(zs){
-  let jB = 1; while (jB < zs.length - 1 && zs[jB] < 3) jB++;
+/* prima riga della cavita': il pavimento sta appena sopra floorMin(P).
+   Senza P vale il minimo storico di 3 mm, cosi' i richiami di comodo
+   (strumenti, test) restano quelli di prima. */
+function firstInnerRow(zs, P){
+  const fl = floorMin(P);
+  let jB = 1; while (jB < zs.length - 1 && zs[jB] < fl) jB++;
   return jB;
 }
 /* stessa regola di firstInnerRow applicata alle righe di esportazione */
-function exportFloorRow(h){
-  let j = 1; while (j < PE.nB - 1 && h * j / (PE.nB - 1) < 3) j++;
+function exportFloorRow(h, P){
+  const fl = floorMin(P || { h, w: FLOOR_MIN });
+  let j = 1; while (j < PE.nB - 1 && h * j / (PE.nB - 1) < fl) j++;
   return j;
 }
+/* quota del pavimento nell'STL esportato: e' il pieno che sta sotto il liquido */
+const exportFloorZ = P => P.h * exportFloorRow(P.h, P) / (PE.nB - 1);
 /* contesto per una qualsiasi risoluzione: PE per l'export, PS per la ricerca.
    Con cfg = PE il percorso è identico alla versione precedente (STL invariati). */
 function makeCtxFor(cfg, P, profKey, raster, depth){
@@ -902,7 +927,7 @@ function makeCtxFor(cfg, P, profKey, raster, depth){
   const ctx = baseCtx(P, cfg.nTh, cfg.K);
   ctx.zs = zs; ctx.Bo = Bo; ctx.Bi = Bi;
   ctx.n = n; ctx.open = !!n.open;
-  ctx.jB = firstInnerRow(zs); ctx.zBase = P.h; ctx.Ht = zs[rows-1];
+  ctx.jB = firstInnerRow(zs, P); ctx.zBase = P.h; ctx.Ht = zs[rows-1];
   ctx.r95 = r95Of(P, PROFILES[profKey](0), Bo[0]);
   ctx.raster = L; ctx.depth = depth;
   ctx.vr = vr ? { A:vr.A, ramp:vr.ramp, zTop:vr.zTop, cth: ringTable(vr, cfg.nTh) } : null;
@@ -1000,7 +1025,9 @@ function runPlate(job){
   if (!plan.fits) return { ok:false, error:'i pezzi non stanno insieme sul piatto · ' + plan.why };
   const label = 'VORTICE set: ' + parts.map(p => p.name).join(' + ');
   const summary = { ok:true, check:{ tris }, plate:{ W:plan.W, D:plan.D, H:plan.H }, matVol, secs, Ht, tris, pieces:parts.length };
-  if (job.format === '3mf') return build3MF(parts, label).then(buffer => ({ ...summary, buffer, format:'3mf' }));
+  if (job.format === '3mf')
+    return build3MF(parts, label, recipeForAll(plan.items.map(it => it.P)))
+      .then(buffer => ({ ...summary, buffer, format:'3mf' }));
   return { ...summary, buffer: plateSTL(parts, label), format:'stl' };
 }
 
@@ -1124,49 +1151,85 @@ function model3MF(parts, title){
  */
 const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6,
                  pattern:'gyroid', seam:'random', floorSolid:4,
-                 /* Le pareti che lo studio propone (2,0 · 2,4 · 2,8 · 3,2) sono
-                    multipli esatti di 0,40: i perimetri le riempiono senza
-                    avanzi. Col default di PrusaSlicer per un ugello da 0,4
-                    (0,45) una parete da 2,4 lascerebbe una fessura che corre
-                    per tutta l'altezza del pezzo. */
+                 /* Le pareti che lo studio propone sono multipli esatti di
+                    0,40: i perimetri le riempiono senza avanzi. Col default di
+                    PrusaSlicer per un ugello da 0,4 (0,45) una parete da 2,4
+                    lascerebbe una fessura che corre per tutta l'altezza del
+                    pezzo. */
                  width:.4, generator:'arachne' };
-const slic3rConfig = () => [
+
+/*
+ * La parete di un vaso ha DUE contorni — la faccia esterna e quella della
+ * cavita' — quindi ogni perimetro della ricetta vale due passate, una per
+ * lato. Con 4 perimetri da 0,40 si coprono 3,2 mm: era esattamente la parete
+ * massima di prima, e per questo il numero poteva restare fisso.
+ *
+ * Con la parete fino a 8 mm non puo' piu' restarlo. Un guscio da 6 mm slicciato
+ * con 4 perimetri verrebbe 3,2 mm di cordoli pieni e 2,8 mm di GYROID AL 6%
+ * chiuso in mezzo: piu' spesso, piu' pesante, piu' lento — e piu' debole di
+ * prima, perche' la parete diventa una scatola vuota che cede alla prima
+ * pressione e lascia passare il liquido lungo il reticolo. E' il difetto
+ * esattamente opposto a quello che si vuole ottenere ingrossando il guscio.
+ *
+ * Il conto e' quindi derivato dal design: tanti perimetri quante passate
+ * servono a riempire la parete senza lasciare un millimetro al riempimento.
+ * Stessa regola per il fondo, che ora segue la parete (floorMin).
+ */
+function recipeWalls(w, width = RECIPE.width){
+  return Math.max(RECIPE.walls, Math.ceil(w / (2 * width) - 1e-9));
+}
+function recipeFor(P){
+  const w = P && Number.isFinite(P.w) ? P.w : 2.4;
+  return { ...RECIPE, walls: recipeWalls(w),
+           floorSolid: Math.max(RECIPE.floorSolid, Math.ceil(exportFloorZ(P) - 1e-9)) };
+}
+/* ricetta di un piatto con piu' pezzi: vale la piu' esigente */
+function recipeForAll(list){
+  let r = RECIPE;
+  for (const P of list){
+    const c = recipeFor(P);
+    if (c.walls > r.walls || c.floorSolid > r.floorSolid)
+      r = { ...c, walls: Math.max(r.walls, c.walls), floorSolid: Math.max(r.floorSolid, c.floorSolid) };
+  }
+  return r;
+}
+const slic3rConfig = (R = RECIPE) => [
   '; ricetta VORTICE — tenuta al liquido affidata ai perimetri',
-  `layer_height = ${RECIPE.layer}`, `first_layer_height = ${RECIPE.first}`,
-  `perimeters = ${RECIPE.walls}`, `top_solid_layers = ${RECIPE.top}`, `bottom_solid_layers = ${RECIPE.bottom}`,
-  `fill_density = ${RECIPE.infill}%`, `fill_pattern = ${RECIPE.pattern}`,
+  `layer_height = ${R.layer}`, `first_layer_height = ${R.first}`,
+  `perimeters = ${R.walls}`, `top_solid_layers = ${R.top}`, `bottom_solid_layers = ${R.bottom}`,
+  `fill_density = ${R.infill}%`, `fill_pattern = ${R.pattern}`,
   '; cucitura sparsa: i punti di partenza non si incolonnano in un canale',
-  `seam_position = ${RECIPE.seam}`,
+  `seam_position = ${R.seam}`,
   '; e le cuciture dei perimetri interni non cadono sopra quella esterna',
   'staggered_inner_seams = 1',
   '; fondo pieno per tutto lo spessore: sotto il liquido non resta riempimento rado',
-  `bottom_solid_min_thickness = ${RECIPE.floorSolid}`,
+  `bottom_solid_min_thickness = ${R.floorSolid}`,
   '; larghezza di estrusione che divide esattamente le pareti proposte',
-  `extrusion_width = ${RECIPE.width}`,
-  `perimeter_extrusion_width = ${RECIPE.width}`,
-  `external_perimeter_extrusion_width = ${RECIPE.width}`,
+  `extrusion_width = ${R.width}`,
+  `perimeter_extrusion_width = ${R.width}`,
+  `external_perimeter_extrusion_width = ${R.width}`,
   '; adatta la larghezza delle singole passate allo spessore che trova',
-  `perimeter_generator = ${RECIPE.generator}`,
-  'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + RECIPE.nozzle, ''].join('\n');
-const orcaConfig = () => JSON.stringify({
-  layer_height: String(RECIPE.layer), initial_layer_print_height: String(RECIPE.first),
-  wall_loops: String(RECIPE.walls), top_shell_layers: String(RECIPE.top), bottom_shell_layers: String(RECIPE.bottom),
-  sparse_infill_density: RECIPE.infill + '%', sparse_infill_pattern: RECIPE.pattern,
-  seam_position: RECIPE.seam,
-  bottom_shell_thickness: String(RECIPE.floorSolid),
-  line_width: String(RECIPE.width),
-  inner_wall_line_width: String(RECIPE.width),
-  outer_wall_line_width: String(RECIPE.width),
-  wall_generator: RECIPE.generator,
+  `perimeter_generator = ${R.generator}`,
+  'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + R.nozzle, ''].join('\n');
+const orcaConfig = (R = RECIPE) => JSON.stringify({
+  layer_height: String(R.layer), initial_layer_print_height: String(R.first),
+  wall_loops: String(R.walls), top_shell_layers: String(R.top), bottom_shell_layers: String(R.bottom),
+  sparse_infill_density: R.infill + '%', sparse_infill_pattern: R.pattern,
+  seam_position: R.seam,
+  bottom_shell_thickness: String(R.floorSolid),
+  line_width: String(R.width),
+  inner_wall_line_width: String(R.width),
+  outer_wall_line_width: String(R.width),
+  wall_generator: R.generator,
   enable_support: '0', brim_type: 'no_brim', version: '1.0.0', from: 'VORTICE',
 }, null, 1);
-function build3MF(parts, title){
+function build3MF(parts, title, R = RECIPE){
   return zipArchive([
     { name:'[Content_Types].xml', data:'<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="text/plain"/></Types>' },
     { name:'_rels/.rels', data:'<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rel0" Target="/3D/3dmodel.model" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>' },
     { name:'3D/3dmodel.model', data: model3MF(parts, title) },
-    { name:'Metadata/Slic3r_PE.config', data: slic3rConfig() },
-    { name:'Metadata/project_settings.config', data: orcaConfig() },
+    { name:'Metadata/Slic3r_PE.config', data: slic3rConfig(R) },
+    { name:'Metadata/project_settings.config', data: orcaConfig(R) },
   ]);
 }
 
@@ -1531,7 +1594,9 @@ function runExport(job){
   if (!check.ok) return { ok:false, error:'mesh non valida: ' + check.errors.join(' · '), check };
   if (job.format === '3mf'){
     const name = (job.logo && job.logo.serial ? job.logo.serial + ' · ' : '') + pieceOf(P).name;
-    return build3MF([{ name, pos, ind, x:0, y:0 }], label).then(buffer => ({
+    /* lo spool di prova e' pieno: non ha parete da riempire, tiene la ricetta base */
+    const R = job.kind === 'ring' ? RECIPE : recipeFor(P);
+    return build3MF([{ name, pos, ind, x:0, y:0 }], label, R).then(buffer => ({
       ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, minWall: st.minWall,
       tilt: Math.atan(st.maxW) * 180 / Math.PI, depth: ctx.Ht - ctx.zs[ctx.jB],
       serialOk: !!(raster && raster.serialOk), format:'3mf',
@@ -1545,9 +1610,9 @@ function runExport(job){
 
 G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
   buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, layoutSerial, fillVessel, vesselVerts, vesselTriCount,
-  writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow,
+  writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow, exportFloorZ, floorMin, FLOOR_MIN,
   makeExportCtx, makeRingCtx, buildSTLBuffer, validateMesh, discFolds, r95Of, runExport, PIECES, pieceOf, piecePar, pieceRows,
-  matVolOf, printSeconds, rippleQ, build3MF, model3MF, zipArchive, RECIPE, BED, BED_MARGIN, PIECE_GAP, pieceExtent, platePlan, runPlate,
+  matVolOf, printSeconds, rippleQ, build3MF, model3MF, zipArchive, RECIPE, recipeFor, recipeForAll, recipeWalls, BED, BED_MARGIN, PIECE_GAP, pieceExtent, platePlan, runPlate,
   PS, makeCtxFor, evalPiece, evalSignal, evalDesign, runSearch, SEARCH_VARS,
   SIG_N, SIG_SPAN, SIG_SIGMA_MAX, SIG_TOL, B64U, sigValid, sigEncode, sigRaw, smoothNorm,
   shapeAt, sigWeight, sigRig, sigResidual, fitSignal, fitSignalFor, fitProfile, profileFn,

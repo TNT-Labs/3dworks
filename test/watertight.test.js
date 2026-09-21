@@ -37,6 +37,17 @@ test('i quattro perimetri della ricetta stanno nella parete più sottile ammessa
     `la parete minima selezionabile (${minSlider} mm) deve bastare a ${PERIMETERS} perimetri (${WALL_SEAL_MIN} mm)`);
 });
 
+test('la parete più spessa selezionabile resta tutta cordoli pieni', () => {
+  /* ogni perimetro vale due passate, una per faccia: se il numero non seguisse
+     la parete, l'eccedenza diventerebbe riempimento rado chiuso dentro il
+     guscio — spesso, pesante e più debole di una parete sottile */
+  for (let sl = RANGES.w.min; sl <= RANGES.w.max; sl++){
+    const w = sl / RANGES.w.scale;
+    const coperto = V.recipeFor(par({ w })).walls * 2 * V.RECIPE.width;
+    assert.ok(coperto >= w - 1e-9, `parete ${w.toFixed(1)} mm: coperti ${coperto.toFixed(2)} mm`);
+  }
+});
+
 test('ogni preset ha davvero la parete che dichiara', () => {
   for (const [name, p] of Object.entries(PRESETS)){
     const P = par({ h:p.h, r:p.r, petals:p.petals, twist:p.twist, sharp:p.sharp });
@@ -63,7 +74,7 @@ test('in nessun punto la parete scende sotto la soglia di tenuta', () => {
         for (const petals of [3, 6, 9])
           for (const twist of [0, 180, 360])
             for (const sharp of [0, .5, 1])
-              for (const w of [2.0, 2.6, 3.2]){
+              for (const w of [2.0, 2.6, 3.2, 5.0, 8.0]){
                 const P = par({ h, r, petals, twist, sharp, w });
                 const st = exportWall(P, profKey);
                 if (st.minWall < WALL_SEAL_MIN - .01 || st.floored)
@@ -80,7 +91,7 @@ test('nel corpo la parete è esattamente quella scelta', () => {
   for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
     for (const sharp of [0, .5, 1])
       for (const twist of [0, 360])
-        for (const w of [2.0, 2.6, 3.2]){
+        for (const w of [2.0, 2.6, 3.2, 5.0, 8.0]){
           const P = par({ sharp, twist, w });
           const raster = V.buildLogoRaster(LOGO, V.targetR95(P, profKey));
           const ctx = V.makeExportCtx(P, profKey, raster, .8);
@@ -96,10 +107,64 @@ test('nel corpo la parete è esattamente quella scelta', () => {
 });
 
 test('anche il portaspazzolino, che ha il bordo aperto, tiene la parete', () => {
-  for (const w of [2.0, 2.4, 3.2]){
-    const st = exportWall(par({ w, piece:'tooth' }), 'clessidra');
+  for (const w of [2.0, 2.4, 3.2, 5.0]){
+    const st = exportWall(V.piecePar(par({ w }), 'tooth'), 'clessidra');
     assert.ok(st.minWall >= w - .01, `portaspazzolino w${w}: ${st.minWall.toFixed(2)} mm`);
   }
+});
+
+/*
+ * Parete spessa: è ciò che rende un pezzo robusto in mano invece che fragile
+ * appena nato. Due cose devono restare vere quando lo slider sale.
+ */
+test('la parete spessa esiste davvero nel corpo, fino al massimo dello slider', () => {
+  const wMax = RANGES.w.max / RANGES.w.scale;
+  const guasti = [];
+  for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
+    for (const [name, p] of Object.entries(PRESETS))
+      for (const w of [4, 6, wMax]){
+        const P = par({ h:p.h, r:p.r, petals:p.petals, twist:p.twist, sharp:p.sharp, w });
+        const raster = V.buildLogoRaster(LOGO, V.targetR95(P, profKey));
+        const ctx = V.makeExportCtx(P, profKey, raster, .8);
+        let worst = Infinity;
+        for (let j = ctx.jB + 1; j < ctx.zs.length; j++){
+          if (ctx.zs[j] / P.h > .55) break;
+          worst = Math.min(worst, ctx.Bo[j] - ctx.Bi[j]);
+        }
+        if (Math.abs(worst - w) > .01) guasti.push(`${name}/${profKey} w${w}: ${worst.toFixed(2)} mm`);
+      }
+  assert.deepEqual(guasti, []);
+});
+
+test('il fondo segue la parete: non resta il punto debole del pezzo', () => {
+  /* un guscio da 6 mm su un pavimento da 3 mm avrebbe il suo punto più fragile
+     proprio dove il liquido preme e dove il vaso appoggia quando lo posi */
+  for (const h of [120, 185, 235]){
+    for (const w of [2.0, 2.4, 3.0]) // fino a 3 mm il fondo è quello di sempre
+      assert.equal(V.exportFloorZ(par({ h, w })), V.exportFloorZ(par({ h, w:3 })),
+        `h${h} w${w}: il fondo storico non deve cambiare`);
+    for (const w of [4, 6, 8]){
+      const fondo = V.exportFloorZ(par({ h, w }));
+      assert.ok(fondo >= w, `h${h} w${w}: fondo ${fondo.toFixed(2)} mm`);
+      assert.ok(fondo <= Math.max(3, h * .2) + 1,
+        `h${h} w${w}: il fondo non deve mangiare la cavità (${fondo.toFixed(2)} mm)`);
+    }
+  }
+});
+
+test('una parete che non entra nel pezzo viene detta, non stampata di nascosto', () => {
+  /* su un pezzo piccolo la cavità si richiude e del guscio resta la scaglia del
+     fondo scala: è l'unico caso in cui la rete di sicurezza entra in funzione,
+     e deve arrivare all'utente come problema con il rimedio giusto */
+  const s = defaultState();
+  s.piece = 'tooth'; s.profile = 'fiamma';
+  s.P.h = 120; s.P.r = 30; s.P.sharp = 1; s.P.w = 8;
+  const m = new DesignModel({ animate:false });
+  m.applyState(s, false);
+  m.build(true);
+  assert.equal(m.metrics.ok, false);
+  assert.ok(m.metrics.issues.some(i => /non entra nel pezzo/.test(i)),
+    m.metrics.issues.join(' · '));
 });
 
 test('un segnale personale non assottiglia il guscio', () => {
@@ -253,4 +318,16 @@ test('il collo segue lo slider della parete quando questa supera i 3 mm', () => 
   /* e il passaggio per la cannuccia non deve stringersi in modo sensibile */
   assert.ok(neck(3.2).passaggio > neck(2.4).passaggio - .5);
   assert.ok(neck(3.2).passaggio >= PASS_MIN_BORE, 'resta ben oltre il minimo utile');
+
+  /* Con la parete spessa il collo NON la segue fino in fondo: l'alesaggio si
+     ferma a Ø12 perché la cannuccia della pompa ci passi, quindi oltre i
+     ~6,9 mm il collo resta il punto più sottile del pezzo. È voluto, ed è ciò
+     che la scheda riporta come «parete reale» — va sorvegliato, non corretto. */
+  for (const w of [4, 5, 6])
+    assert.ok(Math.abs(neck(w).parete - w) < 1e-9, `w ${w}: collo ${neck(w).parete}`);
+  for (const w of [7, 8]){
+    assert.equal(neck(w).passaggio, PASS_MIN_BORE, `w ${w}: il passaggio non scende sotto Ø12`);
+    assert.ok(neck(w).parete >= WALL_SEAL_MIN, `w ${w}: collo ${neck(w).parete.toFixed(2)} mm`);
+    assert.ok(neck(w).parete < w, 'oltre la saturazione il collo non segue più lo slider');
+  }
 });
