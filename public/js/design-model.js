@@ -20,8 +20,8 @@ const {
   targetR95, fillVessel, vesselTriCount, writeVesselIndex, PN, PE, discCounts, discSpec,
   r95Of, SIG_SPAN, SIG_SIGMA_MAX, sigRaw, smoothNorm, shapeAt, sigWeight, fitSignal,
   fitProfile, fitRing, ringTable, shapeCirc, normZero, baseCtx, firstInnerRow,
-  exportFloorRow, matVolOf, printSeconds, rippleQ, pieceRows, buildLogoRaster,
-  WALL_FLOOR,
+  exportFloorRow, exportFloorZ, matVolOf, printSeconds, rippleQ, pieceRows, buildLogoRaster,
+  WALL_FLOOR, recipeFor,
 } = V;
 
 export const PLATE_PIECES = ['disp', 'tooth'];
@@ -35,7 +35,9 @@ export const TILT_MAX = 45;      // oltre questa pendenza servirebbero i support
    una larghezza di estrusione di 0,40 mm — che divide esattamente tutte le pareti
    proposte — quindi servono almeno quattro cordoli pieni perché la parete si
    chiuda. Sotto questa misura lo slicer non riesce a completarli e il pezzo perde.
-   Lo stesso numero lo usa scripts/tenuta.js per contare le passate. */
+   Lo stesso numero lo usa scripts/tenuta.js per contare le passate.
+   PERIMETERS è il MINIMO della ricetta, non il suo valore: sulle pareti spesse
+   il conto lo fa VCore.recipeFor, perché il guscio resti tutto cordoli pieni. */
 export const EXTRUSION_W = .4;
 export const PERIMETERS = 4;
 export const WALL_SEAL_MIN = EXTRUSION_W * PERIMETERS;   // 1,80 mm
@@ -327,7 +329,7 @@ export class DesignModel {
 
     ctx.vr = ring ? { A:ring.A, ramp:ring.ramp, zTop:ring.zTop, cth: ringTable(ring, PN.nTh) } : null;
     ctx.n = n;
-    ctx.jB = firstInnerRow(ctx.zs);
+    ctx.jB = firstInnerRow(ctx.zs, P);
     ctx.zBase = P.h;
     ctx.Ht = ctx.zs[ctx.zs.length - 1];
     ctx.r95 = r95Of(P, this.profAt(0), ctx.Bo[0]);
@@ -379,7 +381,7 @@ export class DesignModel {
   /* La base piena dell'anteprima è più grossolana di quella dell'export:
      riporta il volume allo spessore che il pavimento avrà davvero nell'STL. */
   #fixBase(st, ctx){
-    const exportFloor = ctx.P.h * exportFloorRow(ctx.P.h) / (PE.nB - 1);
+    const exportFloor = exportFloorZ(ctx.P);
     const previewFloor = ctx.zs[ctx.jB] || exportFloor;
     return st.wallV + (matVolOf(st) - st.wallV) * (exportFloor / previewFloor);
   }
@@ -392,7 +394,7 @@ export class DesignModel {
     const tilt = Math.atan(st.maxW) * 180 / Math.PI;
     const capML = st.capV / 1000;
 
-    const floorZ = P.h * exportFloorRow(P.h) / (PE.nB - 1);
+    const floorZ = exportFloorZ(P);
     const matVol = this.#fixBase(st, ctx);
     const q = rippleQ(this.slots[0].pos, ctx);
     const seconds = printSeconds(matVol, q);
@@ -413,9 +415,20 @@ export class DesignModel {
     if (tilt > TILT_MAX) issues.push(`pareti a ${tilt.toFixed(0)}° — ` + tiltHint(this.cur, st.maxWz, st.maxWall));
     if (pass < PASS_MIN)
       issues.push(`strozzatura interna Ø ${pass.toFixed(0)} mm — la cannuccia rischia di non arrivare al fondo; riduci l'intensità del segnale o la parete`);
-    if (!wallOk)
+    /* La cavità è la faccia esterna meno lo spessore voluto: su un pezzo
+       piccolo una parete grossa la chiude del tutto, e dove si chiude resta la
+       scaglia del fondo scala al posto del guscio. Non è una parete sottile per
+       distrazione, è la parete richiesta che non ci sta — e il rimedio è
+       l'opposto, quindi va detta un'altra cosa. Il collo non c'entra: lì lo
+       spessore lo detta la norma GPI e resta sotto lo slider per progetto,
+       senza che la rete di sicurezza entri mai in funzione. */
+    const wallStarved = st.floored > 0 || st.pinched > 0;
+    if (!wallOk && wallStarved)
+      issues.push(`la parete da ${P.w.toFixed(1)} mm non entra nel pezzo: la cavità si richiude e ` +
+        `del guscio restano ${wall.toFixed(1)} mm — riduci la parete o allarga raggio e altezza`);
+    else if (!wallOk)
       issues.push(`parete di soli ${wall.toFixed(1)} mm in qualche punto — sotto i ${WALL_SEAL_MIN.toFixed(1)} mm ` +
-        `i ${PERIMETERS} perimetri non si chiudono e il pezzo può perdere; aumenta la parete del guscio`);
+        `i perimetri non si chiudono e il pezzo può perdere; aumenta la parete del guscio`);
     const R = this.logoRaster;
     if (this.logo.on && this.logo.sn && R && (R.ok || R.blank) && !R.serialOk)
       issues.push('il codice non entra nel fondo e verrà omesso — riduci il corpo testo o aumenta il raggio base');
@@ -443,9 +456,12 @@ export class DesignModel {
       plateMode: this.plateMode,
       diameter, height, capML, tilt, pass, seal,
       wall, wallOk, wallNominal: P.w, wallPerimeters: Math.floor(wall / EXTRUSION_W + 1e-6),
+      /* perimetri che la ricetta del 3MF impone a questo design: sotto questo
+         numero la parete in eccesso diventerebbe riempimento rado */
+      recipeWalls: recipeFor(P).walls, floor: floorZ,
       depth: height - floorZ,
       matVol, grams: matVol * 1.24e-3, meters: matVol / 2405, seconds,
-      tris: vesselTriCount(pieceRows(P, PE), PE.nTh, exportFloorRow(P.h),
+      tris: vesselTriCount(pieceRows(P, PE), PE.nTh, exportFloorRow(P.h, P),
         discCounts(PE, this.engraved).K, discCounts(PE, this.engraved).nD),
       fitsBed: overXY <= 0 && overZ <= 0,
       tiltOk: tilt <= TILT_MAX,

@@ -116,7 +116,10 @@ function fillPanel(product, state, model){
   set('mDepth', `≈ ${Math.round(m.depth)} mm`);
   set('mPass',  `Ø min ${m.pass.toFixed(0)} mm`);
   set('mTilt',  `${m.tilt.toFixed(0)}° max`);
-  set('mWall',  `${m.wall.toFixed(2)} mm · ${m.wallPerimeters} perimetri`);
+  set('mWall',  `${m.wall.toFixed(2)} mm · ${m.wallPerimeters} passate`);
+  /* i perimetri della ricetta seguono la parete del pezzo: su un guscio spesso
+     un numero fisso lascerebbe riempimento rado chiuso dentro la parete */
+  set('mWalls', `${m.recipeWalls} perimetri (tenuta)`);
   set('mSeal',  `≥ ${m.seal.toFixed(1)} mm pieni`);
   set('mVol',   `≈ ${Math.round(m.matVol / 1000)} cm³`);
   set('mFil',   `${Math.round(m.grams)} g · ${Math.round(m.meters)} m`);

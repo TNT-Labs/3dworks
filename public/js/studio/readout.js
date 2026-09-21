@@ -40,7 +40,7 @@ export function renderReadout(m, model){
   text('mDepth', `≈ ${Math.round(m.depth)} mm`);
   text('mPass',  `Ø min ${m.pass.toFixed(0)} mm`);
   text('mTilt',  `${m.tilt.toFixed(0)}° max`);
-  text('mWall',  `${m.wall.toFixed(2)} mm · ${m.wallPerimeters} perimetri`);
+  text('mWall',  `${m.wall.toFixed(2)} mm · ${m.wallPerimeters} passate · ricetta ${m.recipeWalls} perimetri`);
   text('mSeal',  `≥ ${m.seal.toFixed(1)} mm pieni`);
   text('mVol',   `≈ ${Math.round(m.matVol / 1000)} cm³`);
   text('mFil',   `${Math.round(m.grams)} g · ${Math.round(m.meters)} m`);

@@ -181,6 +181,26 @@ rientrando l'alesaggio quel tanto che basta: il passaggio per la cannuccia perde
 massimo 0,4 mm di diametro. Lo spessore misurato è riportato nella scheda del pezzo
 e in quella pubblica, e l'export lo rifiuta sotto la soglia.
 
+**La parete arriva a 8 mm, e resta tutta perimetri.** Un vaso alto con 2,4 mm di
+parete è a tenuta ma flette: appena nato si segna, e su un primo strato
+sottoestruso si buca. Il cursore della parete arriva quindi a **8 mm** (4–5 mm è
+il punto in cui il pezzo diventa rigido in mano), e con lui salgono il fondo
+— minimo 3 mm come prima, tetto a un quinto dell'altezza — e il pieno imposto
+allo slicer.
+
+Il seguito è la parte che conta. La parete di un vaso ha due contorni, quindi
+ogni perimetro della ricetta vale due passate: i **4 perimetri fissi** di prima
+coprivano 3,2 mm, cioè esattamente la vecchia parete massima. Lasciandoli fissi,
+una parete da 6 mm uscirebbe dallo slicer come 3,2 mm di cordoli pieni e 2,8 mm
+di **gyroid al 6% chiuso dentro il guscio**: più spessa, più pesante, più lenta e
+*più fragile* di una da 2,4, perché una scatola vuota cede alla prima pressione.
+Il numero di perimetri nel 3MF lo calcola quindi l'export sul design
+(`max(4, ⌈parete / 0,8⌉)`), e un test lo verifica su tutta la corsa del cursore.
+Chi slicia l'STL deve alzarlo a mano: l'STL non trasporta impostazioni.
+
+Ingrossare costa, e la scheda lo dice prima di stampare: su un Aureo da 2,4 a
+6 mm si passa da 183 a 400 g e da 18 a 40 ore, con la capacità da 903 a 729 ml.
+
 **La cucitura Z non si incolonna.** Ogni giro di perimetro deve iniziare e finire
 da qualche parte, e lì l'estrusione si interrompe: resta un grumo o un microvuoto.
 Il default di PrusaSlicer e di Orca è `aligned`, che impila quei punti sulla stessa
@@ -201,7 +221,7 @@ normale di qualsiasi stampa e di solito tiene, ma qui sotto c'è sapone.
 e 1,5–2,2 ore**.
 
 Effetto collaterale utile: così il pezzo non ha più alcuna zona a riempimento rado
-— la parete era già tutta perimetri — e **il materiale torna a essere il volume
+— la parete è tutta perimetri a qualunque spessore — e **il materiale torna a essere il volume
 esatto della geometria**. Prima il fondo valeva 0,672 del suo volume, un rapporto
 misurato su 8 slicing reali ma uno solo, mentre quello vero dipende dall'altezza
 (0,68 a h 120, 0,54 a h 235). Quell'errore sistematico non esiste più. La stima del

@@ -84,7 +84,7 @@ export function analizza(state, { larghezza = .4, layer = .2 } = {}){
   }
 
   /* fondo: quota del pavimento della cavità meno la massima profondità incisa */
-  const floorZ = P.h * V.exportFloorRow(P.h) / (V.PE.nB - 1);
+  const floorZ = V.exportFloorZ(P);
   const inciso = !!(raster && raster.ok);
   const fondo = floorZ - (inciso ? logo.depth : 0);
 
@@ -100,6 +100,9 @@ export function analizza(state, { larghezza = .4, layer = .2 } = {}){
     inclinazione: Math.atan(st.maxW) * 180 / Math.PI,
     passaggio: st.minRi * 2,
     capacita: st.capV / 1000,
+    ricetta: V.recipeFor(P),
+    /* la cavità si è richiusa: la parete richiesta non entra nel pezzo */
+    strozzato: st.floored > 0 || st.pinched > 0,
   };
 }
 
@@ -121,6 +124,14 @@ function stampa(nome, a, larghezza){
   console.log(`  parete corpo  ${esito(pareteOk, pareteLimite)} · minimo ${a.parete.minima.toFixed(2)} mm`
     + ` a z=${a.parete.z.toFixed(0)} mm = ${np.toFixed(1)} passate da ${larghezza}`
     + ` (nominale ${a.parete.nominale} = ${(a.parete.nominale/larghezza).toFixed(1)})`);
+  /* Il numero di perimetri è ciò che rende la parete spessa materiale pieno
+     invece che una scatola di reticolo: ogni perimetro vale due passate. */
+  const coperto = a.ricetta.walls * 2 * V.RECIPE.width;
+  console.log(`  ricetta       ${esito(coperto >= a.P.w - 1e-9)} · ${a.ricetta.walls} perimetri`
+    + ` = ${coperto.toFixed(1)} mm coperti su ${a.P.w} di parete`
+    + ` · fondo pieno ${a.ricetta.floorSolid} mm su ${a.fondo.totale.toFixed(2)}`);
+  if (a.strozzato)
+    console.log(`                ${r('la parete richiesta non entra nel pezzo')}: la cavità si richiude`);
   if (a.parete.altezzaSottile > 0)
     console.log(`                fascia sotto ${SOGLIA_SICURA} passate: ${y(a.parete.altezzaSottile.toFixed(0) + ' mm')}`
       + ` di altezza, in spalla`

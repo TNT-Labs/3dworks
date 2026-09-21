@@ -12,6 +12,7 @@ import { inflateRawSync } from 'node:zlib';
 globalThis.self = globalThis;
 await import('../public/js/vcore.js');
 const V = globalThis.VCore;
+const { RANGES } = await import('../public/js/design-spec.js');
 
 /** Legge un archivio ZIP dalla sua directory centrale. @returns {Map<string,string>} */
 function unzip(buf){
@@ -45,8 +46,8 @@ const PAR = { h:185, r:62, petals:6, twist:60, sharp:.36, w:2.4,
 const LOGO = { on:true, text:'Made by Umberto Molteni', size:7, depth:.8,
                arc:true, rot:0, sn:true, serial:'VRT-ABCDE' };
 
-const build = async (kind = 'vessel') => {
-  const r = await V.runExport({ kind, P: PAR, profKey:'clessidra', format:'3mf', logo: LOGO });
+const build = async (kind = 'vessel', over = {}) => {
+  const r = await V.runExport({ kind, P: { ...PAR, ...over }, profKey:'clessidra', format:'3mf', logo: LOGO });
   assert.equal(r.ok, true, r.error);
   return { r, files: unzip(r.buffer) };
 };
@@ -83,13 +84,43 @@ test('il fondo è pieno per tutto lo spessore, non solo nei primi strati', async
   const orca = JSON.parse(files.get('Metadata/project_settings.config'));
   assert.equal(orca.bottom_shell_thickness, '4');
 
-  /* lo spessore imposto deve coprire il fondo più alto che la geometria produce */
-  const { PE, exportFloorRow } = V;
-  let massimo = 0;
+  /* lo spessore imposto deve coprire il fondo più alto che la geometria
+     produce, a QUALUNQUE parete: il fondo segue la parete, e la ricetta il fondo */
+  const guasti = [];
   for (let h = 120; h <= 235; h += 5)
-    massimo = Math.max(massimo, h * exportFloorRow(h) / (PE.nB - 1));
-  assert.ok(V.RECIPE.floorSolid >= massimo,
-    `il fondo arriva a ${massimo.toFixed(2)} mm, la ricetta ne impone ${V.RECIPE.floorSolid}`);
+    for (const w of [2, 2.4, 3.2, 4, 5, 6, 8]){
+      const P = { ...PAR, h, w };
+      const fondo = V.exportFloorZ(P), imposto = V.recipeFor(P).floorSolid;
+      if (imposto < fondo) guasti.push(`h${h} w${w}: fondo ${fondo.toFixed(2)} mm, ricetta ${imposto}`);
+    }
+  assert.deepEqual(guasti, []);
+});
+
+test('i perimetri della ricetta riempiono la parete, qualunque sia', async () => {
+  /* È il punto che rende utile una parete spessa. La parete di un vaso ha due
+     contorni, quindi ogni perimetro vale due passate: con un numero fisso, tutto
+     ciò che eccede `perimetri × 2 × larghezza` non sarebbe guscio pieno ma
+     gyroid al 6% chiuso dentro la parete — più spesso, più lento e più debole. */
+  const guasti = [];
+  for (let sl = RANGES.w.min; sl <= RANGES.w.max; sl++){
+    const w = sl / RANGES.w.scale;
+    const coperto = V.recipeFor({ ...PAR, w }).walls * 2 * V.RECIPE.width;
+    if (coperto < w - 1e-9) guasti.push(`parete ${w.toFixed(1)}: coperti ${coperto.toFixed(2)} mm`);
+  }
+  assert.deepEqual(guasti, []);
+
+  /* e nel file, non solo nella funzione */
+  const { files } = await build('vessel', { w: 6 });
+  assert.match(files.get('Metadata/Slic3r_PE.config'), /^perimeters = 8$/m);
+  assert.equal(JSON.parse(files.get('Metadata/project_settings.config')).wall_loops, '8');
+});
+
+test('la parete di serie non cambia la ricetta di prima', async () => {
+  /* retrocompatibilità: fino a 3,2 mm i 4 perimetri storici bastavano già */
+  for (const w of [2, 2.4, 2.8, 3.2]){
+    const r = V.recipeFor({ ...PAR, w });
+    assert.equal(r.walls, 4, `parete ${w}`);
+  }
 });
 
 test('i perimetri che fanno la tenuta sono nella ricetta', async () => {

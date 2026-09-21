@@ -124,7 +124,10 @@
     <div class="ctl"><div class="lr"><label for="sS">Affilatura</label><output id="vS"></output></div>
       <input type="range" id="sS"></div>
     <div class="ctl"><div class="lr"><label for="sW">Parete del guscio</label><output id="vW"></output></div>
-      <input type="range" id="sW"></div>
+      <input type="range" id="sW">
+      <p class="fine">2,0–3,2 mm = vaso leggero · 4–5 mm = robusto in mano · 6–8 mm = massiccio.
+      Il fondo segue la parete, e la ricetta del 3MF alza i perimetri di conseguenza: lo
+      spessore in più è materiale pieno, non reticolo.</p></div>
     <div class="ctl mt-14">
       <div class="lr"><label>Profilo in quota</label></div>
       <div class="seg" id="segProfile">
@@ -276,17 +279,25 @@
       <div class="row"><span class="k">Mesh esportata</span><span class="dots"></span><span class="v" id="mTri">—</span></div>
     </div>
     <p class="note"><b>«Parete reale»</b> è lo spessore minimo misurato sul guscio, non quello
-    richiesto: è ciò che decide la tenuta al liquido. Sotto 1,8 mm i 4 perimetri della ricetta
-    non si chiudono e il pezzo perde. Nel collo lo spessore lo detta la norma GPI (≈3 mm) e non
-    segue lo slider. Overhang = massimo tra crescita esterna e restringimento della cavità,
+    richiesto: è ciò che decide la tenuta al liquido. Sotto 1,8 mm i perimetri della ricetta
+    non si chiudono e il pezzo perde. Nel collo lo spessore lo detta la norma GPI e non
+    segue lo slider oltre i ~3 mm, quindi su una parete spessa il collo resta il punto più
+    sottile. <b>«Ricetta N perimetri»</b> è il numero che il 3MF impone allo slicer: ogni
+    perimetro vale due passate (una per faccia), e il numero segue la parete perché il
+    guscio resti <i>tutto</i> cordoli pieni. Con un numero fisso, una parete da 6 mm
+    diventerebbe 3,2 mm di perimetri e 2,8 mm di reticolo al 6% chiuso in mezzo: più spessa
+    e più debole di una da 2,4. Overhang = massimo tra crescita esterna e restringimento della cavità,
     elica delle costole e inviluppo della spalla inclusi. «Tenuta fondo» = pieno minimo
     tra il fondo delle lettere e il serbatoio. La tenuta al liquido la fanno i <b>perimetri</b>
     (4), non l'infill. Con il fondo pieno e la parete tutta perimetri il pezzo non ha zone
-    a riempimento rado, quindi <b>«Filamento» è ora il volume esatto della geometria</b>,
+    a riempimento rado a nessuno spessore di parete, quindi <b>«Filamento» è il volume esatto della geometria</b>,
     senza coefficienti. «Tempo stimato» resta tarato su 8 design affettati con PrusaSlicer
     (0,2 mm, 4 perimetri): errore medio 8%, massimo 14%, e da quando il fondo è pieno tende
     a sovrastimare di qualche punto, perché il pieno si stampa più in fretta dei perimetri. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
-    della cavità: con la pompa avvitata, taglia la cannuccia 2–3 mm più corta.</span></p>
+    della cavità: con la pompa avvitata, taglia la cannuccia 2–3 mm più corta.</span>
+    Ingrossare la parete costa: da 2,4 a 6 mm un Aureo passa da 183 a 400 g e da 18 a 40 ore,
+    e la capacità scende da 903 a 729 ml. Per un pezzo che si deve poter <i>stringere in mano</i>
+    4–5 mm sono in genere il compromesso giusto; il fondo segue da solo.</p>
   </section>
 
   <!-- ====================== ricerca ====================== -->
