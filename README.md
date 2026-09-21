@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 121 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
+npm test          # 128 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
 npm run test:e2e  # 15 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -217,7 +217,8 @@ piena, ma con i soli strati solidi di ricetta ne venivano stampati pieni appena
 2,0 mm: in mezzo restava riempimento al 6%, e il vero sbarramento sotto il liquido
 erano gli strati solidi superiori — 1 mm steso sopra il vuoto. È la costruzione
 normale di qualsiasi stampa e di solito tiene, ma qui sotto c'è sapone.
-`bottom_solid_min_thickness = 4` lo riempie per intero. Costa **+9–14% di materiale
+`bottom_solid_min_thickness` lo riempie per intero — 4 mm, o quanto serve al
+fondo di quel design se la parete lo ha fatto crescere. Costa **+9–14% di materiale
 e 1,5–2,2 ore**.
 
 Effetto collaterale utile: così il pezzo non ha più alcuna zona a riempimento rado

@@ -31,10 +31,19 @@ const par = (over = {}) => ({ h:185, r:62, petals:6, twist:60, sharp:.36, w:2.4,
   thD:28.2, pitch:3.18, turns:1.5, amp:0, piece:'disp', ...over });
 
 test('i quattro perimetri della ricetta stanno nella parete più sottile ammessa', () => {
-  assert.equal(WALL_SEAL_MIN, EXTRUSION_W * PERIMETERS);
   const minSlider = RANGES.w.min / RANGES.w.scale;
+  assert.ok(minSlider >= EXTRUSION_W * PERIMETERS,
+    `la parete minima selezionabile (${minSlider} mm) deve bastare a ${PERIMETERS} perimetri (${EXTRUSION_W * PERIMETERS} mm)`);
   assert.ok(minSlider >= WALL_SEAL_MIN,
-    `la parete minima selezionabile (${minSlider} mm) deve bastare a ${PERIMETERS} perimetri (${WALL_SEAL_MIN} mm)`);
+    `e reggere anche alla larghezza di default di PrusaSlicer (${WALL_SEAL_MIN} mm)`);
+});
+
+test('la scheda non promette una tenuta che poi l\'export rifiuta', () => {
+  /* C\'era una fascia fra 1,60 e 1,80 mm in cui la scheda diceva «passa» e
+     l\'export si rifiutava di produrre il file: due soglie diverse per la
+     stessa cosa. Devono restare una sola, o la differenza torna. */
+  assert.equal(WALL_SEAL_MIN, V.WALL_SEAL_MIN,
+    'la soglia della scheda è quella con cui l\'export rifiuta il file');
 });
 
 test('la parete più spessa selezionabile resta tutta cordoli pieni', () => {

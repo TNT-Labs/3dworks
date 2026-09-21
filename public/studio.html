@@ -125,7 +125,7 @@
       <input type="range" id="sS"></div>
     <div class="ctl"><div class="lr"><label for="sW">Parete del guscio</label><output id="vW"></output></div>
       <input type="range" id="sW">
-      <p class="fine">2,0–3,2 mm = vaso leggero · 4–5 mm = robusto in mano · 6–8 mm = massiccio.
+      <p class="fine mt-4">2,0–3,2 mm = vaso leggero · 4–5 mm = robusto in mano · 6–8 mm = massiccio.
       Il fondo segue la parete, e la ricetta del 3MF alza i perimetri di conseguenza: lo
       spessore in più è materiale pieno, non reticolo.</p></div>
     <div class="ctl mt-14">
@@ -288,12 +288,14 @@
     diventerebbe 3,2 mm di perimetri e 2,8 mm di reticolo al 6% chiuso in mezzo: più spessa
     e più debole di una da 2,4. Overhang = massimo tra crescita esterna e restringimento della cavità,
     elica delle costole e inviluppo della spalla inclusi. «Tenuta fondo» = pieno minimo
-    tra il fondo delle lettere e il serbatoio. La tenuta al liquido la fanno i <b>perimetri</b>
-    (4), non l'infill. Con il fondo pieno e la parete tutta perimetri il pezzo non ha zone
+    tra il fondo delle lettere e il serbatoio. La tenuta al liquido la fanno i <b>perimetri</b>,
+    non l'infill. Con il fondo pieno e la parete tutta perimetri il pezzo non ha zone
     a riempimento rado a nessuno spessore di parete, quindi <b>«Filamento» è il volume esatto della geometria</b>,
     senza coefficienti. «Tempo stimato» resta tarato su 8 design affettati con PrusaSlicer
-    (0,2 mm, 4 perimetri): errore medio 8%, massimo 14%, e da quando il fondo è pieno tende
-    a sovrastimare di qualche punto, perché il pieno si stampa più in fretta dei perimetri. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
+    (0,2 mm, 4 perimetri, parete 2,0–3,2 mm): errore medio 8%, massimo 14%, e da quando il
+    fondo è pieno tende a sovrastimare di qualche punto, perché il pieno si stampa più in
+    fretta dei perimetri. Oltre i 3,2 mm di parete la stima è un'estrapolazione: il pezzo
+    resta tutto perimetri, quindi l'errore non dovrebbe cambiare natura, ma non è misurato. <span id="noteTube">«Profondità interna» = dal bordo del collo al fondo
     della cavità: con la pompa avvitata, taglia la cannuccia 2–3 mm più corta.</span>
     Ingrossare la parete costa: da 2,4 a 6 mm un Aureo passa da 183 a 400 g e da 18 a 40 ore,
     e la capacità scende da 903 a 729 ml. Per un pezzo che si deve poter <i>stringere in mano</i>
@@ -333,17 +335,25 @@
     <h2 class="sec">Ricetta di stampa · PLA</h2>
     <div class="rows">
       <div class="row"><span class="k">Ugello · layer</span><span class="dots"></span><span class="v">0.4 · 0.20 mm</span></div>
-      <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v">4 perimetri</span></div>
-      <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v">piena per tutto lo spessore</span></div>
+      <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v" id="rcWalls">4 perimetri</span></div>
+      <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v" id="rcBase">piena per tutto lo spessore</span></div>
       <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6% · non usato</span></div>
       <div class="row"><span class="k">Cucitura Z</span><span class="dots"></span><span class="v">casuale (antiperdita)</span></div>
       <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
       <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v">PLA prova · PETG bagno</span></div>
     </div>
     <p class="note">La tenuta al liquido la fanno i <b>perimetri</b>, non il riempimento:
-    sono loro a formare una parete continua. Con 4 perimetri da 0,45 mm servono
-    <b>1,8 mm</b> di guscio perché si chiudano, e la geometria non scende mai sotto
-    questa misura. Il gyroid al 6% serve solo a sostenere la spalla.<br><br>
+    sono loro a formare una parete continua. La soglia di tenuta è <b>1,8 mm</b>:
+    quattro perimetri stampati alla larghezza di default di PrusaSlicer (0,45 mm,
+    più della ricetta — la soglia sta dalla parte prudente). La geometria non
+    scende mai sotto quella misura, e l'export si rifiuta di produrre il file se
+    ci arriva.<br>
+    Quattro è però il <i>minimo</i> della ricetta, non il suo valore: alla
+    larghezza che impone, 0,40 mm, ogni perimetro vale due passate — una per
+    faccia — e copre 0,8 mm di parete, quindi oltre i 3,2 mm il numero sale con
+    la parete. Senza, l'eccedenza non sarebbe guscio ma reticolo al 6% chiuso
+    dentro la parete. La riga «Pareti» qui sopra è quella del design che stai
+    guardando; il gyroid resta nella ricetta e non viene usato.<br><br>
     <b>Cucitura Z.</b> Ogni giro di perimetro deve iniziare e finire da qualche parte,
     e lì l'estrusione si interrompe. Il default degli slicer è <i>allineata</i>: impila
     quei punti sulla stessa verticale per farli sembrare una riga sola — ordinato a
@@ -369,7 +379,7 @@
     </button>
     <p class="fine center mt-10">
       <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano la cucitura Z
-      su «casuale»</b> nello slicer, o il pezzo rischia di perdere<br></span>
+      su «casuale»</b> nello slicer, o il pezzo rischia di perdere<span id="noteStlWalls" hidden></span><br></span>
       <span id="note3mf" hidden>3MF: geometria <b>e ricetta</b>, cucitura compresa · letta da
       PrusaSlicer e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
       mesh chiusa e verificata · vaso cavo + collo filettato + firma e codice incisi<br>
