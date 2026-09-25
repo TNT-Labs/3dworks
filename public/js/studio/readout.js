@@ -41,6 +41,8 @@ export function renderReadout(m, model){
   text('mPass',  `Ø min ${m.pass.toFixed(0)} mm`);
   text('mTilt',  `${m.tilt.toFixed(0)}° max`);
   text('mWall',  `${m.wall.toFixed(2)} mm · ${m.wallPerimeters} passate · ricetta ${m.recipeWalls} perimetri`);
+  /* la parete è il minimo; dentro una costola piena il guscio è molto più spesso */
+  text('mThick', `${m.wall.toFixed(2)}–${m.thickMax.toFixed(1)} mm`);
   text('mSeal',  `≥ ${m.seal.toFixed(1)} mm pieni`);
   text('mVol',   `≈ ${Math.round(m.matVol / 1000)} cm³`);
   text('mFil',   `${Math.round(m.grams)} g · ${Math.round(m.meters)} m`);

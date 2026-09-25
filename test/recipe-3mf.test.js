@@ -109,10 +109,45 @@ test('i perimetri della ricetta riempiono la parete, qualunque sia', async () =>
   }
   assert.deepEqual(guasti, []);
 
-  /* e nel file, non solo nella funzione */
-  const { files } = await build('vessel', { w: 6 });
-  assert.match(files.get('Metadata/Slic3r_PE.config'), /^perimeters = 8$/m);
-  assert.equal(JSON.parse(files.get('Metadata/project_settings.config')).wall_loops, '8');
+  /* e nel file, non solo nella funzione: i perimetri scritti devono coprire
+     la parete del design, qualunque numero venga fuori */
+  for (const w of [2.4, 6]){
+    const { files } = await build('vessel', { w });
+    const n = Number(files.get('Metadata/Slic3r_PE.config').match(/^perimeters = (\d+)$/m)[1]);
+    assert.ok(n * 2 * V.RECIPE.width >= w - 1e-9, `parete ${w}: ${n} perimetri`);
+    assert.equal(JSON.parse(files.get('Metadata/project_settings.config')).wall_loops, String(n));
+  }
+});
+
+test('i perimetri arrivano anche dentro le costole piene', async () => {
+  /* Con la cavità erosa una costola più fitta della sfera resta piena, e lì il
+     guscio è molto più spesso della parete. Se i perimetri si fermassero alla
+     parete, il nucleo della costola si stamperebbe a riempimento rado: più
+     leggero del modello, quindi il materiale dichiarato sarebbe sbagliato, e
+     senza il pieno che la geometria promette. */
+  const geom = (over = {}) => {
+    const P = { ...PAR, ...over };
+    const raster = V.buildLogoRaster(LOGO, V.targetR95(P, 'clessidra'));
+    const ctx = V.makeExportCtx(P, 'clessidra', raster, .8);
+    const pos = new Float32Array(V.vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+    return { P, st: V.fillVessel(pos, ctx) };
+  };
+  const guasti = [];
+  for (const sharp of [0, .36, .7])
+    for (const petals of [3, 6, 9]){
+      const { P, st } = geom({ sharp, petals });
+      const r = V.recipeFor(P, st.thickMax);
+      const coperto = r.walls * 2 * V.RECIPE.width;
+      if (coperto < Math.min(st.thickMax, V.RECIPE_WALLS_MAX * 2 * V.RECIPE.width) - 1e-9)
+        guasti.push(`n${petals} sh${sharp}: spessore max ${st.thickMax.toFixed(1)}, coperti ${coperto.toFixed(1)}`);
+    }
+  assert.deepEqual(guasti, []);
+
+  /* il tetto esiste: una costola da venti millimetri non si riempie di soli
+     cordoli, e il numero non deve scappare */
+  const { P, st } = geom({ sharp: 1, petals: 9 });
+  assert.ok(st.thickMax > 12, `spessore max ${st.thickMax.toFixed(1)} mm`);
+  assert.equal(V.recipeFor(P, st.thickMax).walls, V.RECIPE_WALLS_MAX);
 });
 
 test('la parete di serie non cambia la ricetta di prima', async () => {
@@ -126,11 +161,13 @@ test('la parete di serie non cambia la ricetta di prima', async () => {
 test('i perimetri che fanno la tenuta sono nella ricetta', async () => {
   const { files } = await build();
   const cfg = files.get('Metadata/Slic3r_PE.config');
-  assert.match(cfg, /^perimeters = 4$/m, 'sono i perimetri a chiudere la parete');
+  /* quattro è il minimo, non il valore: il numero segue parete e costole */
+  const n = Number(cfg.match(/^perimeters = (\d+)$/m)[1]);
+  assert.ok(n >= 4, `sono i perimetri a chiudere la parete: ${n}`);
   assert.match(cfg, /^layer_height = 0\.2$/m);
   assert.match(cfg, /^support_material = 0$/m, 'il pezzo è progettato per non averne bisogno');
   const orca = JSON.parse(files.get('Metadata/project_settings.config'));
-  assert.equal(orca.wall_loops, '4');
+  assert.equal(orca.wall_loops, String(n));
   assert.equal(orca.enable_support, '0');
 });
 

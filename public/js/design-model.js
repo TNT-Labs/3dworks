@@ -402,7 +402,10 @@ export class DesignModel {
     const capML = st.capV / 1000;
 
     const floorZ = exportFloorZ(P);
-    const recipe = recipeFor(P);
+    /* i perimetri della ricetta seguono anche lo spessore massimo locale: con
+       la cavità erosa una costola affilata resta piena, e senza perimetri che
+       ci arrivino il suo nucleo si stamperebbe a reticolo rado */
+    const recipe = recipeFor(P, st.thickMax);
     const matVol = this.#fixBase(st, ctx);
     const q = rippleQ(this.slots[0].pos, ctx);
     const seconds = printSeconds(matVol, q);
@@ -466,7 +469,7 @@ export class DesignModel {
       wall, wallOk, wallNominal: P.w, wallPerimeters: Math.floor(wall / EXTRUSION_W + 1e-6),
       /* perimetri che la ricetta del 3MF impone a questo design: sotto questo
          numero la parete in eccesso diventerebbe riempimento rado */
-      recipeWalls: recipe.walls, recipeFloor: recipe.floorSolid,
+      recipeWalls: recipe.walls, recipeFloor: recipe.floorSolid, thickMax: st.thickMax,
       /* millimetri di parete che quei perimetri riempiono di cordoli pieni:
          deve restare ≥ della parete, o l'eccedenza diventa riempimento rado */
       recipeCover: recipe.walls * 2 * RECIPE.width, floor: floorZ,

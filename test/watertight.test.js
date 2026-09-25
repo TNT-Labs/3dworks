@@ -27,6 +27,47 @@ function exportWall(P, profKey){
 /** Ø minimo del passaggio nel collo perché la cannuccia della pompa ci passi. */
 const PASS_MIN_BORE = 12;
 
+/**
+ * Spessore VERO del guscio: distanza perpendicolare minima fra la cavità e il
+ * contorno esterno, nel piano dello strato — misurata sui vertici della mesh
+ * esportata, senza chiedere niente al motore che l'ha costruita.
+ *
+ * È la misura che conta, e non quella radiale: il slicer non lavora per raggi,
+ * lavora sul poligono di ogni strato, e i perimetri li infila nello spazio fra
+ * i due contorni. Sul fianco di una costola le due misure divergono, ed è per
+ * questo che la cavità è il corpo EROSO invece della faccia esterna scalata:
+ * con lo scalamento radiale i preset rendevano il 60-70% della parete
+ * dichiarata, e una parete da 8 mm con 9 costole affilate ne rendeva 1,08.
+ */
+function spessoreVero(P, profKey){
+  const raster = V.buildLogoRaster(LOGO, V.targetR95(P, profKey));
+  const ctx = V.makeExportCtx(P, profKey, raster, .8);
+  const pos = new Float32Array(V.vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+  const st = V.fillVessel(pos, ctx);
+  const rows = ctx.zs.length, nTh = ctx.nTh, jB = ctx.jB;
+  let min = Infinity;
+  /* una riga ogni quattro: lo spessore varia con continuità in quota, mentre il
+     difetto che questo test insegue è periodico attorno alla circonferenza —
+     quindi gli angoli si guardano tutti, e il conto resta un ottavo */
+  for (let j = jB; j < rows; j += 4){
+    if (ctx.zs[j] > P.h) break;                      // il collo ha regole sue
+    for (let i = 0; i < nTh; i++){
+      const a = (rows*nTh + (j - jB)*nTh + i) * 3;
+      const ix = pos[a], iy = pos[a+1];
+      for (let k = 0; k < nTh; k++){
+        const p = (j*nTh + k) * 3, q = (j*nTh + (k+1) % nTh) * 3;
+        const px = pos[p], py = pos[p+1], ux = pos[q] - px, uy = pos[q+1] - py;
+        const L2 = ux*ux + uy*uy;
+        let t = L2 > 0 ? ((ix - px)*ux + (iy - py)*uy) / L2 : 0;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const dx = ix - (px + t*ux), dy = iy - (py + t*uy), d2 = dx*dx + dy*dy;
+        if (d2 < min*min) min = Math.sqrt(d2);
+      }
+    }
+  }
+  return { vero: min, st };
+}
+
 const par = (over = {}) => ({ h:185, r:62, petals:6, twist:60, sharp:.36, w:2.4,
   thD:28.2, pitch:3.18, turns:1.5, amp:0, piece:'disp', ...over });
 
@@ -57,6 +98,82 @@ test('la parete più spessa selezionabile resta tutta cordoli pieni', () => {
   }
 });
 
+test('la parete dichiarata esiste PERPENDICOLARMENTE, non solo lungo il raggio', () => {
+  /* Il difetto che la cavità erosa ha tolto. Con la cavità ricavata scalando il
+     raggio, questi stessi design rendevano: preset 60-70%, 9 costole affilate
+     14%. Erano pezzi che si bucavano premendoli, e la scheda dichiarava la
+     parete piena perché misurava il raggio. */
+  const guasti = [];
+  for (const [nome, p] of Object.entries(PRESETS)){
+    const P = par({ h:p.h, r:p.r, petals:p.petals, twist:p.twist, sharp:p.sharp });
+    const { vero } = spessoreVero(P, p.profile);
+    if (vero < P.w - .02) guasti.push(`${nome}: dichiarati ${P.w}, veri ${vero.toFixed(2)}`);
+  }
+  for (const petals of [3, 6, 9])
+    for (const sharp of [0, .36, .7, 1])
+      for (const w of [2.0, 3.2]){
+        const P = par({ petals, sharp, w });
+        const { vero } = spessoreVero(P, 'clessidra');
+        if (vero < w - .02) guasti.push(`${petals} costole aff.${sharp} w${w}: veri ${vero.toFixed(2)}`);
+      }
+  assert.deepEqual(guasti, []);
+});
+
+test('la scheda non dichiara una parete che il pezzo non ha', () => {
+  /* misura indipendente contro numero dichiarato: il secondo non deve mai
+     essere il più ottimista dei due */
+  const guasti = [];
+  for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
+    for (const sharp of [0, .5, 1])
+      for (const petals of [3, 9]){
+        const P = par({ petals, sharp });
+        const { vero, st } = spessoreVero(P, profKey);
+        if (st.pinched || st.floored) continue;         // cavità degenere: segnalata a parte
+        if (st.minWall > vero + .02)
+          guasti.push(`${profKey} n${petals} sh${sharp}: dichiara ${st.minWall.toFixed(2)}, ha ${vero.toFixed(2)}`);
+      }
+  assert.deepEqual(guasti, []);
+});
+
+test('la cavità non chiede i supporti: il cielo resta entro i 44°', () => {
+  /* Erodendo, il cielo della cavità può diventare più ripido della faccia
+     esterna: dove le costole svaniscono verso la spalla la cavità passa da
+     piena a vuota in pochi millimetri, e senza limite arrivava a 58°. Il
+     limite si applica scendendo e può solo stringere la cavità, quindi toglie
+     l'aggetto senza mai assottigliare la parete. */
+  /* si misura la SOLA cavità, dai vertici interni della mesh: la faccia esterna
+     ha il suo limitatore e i suoi conti, e sul primo strato di un design molto
+     affilato supera i 45° da sempre — è un altro problema, che lo studio
+     segnala già per conto suo */
+  const pendenzaCavita = (P, profKey) => {
+    const raster = V.buildLogoRaster(LOGO, V.targetR95(P, profKey));
+    const ctx = V.makeExportCtx(P, profKey, raster, .8);
+    const pos = new Float32Array(V.vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+    V.fillVessel(pos, ctx);
+    const rows = ctx.zs.length, nTh = ctx.nTh, jB = ctx.jB;
+    const I = (j, i) => (rows*nTh + (j - jB)*nTh + i) * 3;
+    let max = 0;
+    for (let j = jB + 1; j < rows; j++){
+      const dz = Math.max(1e-9, ctx.zs[j] - ctx.zs[j-1]);
+      for (let i = 0; i < nTh; i++){
+        const a = I(j-1, i), b = I(j, i);
+        const rPrima = Math.hypot(pos[a], pos[a+1]), rDopo = Math.hypot(pos[b], pos[b+1]);
+        const p = (rPrima - rDopo) / dz;                 // la cavità che si stringe salendo
+        if (p > max) max = p;
+      }
+    }
+    return Math.atan(max) * 180 / Math.PI;
+  };
+  const guasti = [];
+  for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
+    for (const sharp of [.5, 1])
+      for (const petals of [6, 9]){
+        const g = pendenzaCavita(par({ petals, sharp }), profKey);
+        if (g > 45.5) guasti.push(`${profKey} n${petals} sh${sharp}: ${g.toFixed(0)}°`);
+      }
+  assert.deepEqual(guasti, []);
+});
+
 test('ogni preset ha davvero la parete che dichiara', () => {
   for (const [name, p] of Object.entries(PRESETS)){
     const P = par({ h:p.h, r:p.r, petals:p.petals, twist:p.twist, sharp:p.sharp });
@@ -83,7 +200,7 @@ test('in nessun punto la parete scende sotto la soglia di tenuta', () => {
         for (const petals of [3, 6, 9])
           for (const twist of [0, 180, 360])
             for (const sharp of [0, .5, 1])
-              for (const w of [2.0, 2.6, 3.2, 5.0, 8.0]){
+              for (const w of [2.0, 3.2, 8.0]){       // minimo, vecchio massimo, massimo
                 const P = par({ h, r, petals, twist, sharp, w });
                 const st = exportWall(P, profKey);
                 if (st.minWall < WALL_SEAL_MIN - .01 || st.floored)
@@ -94,8 +211,11 @@ test('in nessun punto la parete scende sotto la soglia di tenuta', () => {
 });
 
 test('nel corpo la parete è esattamente quella scelta', () => {
-  /* misurata sotto la fascia di raccordo della spalla (z/h < 0,6), dove lo
-     spessore non ha motivo di discostarsi dal valore richiesto */
+  /* Lo spessore VOLUTO riga per riga (Bo − Bi), che è anche il raggio della
+     sfera con cui si erode la cavità: sotto la fascia di raccordo della spalla
+     (z/h < 0,6) non ha motivo di discostarsi dal valore richiesto. Che poi
+     quello spessore esista davvero, e perpendicolarmente, lo verifica
+     «la parete dichiarata esiste PERPENDICOLARMENTE» sui vertici della mesh. */
   const guasti = [];
   for (const profKey of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
     for (const sharp of [0, .5, 1])
