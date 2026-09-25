@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 128 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
+npm test          # 132 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
 npm run test:e2e  # 15 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -151,6 +151,42 @@ assenza di bordi aperti o non-manifold, winding coerente e volume positivo.
 L'export si rifiuta di produrre un file che non passi: non esiste un STL scaricabile
 con la mesh rotta.
 
+**La parete dichiarata esiste perpendicolarmente, non solo lungo il raggio.**
+Un pezzo stampato continuava a bucarsi al tatto anche con la parete portata a
+8 mm, e non era lo spessore: era la misura. La cavità era la faccia esterna
+spostata di *w* **lungo il raggio**; lo spessore di un guscio è invece la
+distanza fra le sue facce misurata **perpendicolarmente**. Su un cilindro
+coincidono, su un vaso a costole no — sul fianco di una costola la normale non
+è radiale, e uno spostamento radiale di 2,4 mm ne lascia 2,4·cos α.
+
+Misurato sulla mesh esportata, con 2,40 mm richiesti, i quattro preset avevano
+fra **1,46 e 1,67 mm** — tutti sotto la soglia di tenuta, mentre la scheda
+dichiarava 2,40 perché misurava anche lei il raggio. Con nove costole affilate
+si scendeva a **0,34 mm**. La resa è una frazione della geometria, non un
+valore assoluto: per questo ingrossare la parete non serviva: 8 mm dichiarati
+ne rendevano 1,08.
+
+Ora **la cavità è il corpo eroso da una sfera del raggio della parete**:
+l'insieme dei punti in cui quella sfera ci sta tutta. Per costruzione ogni
+punto della superficie esterna ha almeno *w* di materiale sotto di sé, misurato
+dove conta. Il conto è esatto — intersezione raggio/capsula contro i segmenti
+del poligono che finisce nell'STL — e dove le costole sono più fitte della
+sfera la costola **resta piena**: diventa un nervo di rinforzo invece di una
+piega sottile del guscio.
+
+|  | prima | ora |
+|---|---|---|
+| parete vera, preset | 1,46–1,67 mm | **2,40 mm (100 % del nominale)** |
+| parete vera, caso peggiore | 0,34 mm | **quella impostata** |
+| faccia esterna | — | **invariata al bit** (1.064.448 coordinate) |
+| capacità / filamento, Aureo | 903 ml / 183 g | 876 ml / **217 g** |
+
+Il pezzo ha lo stesso aspetto e pesa il 19 % in più: è il materiale che prima
+mancava. La cavità è limitata a 44° come la faccia esterna — senza quel limite
+i design molto affilati arrivavano a 58° nel cielo della cavità — e un test
+misura lo spessore vero sui vertici della mesh, indipendentemente da ciò che il
+motore dichiara.
+
 **Il guscio ha davvero lo spessore dichiarato.** Nella V3 la faccia esterna e la
 cavità venivano limitate separatamente per rispettare i 44°, e le costole avevano
 ampiezza diversa dentro e fuori: lo spessore reale poteva scendere a 0,9 mm anche
@@ -194,8 +230,11 @@ coprivano 3,2 mm, cioè esattamente la vecchia parete massima. Lasciandoli fissi
 una parete da 6 mm uscirebbe dallo slicer come 3,2 mm di cordoli pieni e 2,8 mm
 di **gyroid al 6% chiuso dentro il guscio**: più spessa, più pesante, più lenta e
 *più fragile* di una da 2,4, perché una scatola vuota cede alla prima pressione.
-Il numero di perimetri nel 3MF lo calcola quindi l'export sul design
-(`max(4, ⌈parete / 0,8⌉)`), e un test lo verifica su tutta la corsa del cursore.
+Il numero di perimetri nel 3MF lo calcola quindi l'export sul design — dalla
+parete e dallo spessore massimo locale, perché con la cavità erosa le costole
+affilate restano piene e anche il loro nucleo va riempito di cordoli (sui preset
+vengono 6–7 perimetri invece di 4, con tetto a 16) — e un test lo verifica su
+tutta la corsa del cursore.
 Chi slicia l'STL deve alzarlo a mano: l'STL non trasporta impostazioni.
 
 Ingrossare costa, e la scheda lo dice prima di stampare: su un Aureo da 2,4 a

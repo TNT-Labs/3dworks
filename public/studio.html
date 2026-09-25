@@ -271,6 +271,7 @@
         <span class="v"><i class="dot ok" id="tiltDot"></i><span id="mTilt">—</span></span></div>
       <div class="row"><span class="k">Parete reale (tenuta)</span><span class="dots"></span>
         <span class="v"><i class="dot ok" id="wallDot"></i><span id="mWall">—</span></span></div>
+      <div class="row"><span class="k">Guscio, da…a</span><span class="dots"></span><span class="v" id="mThick">—</span></div>
       <div class="row"><span class="k">Tenuta fondo</span><span class="dots"></span>
         <span class="v"><i class="dot ok" id="sealDot"></i><span id="mSeal">—</span></span></div>
       <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v" id="mVol">—</span></div>
@@ -278,9 +279,16 @@
       <div class="row"><span class="k">Tempo stimato</span><span class="dots"></span><span class="v" id="mTime">—</span></div>
       <div class="row"><span class="k">Mesh esportata</span><span class="dots"></span><span class="v" id="mTri">—</span></div>
     </div>
-    <p class="note"><b>«Parete reale»</b> è lo spessore minimo misurato sul guscio, non quello
-    richiesto: è ciò che decide la tenuta al liquido. Sotto 1,8 mm i perimetri della ricetta
-    non si chiudono e il pezzo perde. Nel collo lo spessore lo detta la norma GPI e non
+    <p class="note"><b>«Parete reale»</b> è lo spessore minimo del guscio misurato
+    <b>perpendicolarmente</b> alle due facce — non la differenza di raggio, che sul fianco di
+    una costola è un altro numero: con 2,40 mm richiesti, lì ce n'erano 1,46. La cavità è
+    costruita erodendo il corpo con una sfera del raggio della parete, così lo spessore
+    dichiarato esiste davvero in ogni direzione, e dove le costole sono più fitte della sfera
+    restano piene: nervi di rinforzo invece di pieghe sottili. È ciò che decide la tenuta al
+    liquido. <b>«Guscio, da…a»</b> dice quanto varia lo spessore attorno al pezzo: il primo
+    numero è la parete, il secondo il cuore della costola più piena. I perimetri della ricetta
+    coprono anche quello, altrimenti il nucleo si stamperebbe a reticolo rado.
+    Sotto 1,8 mm i perimetri non si chiudono e il pezzo perde. Nel collo lo spessore lo detta la norma GPI e non
     segue lo slider oltre i ~3 mm, quindi su una parete spessa il collo resta il punto più
     sottile. <b>«Ricetta N perimetri»</b> è il numero che il 3MF impone allo slicer: ogni
     perimetro vale due passate (una per faccia), e il numero segue la parete perché il
@@ -351,8 +359,9 @@
     Quattro è però il <i>minimo</i> della ricetta, non il suo valore: alla
     larghezza che impone, 0,40 mm, ogni perimetro vale due passate — una per
     faccia — e copre 0,8 mm di parete, quindi oltre i 3,2 mm il numero sale con
-    la parete. Senza, l'eccedenza non sarebbe guscio ma reticolo al 6% chiuso
-    dentro la parete. La riga «Pareti» qui sopra è quella del design che stai
+    la parete. Sale anche con le <b>costole piene</b>, che con la cavità erosa
+    sono più spesse della parete: senza, il loro nucleo non sarebbe guscio ma
+    reticolo al 6% chiuso dentro il pezzo. La riga «Pareti» qui sopra è quella del design che stai
     guardando; il gyroid resta nella ricetta e non viene usato.<br><br>
     <b>Cucitura Z.</b> Ogni giro di perimetro deve iniziare e finire da qualche parte,
     e lì l'estrusione si interrompe. Il default degli slicer è <i>allineata</i>: impila

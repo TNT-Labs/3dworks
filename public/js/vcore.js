@@ -635,13 +635,15 @@ function clampProfile(P, n, prof, zs, Rc, Bo, Bi, vr, diag){
   };
   sweep(Bo, false); cone(Bo, false);
 
-  /* La cavita' non e' una seconda superficie limitata per conto suo: e' la
-     faccia esterna meno lo spessore voluto. Limitandole separatamente, il
-     vincolo dei 44° poteva stringere Bo senza stringere Bi (o viceversa) e lo
-     spessore reale scendeva fino al fondo scala di sicurezza anche con 2,4 mm
-     richiesti — il difetto da cui nasce una perdita. Derivandola, lo spessore
-     e' esatto per costruzione e la faccia esterna resta identica: Bo non viene
-     toccato da questa riga in poi. */
+  /* Bi non e' piu' la cavita': e' lo SPESSORE VOLUTO riga per riga, scritto come
+     raggio perche' il resto del motore lo legge cosi' (Bo[j] − Bi[j]). La cavita'
+     vera la costruisce erodeCavity, erodendo il corpo con una sfera di questo
+     raggio — uno spostamento radiale lascerebbe sul fianco delle costole uno
+     spessore vero di w·cos(alfa), cioe' il 60-70% sui preset.
+     Qui resta il raccordo dello spessore fra corpo e collo, che e' una scelta
+     di progetto: lo spessore passa dolcemente da quello del cursore a quello
+     che la norma GPI impone al collo. Bo non viene toccato da questa riga in
+     poi: la faccia esterna resta identica. */
   for (let j = 0; j < rows; j++){
     const t = Math.min(1, zs[j] / P.h);
     const u = Math.min(1, Math.max(0, (t - .6) / .4));
@@ -708,6 +710,170 @@ function buildRadKBands(KI, r95, bands, W = 6){
   return rad;
 }
 
+/* ============ la cavita': il corpo eroso, non il raggio scalato ============
+ *
+ * Il difetto che questa funzione esiste per togliere.
+ *
+ * Prima di questa revisione la cavita' era la faccia esterna spostata di w
+ * LUNGO IL RAGGIO:
+ * ri = ro - w. Su un cilindro e' giusto. Su un vaso a costole no, perche' sul
+ * fianco di una costola la normale alla superficie non e' radiale: uno
+ * spostamento radiale di w vi lascia uno spessore vero di w·cos(alfa), con
+ * alfa l'angolo fra raggio e normale. Misurato sui preset di listino, con
+ * 2,40 mm richiesti: 1,67 (Aureo), 1,46 (Maelstrom), 1,48 (Fiamma), 1,57
+ * (Marea). Tutti sotto la soglia di tenuta, mentre la scheda dichiarava 2,40 —
+ * perche' misurava anche lei il raggio.
+ *
+ * Peggiora con le costole: 9 costole e affilatura 1 rendono il 14% del
+ * nominale. E' anche il motivo per cui ingrossare la parete non serviva a
+ * nulla: la resa e' una frazione della geometria, non un valore assoluto, e
+ * 8 mm dichiarati restavano 1,08 mm veri.
+ *
+ * Ora la cavita' e' il corpo EROSO da una sfera del raggio della parete:
+ * l'insieme dei punti in cui quella sfera ci sta tutta. Per definizione ogni
+ * punto della superficie esterna ha almeno w di materiale sotto di se',
+ * misurato dove conta — perpendicolarmente. Dove le costole sono piu' fitte
+ * della sfera, la sfera non entra e la costola resta piena: smette di essere
+ * una piega sottile del guscio e diventa un nervo di rinforzo, che e' il modo
+ * in cui si irrigidisce un recipiente a parete sottile.
+ *
+ * Il conto e' esatto, non approssimato: per ogni direzione si cerca il raggio
+ * massimo a cui il disco di raggio w non tocca nessun segmento del contorno
+ * dello strato — intersezione raggio/capsula, in forma chiusa. Il contorno
+ * dello strato e' esattamente il poligono che finisce nell'STL, quindi la
+ * misura e' quella che lo slicer riempira' davvero.
+ *
+ * La pendenza verticale entra come fattore sqrt(1 + Rz²) sul raggio della
+ * sfera: una parete inclinata di 44° attraversata in orizzontale e' piu'
+ * spessa di quanto sia perpendicolarmente, e senza quel fattore la spalla
+ * resterebbe sottile proprio dove la pompa la sollecita.
+ */
+
+/* faccia esterna del corpo senza il cordolo del filetto: e' la superficie da
+   cui si ricava la cavita', e serve tutta insieme perche' l'erosione guarda i
+   vicini. */
+function outerGrid(ctx, RO){
+  const { zs, Bo, nTh, P } = ctx, rows = zs.length;
+  const twist = P.twist * Math.PI / 180;
+  const a = P.sharp * .42, b = -P.sharp * P.sharp * .10, DTH = TAU / nTh;
+  const vrc = ctx.vr;
+  for (let j = 0; j < rows; j++){
+    const z = zs[j];
+    let fade, m;
+    if (ctx.ring){ fade = 0; m = 0; }
+    else {
+      const t = Math.min(1, z / P.h);
+      const u = Math.min(1, Math.max(0, (t - .6) / .4));
+      fade = ctx.open ? 1 : 1 - u*u*(3 - 2*u);
+      m = twist * t;
+    }
+    const wvz = vrc ? ringBand(z, vrc)[0] : 0;
+    const B = Bo[j], amp = B * fade, o = j * nTh;
+    for (let i = 0; i < nTh; i++){
+      const x = P.petals * (i * DTH - m);
+      let f = a * Math.cos(x) + b * Math.cos(2*x);
+      if (vrc) f += wvz * vrc.cth[i];
+      RO[o + i] = B + amp * f;
+    }
+  }
+}
+
+/* Raggio massimo, sulla semiretta di direzione (ux,uy), a cui un disco di
+   raggio w non tocca il segmento AB: il minore fra le due calotte tonde e la
+   fascia parallela al segmento. `best` entra come limite corrente e serve
+   anche a saltare le soluzioni peggiori senza calcolarle. */
+function rayCapsule(ux, uy, ax, ay, bx, by, w, w2, best){
+  let p = ux*ax + uy*ay, D = p*p - (ax*ax + ay*ay) + w2;
+  if (D >= 0){ const r = p - Math.sqrt(D); if (r >= 0 && r < best) best = r; }
+  p = ux*bx + uy*by; D = p*p - (bx*bx + by*by) + w2;
+  if (D >= 0){ const r = p - Math.sqrt(D); if (r >= 0 && r < best) best = r; }
+  const dx = bx - ax, dy = by - ay, L2 = dx*dx + dy*dy;
+  if (L2 > 1e-24){
+    const L = Math.sqrt(L2), nx = -dy/L, ny = dx/L, den = ux*nx + uy*ny;
+    if (den > 1e-12 || den < -1e-12){
+      const c = ax*nx + ay*ny;
+      for (let q = 0; q < 2; q++){
+        const r = (c + (q ? -w : w)) / den;
+        if (r < 0 || r >= best) continue;
+        const t = ((r*ux - ax)*dx + (r*uy - ay)*dy) / L2;
+        if (t >= 0 && t <= 1) best = r;
+      }
+    }
+  }
+  return best;
+}
+
+/* limite di pendenza della cavita': la stessa regola dei 44° della faccia
+   esterna. Si applica SCENDENDO e puo' solo stringere la cavita', mai
+   allargarla: cosi' toglie l'aggetto senza mai assottigliare la parete. */
+const CAVITY_SLOPE = .97;
+
+function erodeCavity(ctx, RO, RI){
+  const { zs, Bo, Bi, nTh, jB } = ctx, rows = zs.length, DTH = TAU / nTh;
+  const cs = ctx.cosT, sn = ctx.sinT, px = ctx.ex, py = ctx.ey;
+  /* niente costole e niente profilo (lo spool di prova): il raggio basta e
+     l'erosione darebbe lo stesso identico risultato, al centesimo */
+  const piatto = !!ctx.ring;
+  for (let j = jB; j < rows; j++){
+    const o = j * nTh, w0 = Bo[j] - Bi[j];
+    if (piatto){ for (let i = 0; i < nTh; i++) RI[o + i] = RO[o + i] - w0; continue; }
+    let rMin = Infinity;
+    for (let i = 0; i < nTh; i++){
+      const R = RO[o + i]; px[i] = R * cs[i]; py[i] = R * sn[i];
+      if (R < rMin) rMin = R;
+    }
+    const jm = j > 0 ? j - 1 : 0, jp = j + 1 < rows ? j + 1 : rows - 1;
+    const dzz = zs[jp] - zs[jm];
+    for (let i = 0; i < nTh; i++){
+      const R = RO[o + i];
+      const Rz = dzz > 0 ? (RO[jp*nTh + i] - RO[jm*nTh + i]) / dzz : 0;
+      const w = w0 * Math.sqrt(1 + Rz*Rz), w2 = w * w;
+      const ux = cs[i], uy = sn[i];
+      /* Finestra angolare. Il centro del disco sta sulla semiretta, quindi solo
+         un segmento che entra nella BANDA di semilarghezza w attorno alla retta
+         del raggio puo' toccarlo. Un punto del contorno a scarto angolare Δ dista
+         dalla retta almeno rMin·|sin Δ|, con rMin il raggio minimo dello strato:
+         oltre asin(w/rMin) non c'e' piu' niente da guardare. Va preso il minimo
+         dello STRATO e non il raggio locale — nel fondo di una costola il
+         contorno rientra, e con il raggio locale la finestra lasciava fuori
+         proprio il segmento che stringe (misurato: 3,06 mm invece di 3,20). */
+      const span = w >= rMin ? (nTh >> 1)
+        : Math.min(nTh >> 1, ((Math.asin(w / rMin) / DTH) | 0) + 2);
+      let best = R - w;
+      for (let d = -span; d <= span; d++){
+        let k = i + d; k = k < 0 ? k + nTh : k >= nTh ? k - nTh : k;
+        let k2 = k + 1; if (k2 >= nTh) k2 -= nTh;
+        /* la banda, di nuovo, ma sul singolo segmento: quattro moltiplicazioni
+           che tolgono il lavoro vero sui segmenti che la finestra tiene dentro
+           per prudenza */
+        const c1 = py[k]*ux - px[k]*uy, c2 = py[k2]*ux - px[k2]*uy;
+        if ((c1 > w && c2 > w) || (c1 < -w && c2 < -w)) continue;
+        best = rayCapsule(ux, uy, px[k], py[k], px[k2], py[k2], w, w2, best);
+      }
+      RI[o + i] = best;
+    }
+  }
+  for (let j = rows - 2; j >= jB; j--){
+    const dz = zs[j+1] - zs[j], o = j * nTh, o1 = (j+1) * nTh;
+    for (let i = 0; i < nTh; i++){
+      const bound = RI[o1 + i] + CAVITY_SLOPE * dz;
+      if (RI[o + i] > bound) RI[o + i] = bound;
+    }
+  }
+}
+
+/* le due griglie vivono sul contesto: fillVessel gira a ogni fotogramma
+   dell'anteprima e non deve allocare un megabyte per volta */
+function cavityGrids(ctx){
+  const need = ctx.zs.length * ctx.nTh;
+  if (!ctx.gRO || ctx.gRO.length < need){
+    ctx.gRO = new Float64Array(need);
+    ctx.gRI = new Float64Array(need);
+  }
+  outerGrid(ctx, ctx.gRO);
+  erodeCavity(ctx, ctx.gRO, ctx.gRI);
+}
+
 /* ================= costruzione della mesh (vaso cavo, dati Z-up) =================
    Fondo = disco (anelli 1..K-1) il cui anello esterno È la riga 0 del guscio:
    condivisa, quindi watertight per costruzione. Il pavimento della cavità
@@ -717,33 +883,28 @@ function fillVessel(pos, ctx){
   const n = ctx.n, rows = zs.length, jB = ctx.jB;
   const K = ctx.K, r95 = ctx.r95, KI = K - 1;
   const engr = ctx.engrave !== false;
-  const twist = P.twist * Math.PI / 180;
-  const a = P.sharp * .42, b = -P.sharp * P.sharp * .10;
   const DTH = TAU / nTh, snD = Math.sin(DTH);
   const pA = ctx.sA, pO = ctx.sM, pI = ctx.sI, qO = ctx.prevM, qI = ctx.prevI;
   const ridgeH = n.ridgeH, entry = n.entry, zTop = ctx.Ht - n.land;
   let maxR = 0, maxW = 0, maxWz = 0, maxWall = 0, capV = 0, wallV = 0, solidV = 0, prevZ = zs[0], minRi = 1e9;
   let minWall = 1e9, floored = 0, pinched = 0; // spessore reale del guscio, e i due clamp che lo alterano
+  /* spessore massimo locale: dentro una costola piena il guscio e' molto piu'
+     spesso della parete, e i perimetri devono arrivarci o il nucleo resta
+     reticolo rado — piu' leggero del modello e non quello che la scheda conta */
+  let thickMax = 0;
+
+  /* faccia esterna e cavita' si calcolano prima, in due passate loro: la
+     cavita' e' il corpo eroso e per ricavarla ogni punto deve poter guardare i
+     vicini, cosa che una passata sola non permette */
+  cavityGrids(ctx);
+  const RO = ctx.gRO, RI = ctx.gRI;
 
   for (let j = 0; j < rows; j++){
     const z = zs[j], dz = Math.max(1e-6, z - prevZ); prevZ = z;
-    let s, m;
-    if (ctx.ring){ s = 1; m = 0; }
-    else {
-      const t = Math.min(1, z / P.h);
-      const u = Math.min(1, Math.max(0, (t - .6) / .4));
-      s = ctx.open ? 0 : u*u*(3 - 2*u);
-      m = twist * t;
-    }
-    const fade = 1 - s;
-    const vrc = ctx.vr, wvz = vrc ? ringBand(z, vrc)[0] : 0;
+    const wantWall = Bo[j] - Bi[j];
     for (let i = 0; i < nTh; i++){
       const th = i * DTH;
-      const x = P.petals * (th - m);
-      let f = a*Math.cos(x) + b*Math.cos(2*x);
-      if (vrc) f += wvz * vrc.cth[i];                      // voce: ferma rispetto alla torsione
-      const modAmp = Bo[j] * fade;
-      const ro0 = Bo[j] + modAmp * f;
+      const ro0 = RO[j * nTh + i];
       let ro = ro0;
       if (!ctx.open && z > ctx.zBase && z <= zTop){
         const zn = z - ctx.zBase;
@@ -758,21 +919,21 @@ function fillVessel(pos, ctx){
       let k = (j * nTh + i) * 3;
       pos[k] = ro * Math.cos(th); pos[k+1] = ro * Math.sin(th); pos[k+2] = z;
       if (j >= jB){
-        /* Stessa ampiezza di costola dentro e fuori: e' cio' che rende lo
-           spessore costante attorno alla circonferenza. Con l'ampiezza interna
-           elevata al quadrato (come nella V3) le due onde si disallineavano
-           nella fascia di raccordo della spalla e la parete oscillava fino a
-           dimezzarsi, formando una striscia sottile per ogni costola. */
-        let ri = Bi[j] + modAmp * f;
+        let ri = RI[j * nTh + i], clamp = false;
         /* la cavita' si e' richiusa: la parete richiesta non ci sta. Va contato,
            perche' il rimedio (parete piu' sottile, pezzo piu' grande) e'
            l'opposto di quello di una parete sottile per distrazione. */
-        if (ri < 2.5){ ri = 2.5; pinched++; }
+        if (ri < 2.5){ ri = 2.5; pinched++; clamp = true; }
         /* fondo scala di sicurezza: non deve piu' entrare in funzione, ma se
            entra va saputo, non subito in silenzio */
-        if (ri > ro0 - WALL_FLOOR){ ri = ro0 - WALL_FLOOR; floored++; }
-        const wallHere = ro0 - ri;
+        if (ri > ro0 - WALL_FLOOR){ ri = ro0 - WALL_FLOOR; floored++; clamp = true; }
+        /* Fuori dai clamp lo spessore VERO e' quello voluto per costruzione:
+           l'erosione garantisce che la sfera di raggio w ci stia. Dove un clamp
+           ha spostato la cavita' quella garanzia salta, e allora si riporta la
+           misura radiale, che li' e' l'unica che si ha. */
+        const wallHere = clamp ? Math.min(wantWall, ro0 - ri) : wantWall;
         if (wallHere < minWall) minWall = wallHere;
+        if (ro0 - ri > thickMax) thickMax = ro0 - ri;
         pI[i] = ri;
         if (j > jB && ri < minRi) minRi = ri;                  // cerchio inscritto minimo della cavità
         k = (rows * nTh + (j - jB) * nTh + i) * 3;
@@ -822,7 +983,7 @@ function fillVessel(pos, ctx){
   pos[kc] = 0; pos[kc+1] = 0; pos[kc+2] = engr ? logoDepth(ctx.raster, ctx.depth, 0, 0, r95) : 0;
   pos[C1*3] = 0; pos[C1*3+1] = 0; pos[C1*3+2] = zs[jB];
   return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi,
-           minWall: minWall === 1e9 ? 0 : minWall, floored, pinched };
+           minWall: minWall === 1e9 ? 0 : minWall, floored, pinched, thickMax };
 }
 
 /* ================= topologia: vertici, triangoli, indici =================
@@ -891,8 +1052,15 @@ function discSpec(cfg, L, r95){
   c.radK = L ? buildRadKBands(c.K - 1, r95, L.bands, cfg.WD) : buildRadK(cfg.K - 1, r95, 1e9, -1e9);
   return c;
 }
-const mkScratch = nTh => ({ sA:new Float32Array(nTh), sM:new Float32Array(nTh), sI:new Float32Array(nTh),
-                            prevM:new Float32Array(nTh), prevI:new Float32Array(nTh) });
+const mkScratch = nTh => {
+  /* tabelle angolari e contorno dello strato: l'erosione della cavita' lavora
+     in cartesiane e le rifarebbe a ogni punto */
+  const cosT = new Float64Array(nTh), sinT = new Float64Array(nTh);
+  for (let i = 0; i < nTh; i++){ cosT[i] = Math.cos(i * TAU / nTh); sinT[i] = Math.sin(i * TAU / nTh); }
+  return { sA:new Float32Array(nTh), sM:new Float32Array(nTh), sI:new Float32Array(nTh),
+           prevM:new Float32Array(nTh), prevI:new Float32Array(nTh),
+           cosT, sinT, ex:new Float64Array(nTh), ey:new Float64Array(nTh) };
+};
 
 function baseCtx(P, nTh, K){
   return { P, nTh, nD:nTh, K, ring:false, open:false, vr:null, engrave:true, jB:1, zBase:0, Ht:10, n:null, r95:10,
@@ -1012,7 +1180,7 @@ function plateSTL(parts, label){
 }
 function runPlate(job){
   const plan = platePlan(job.P, job.profKey, job.pieces || ['disp','tooth']);
-  const parts = [], errs = [];
+  const parts = [], errs = [], recParts = [];
   let tris = 0, matVol = 0, secs = 0, Ht = 0;
   for (const it of plan.items){
     const m = pieceMesh(it.P, job.profKey, job.logo);
@@ -1020,13 +1188,14 @@ function runPlate(job){
     tris += m.check.tris; matVol += matVolOf(m.st); secs += printSeconds(matVolOf(m.st), rippleQ(m.pos, m.ctx)); Ht = Math.max(Ht, m.ctx.Ht);
     const code = job.logo && job.logo.serial ? job.logo.serial + ' · ' : '';
     parts.push({ name: code + pieceOf(it.P).name, pos:m.pos, ind:m.ind, x:it.x, y:it.y });
+    recParts.push([it.P, m.st.thickMax]);
   }
   if (errs.length) return { ok:false, error:'mesh non valida · ' + errs.join(' | ') };
   if (!plan.fits) return { ok:false, error:'i pezzi non stanno insieme sul piatto · ' + plan.why };
   const label = 'VORTICE set: ' + parts.map(p => p.name).join(' + ');
   const summary = { ok:true, check:{ tris }, plate:{ W:plan.W, D:plan.D, H:plan.H }, matVol, secs, Ht, tris, pieces:parts.length };
   if (job.format === '3mf')
-    return build3MF(parts, label, recipeForAll(plan.items.map(it => it.P)))
+    return build3MF(parts, label, recipeForAll(recParts))
       .then(buffer => ({ ...summary, buffer, format:'3mf' }));
   return { ...summary, buffer: plateSTL(parts, label), format:'stl' };
 }
@@ -1178,16 +1347,26 @@ const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infil
 function recipeWalls(w, width = RECIPE.width){
   return Math.max(RECIPE.walls, Math.ceil(w / (2 * width) - 1e-9));
 }
-function recipeFor(P){
+/* Tetto al numero di perimetri. Con la cavita' erosa una costola molto affilata
+   resta piena per venti millimetri e oltre: riempirla di soli cordoli costerebbe
+   ore per un nucleo che, chiuso dentro un guscio pieno, il reticolo regge
+   benissimo. Oltre questo numero il nucleo resta riempimento, e il materiale
+   dichiarato diventa un limite superiore invece di una misura. */
+const RECIPE_WALLS_MAX = 16;
+function recipeFor(P, thickMax = 0){
   const w = P && Number.isFinite(P.w) ? P.w : 2.4;
-  return { ...RECIPE, walls: recipeWalls(w),
+  /* i perimetri seguono la parete, ma anche lo spessore massimo locale: e' la
+     costola piena, che senza di loro si stamperebbe vuota dentro */
+  const walls = Math.min(RECIPE_WALLS_MAX,
+    Math.max(recipeWalls(w), thickMax > 0 ? recipeWalls(thickMax) : 0));
+  return { ...RECIPE, walls,
            floorSolid: Math.max(RECIPE.floorSolid, Math.ceil(exportFloorZ(P) - 1e-9)) };
 }
 /* ricetta di un piatto con piu' pezzi: vale la piu' esigente */
 function recipeForAll(list){
   let r = RECIPE;
-  for (const P of list){
-    const c = recipeFor(P);
+  for (const it of list){
+    const c = Array.isArray(it) ? recipeFor(it[0], it[1]) : recipeFor(it);
     if (c.walls > r.walls || c.floorSolid > r.floorSolid)
       r = { ...c, walls: Math.max(r.walls, c.walls), floorSolid: Math.max(r.floorSolid, c.floorSolid) };
   }
@@ -1416,11 +1595,17 @@ const SEARCH_VARS = [
   { k:'sharp',  lo:0,   hi:1,   step:.02 },
 ];
 const PROF_KEYS = ['clessidra','fiamma','tornado','bulbo'];
-const SEARCH_MARGIN = .03;
+/* Margine di sicurezza del valutatore veloce. Era 3%: misurato sui preset dopo
+   la cavita' erosa lo scarto sul materiale arriva al 3,7%, perche' a 48
+   campioni angolari il poligono dello strato e' grossolano e l'erosione ci
+   legge qualche decimo in meno. Il vincitore viene comunque riverificato alla
+   risoluzione dell'export: il margine serve solo a non proporre un finalista
+   che poi sfora. */
+const SEARCH_MARGIN = .05;
 function quant(v, va){ return Math.min(va.hi, Math.max(va.lo, Math.round(v / va.step) * va.step)); }
 function runSearch(job){
   const user = job.opt || {}, base = job.P;
-  /* margine di sicurezza: il valutatore veloce ha ±3%, quindi cerco un po' più stretto
+  /* margine di sicurezza: il valutatore veloce ha ±4%, quindi cerco un po' più stretto
      dei limiti richiesti, così il controllo esatto non li supera */
   const M = 1 - SEARCH_MARGIN, opt = { ...user,
     gMax: user.gMax ? user.gMax * M : 0,
@@ -1595,7 +1780,7 @@ function runExport(job){
   if (job.format === '3mf'){
     const name = (job.logo && job.logo.serial ? job.logo.serial + ' · ' : '') + pieceOf(P).name;
     /* lo spool di prova e' pieno: non ha parete da riempire, tiene la ricetta base */
-    const R = job.kind === 'ring' ? RECIPE : recipeFor(P);
+    const R = job.kind === 'ring' ? RECIPE : recipeFor(P, st.thickMax);
     return build3MF([{ name, pos, ind, x:0, y:0 }], label, R).then(buffer => ({
       ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, minWall: st.minWall,
       tilt: Math.atan(st.maxW) * 180 / Math.PI, depth: ctx.Ht - ctx.zs[ctx.jB],
@@ -1608,7 +1793,7 @@ function runExport(job){
            depth: ctx.Ht - ctx.zs[ctx.jB], serialOk: !!(raster && raster.serialOk) };
 }
 
-G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
+G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, RECIPE_WALLS_MAX, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
   buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, layoutSerial, fillVessel, vesselVerts, vesselTriCount,
   writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow, exportFloorZ, floorMin, FLOOR_MIN,
   makeExportCtx, makeRingCtx, buildSTLBuffer, validateMesh, discFolds, r95Of, runExport, PIECES, pieceOf, piecePar, pieceRows,

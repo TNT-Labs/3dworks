@@ -62,17 +62,37 @@ export function analizza(state, { larghezza = .4, layer = .2 } = {}){
 
   const R = k => Math.hypot(pos[k*3], pos[k*3+1]);
 
-  /* parete: spessore ORIZZONTALE, che è quello che il slicer vede nel piano di
-     ogni strato. Lo spessore perpendicolare alla superficie è minore (conta per
-     la resistenza, non per la tenuta). */
+  /* Parete: distanza PERPENDICOLARE fra la cavità e il contorno esterno, nel
+     piano dello strato. È la misura che conta e non quella radiale, che questo
+     strumento usava prima: il slicer non lavora per raggi, lavora sul poligono
+     dello strato, e lo spazio che ha per infilarci i perimetri è la distanza
+     minima fra i due contorni. Sul fianco di una costola le due misure non
+     coincidono affatto — la radiale diceva 2,40 dove ce n'erano 1,46. */
+  const pointSeg = (ix, iy, j) => {
+    let d2 = Infinity;
+    for (let k = 0; k < nTh; k++){
+      const p = (j*nTh + k)*3, q = (j*nTh + (k+1) % nTh)*3;
+      const px = pos[p], py = pos[p+1], ux = pos[q] - px, uy = pos[q+1] - py;
+      const L2 = ux*ux + uy*uy;
+      let t = L2 > 0 ? ((ix - px)*ux + (iy - py)*uy) / L2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const dx = ix - (px + t*ux), dy = iy - (py + t*uy), d = dx*dx + dy*dy;
+      if (d < d2) d2 = d;
+    }
+    return Math.sqrt(d2);
+  };
   let min = Infinity, minZ = 0, hSottile = 0, hCritica = 0, prevZ = null;
+  let minRadiale = Infinity;
   const perFascia = [];
   for (let j = jB; j < rows; j++){
     const z = ctx.zs[j];
     if (z > P.h) break;                                   // il collo si misura a parte
     let rigaMin = Infinity;
-    for (let i = 0; i < nTh; i++)
-      rigaMin = Math.min(rigaMin, R(j*nTh + i) - R(rows*nTh + (j - jB)*nTh + i));
+    for (let i = 0; i < nTh; i++){
+      const a = (rows*nTh + (j - jB)*nTh + i)*3;
+      rigaMin = Math.min(rigaMin, pointSeg(pos[a], pos[a+1], j));
+      minRadiale = Math.min(minRadiale, R(j*nTh + i) - R(rows*nTh + (j - jB)*nTh + i));
+    }
     if (rigaMin < min){ min = rigaMin; minZ = z; }
     const np = passate(rigaMin, larghezza);
     if (prevZ != null){
@@ -91,7 +111,7 @@ export function analizza(state, { larghezza = .4, layer = .2 } = {}){
   const n = V.neckSpec(P);
   return {
     mesh, P, profilo: state.profile,
-    parete: { nominale: P.w, minima: min, z: minZ,
+    parete: { nominale: P.w, minima: min, z: minZ, radiale: minRadiale,
               passate: passate(min, larghezza), altezzaSottile: hSottile, altezzaCritica: hCritica,
               perFascia },
     fondo: { totale: floorZ, inciso, residuo: fondo, strati: Math.floor(fondo / layer) },
@@ -100,7 +120,10 @@ export function analizza(state, { larghezza = .4, layer = .2 } = {}){
     inclinazione: Math.atan(st.maxW) * 180 / Math.PI,
     passaggio: st.minRi * 2,
     capacita: st.capV / 1000,
-    ricetta: V.recipeFor(P),
+    /* i perimetri seguono parete E spessore massimo locale: la costola piena
+       ha un nucleo che senza di loro si stamperebbe a reticolo rado */
+    ricetta: V.recipeFor(P, st.thickMax),
+    spessoreMax: st.thickMax,
     /* la cavità si è richiusa: la parete richiesta non entra nel pezzo */
     strozzato: st.floored > 0 || st.pinched > 0,
   };
@@ -121,14 +144,21 @@ function stampa(nome, a, larghezza){
     + ` · ${a.mesh.tris.toLocaleString('it-IT')} triangoli`);
   console.log(`  fondo         ${esito(a.fondo.residuo >= 1.5)} · ${a.fondo.residuo.toFixed(2)} mm pieni`
     + ` sotto l'incisione (${a.fondo.strati} strati)`);
-  console.log(`  parete corpo  ${esito(pareteOk, pareteLimite)} · minimo ${a.parete.minima.toFixed(2)} mm`
+  console.log(`  parete corpo  ${esito(pareteOk, pareteLimite)} · minimo VERO ${a.parete.minima.toFixed(2)} mm`
     + ` a z=${a.parete.z.toFixed(0)} mm = ${np.toFixed(1)} passate da ${larghezza}`
     + ` (nominale ${a.parete.nominale} = ${(a.parete.nominale/larghezza).toFixed(1)})`);
+  /* la misura radiale resta a vista perché è quella che l'app usava prima: la
+     differenza fra le due è il difetto che la cavità erosa ha tolto */
+  console.log(`                perpendicolare ${a.parete.minima.toFixed(2)} mm`
+    + ` · radiale ${a.parete.radiale.toFixed(2)} mm`
+    + ` · resa ${(a.parete.minima / a.parete.nominale * 100).toFixed(0)}% del nominale`);
   /* Il numero di perimetri è ciò che rende la parete spessa materiale pieno
      invece che una scatola di reticolo: ogni perimetro vale due passate. */
   const coperto = a.ricetta.walls * 2 * V.RECIPE.width;
-  console.log(`  ricetta       ${esito(coperto >= a.P.w - 1e-9)} · ${a.ricetta.walls} perimetri`
-    + ` × 2 × ${V.RECIPE.width} = ${coperto.toFixed(1)} mm coperti su ${a.P.w} di parete`
+  const serve = Math.min(a.spessoreMax, V.RECIPE_WALLS_MAX * 2 * V.RECIPE.width);
+  console.log(`  ricetta       ${esito(coperto >= serve - 1e-9)} · ${a.ricetta.walls} perimetri`
+    + ` × 2 × ${V.RECIPE.width} = ${coperto.toFixed(1)} mm coperti`
+    + ` · guscio da ${a.P.w} a ${a.spessoreMax.toFixed(1)} mm (costole piene)`
     + ` · fondo pieno ${a.ricetta.floorSolid} mm su ${a.fondo.totale.toFixed(2)}`);
   if (a.strozzato)
     console.log(`                ${r('la parete richiesta non entra nel pezzo')}: la cavità si richiude`);

@@ -17,13 +17,23 @@ stampare i pezzi perché tengano davvero.
 |---|---|---|
 | Mesh esportata | **chiusa** in tutti i casi provati, anche agli estremi dei cursori | 0 bordi aperti, 0 spigoli non-manifold, volume coerente allo 0,2 % |
 | Fondo sotto l'incisione | **tiene con margine** | ≥ 1,8 mm pieni nel caso peggiore (incisione 1,2 mm su fondo 3,0 mm) |
-| Parete del corpo | **tiene**, è esattamente quella impostata | 2,0–8,0 mm dal fondo fino al 70 % dell'altezza |
+| Parete del corpo | **tiene**, ed è quella impostata *misurata perpendicolarmente* | 2,0–8,0 mm, 100 % del nominale su tutta la corsa dei cursori |
 | Fascia di spalla | **tiene**, dopo la correzione della geometria | 2,00–3,20 mm, esattamente la parete impostata (era 0,90 mm) |
 | Collo filettato | **tiene** | parete 3,0 mm costanti, battuta di tenuta piana larga 3,0 mm |
 | Inclinazione massima | entro i 45° sui preset | 36–42°, lo studio segnala in rosso oltre 45° |
 
 **In una riga:** i pezzi sono a tenuta su tutta la corsa dei cursori. La parete
 misurata è ovunque quella impostata, cioè almeno cinque passate di estrusione.
+
+> **Questa pagina ha già sbagliato una volta, e vale la pena sapere come.**
+> Fino alla revisione della cavità, «parete misurata» voleva dire *spessore
+> radiale*: la differenza fra il raggio esterno e quello della cavità. Su un
+> cilindro è la stessa cosa; su un vaso a costole no, perché sul fianco di una
+> costola la normale alla superficie non è radiale. Lo spessore vero dei preset
+> era **1,46–1,67 mm** con 2,40 richiesti — tutti sotto la soglia di tenuta —
+> e la pagina dichiarava 2,40 perché misurava il raggio. Vedi «La parete vera».
+> Ora la cavità è costruita in modo che la misura perpendicolare torni, e lo
+> strumento riporta entrambe.
 
 Tutti e quattro i preset di listino passano. Non era così: la prima misura
 (vedi sotto) aveva trovato la fascia di spalla a 0,90 mm su metà dello spazio
@@ -42,7 +52,9 @@ node scripts/tenuta.js --larghezza 0.45      # con un'altra larghezza di estrusi
 ```
 
 Lo strumento costruisce **la stessa mesh dell'export** e misura gli spessori
-riga per riga. Non stima nulla: legge i vertici.
+riga per riga. Non stima nulla: legge i vertici, e misura la distanza
+**perpendicolare** fra i due contorni di ogni strato — non più la differenza
+di raggio. Riporta tutte e due, così la differenza resta visibile.
 
 Legge la parete in *passate di estrusione*, che è ciò che decide la tenuta:
 
@@ -77,11 +89,66 @@ parabolica larga 1,5 mm**: ogni strato chiude un po' più del precedente e
 l'ultimo attraversa sei decimi di millimetro. Nessun ponte, nessuna superficie
 sospesa. È il tipo di incisione che si stampa bene.
 
-### La parete del corpo — esattamente quella impostata
+### La parete vera — il difetto che ha resistito a due tentativi
 
-Dal fondo fino a circa il 70 % dell'altezza la parete misura **esattamente** il
-valore del cursore: 2,40 mm richiesti, 2,40 mm misurati. Il motore tiene
-costante lo spessore anche dove le costole entrano ed escono.
+Un pezzo stampato continuava a bucarsi al tatto anche con la parete portata a
+8 mm. Non era lo spessore: era **la misura**.
+
+Lo spessore di un guscio è la distanza fra le sue due facce misurata
+**perpendicolarmente**. La cavità, invece, era la faccia esterna spostata di
+2,4 mm *lungo il raggio*. Su un cilindro le due cose coincidono. Su un vaso a
+costole no: sul fianco di una costola la normale alla superficie non è radiale,
+e uno spostamento radiale di 2,4 mm lascia uno spessore vero di 2,4·cos α, con
+α l'angolo fra raggio e normale.
+
+Quanto vale α lo decide la geometria delle costole, non la parete. Misurato
+sulla mesh esportata, con 2,40 mm richiesti:
+
+| costole | affilatura 0 | 0,36 | 0,70 | 1,00 |
+|---|---|---|---|---|
+| 3 | 2,40 | 2,13 | 1,51 | 0,98 |
+| 6 | 2,40 | **1,67** | 0,90 | 0,51 |
+| 9 | 2,40 | 1,30 | 0,62 | **0,34** |
+
+I quattro preset di listino stavano fra **1,46 e 1,67 mm**: tutti sotto la
+soglia di tenuta di 1,8, mentre la scheda dichiarava 2,40. Ai minimi dei
+cursori si arrivava a **0,43 mm** con 3,2 dichiarati: carta velina. E siccome la resa è
+una *frazione* della geometria e non un valore assoluto, ingrossare la parete
+non poteva funzionare: 8 mm dichiarati con nove costole affilate restavano
+**1,08 mm** veri.
+
+**La cavità ora è il corpo eroso da una sfera del raggio della parete** —
+l'insieme dei punti in cui quella sfera ci sta tutta. Per definizione ogni
+punto della superficie esterna ha almeno *w* di materiale sotto di sé, misurato
+perpendicolarmente. Il conto è esatto: per ogni direzione si cerca il raggio
+massimo a cui il disco non tocca nessun segmento del contorno dello strato, e
+il contorno dello strato è esattamente il poligono che finisce nell'STL.
+
+Su 3888 design provati agli estremi dei cursori nessuna mesh si rompe, e
+l'inclinazione non peggiora: i design che superano i 45° erano gli stessi
+prima (126 su 288 nel campione, contro 122 adesso), e lo superano sulla faccia
+esterna, non nella cavità.
+
+Dove le costole sono più fitte della sfera, la sfera non entra e **la costola
+resta piena**: smette di essere una piega sottile del guscio e diventa un nervo
+di rinforzo, che è il modo in cui si irrigidisce un recipiente a parete
+sottile. Ogni casella della tabella qui sopra vale ora **2,40 mm**.
+
+Il conto si paga in capacità e materiale — è il materiale che prima mancava:
+
+| preset | capacità | filamento | tempo |
+|---|---|---|---|
+| Aureo | 903 → **876 ml** | 183 → **217 g** | 18,5 → **21,9 h** |
+| Maelström | 762 → **732 ml** | 154 → **188 g** | 15,8 → **19,6 h** |
+| Fiamma | 1092 → **1054 ml** | 211 → **249 g** | 22,4 → **26,7 h** |
+| Marea | 701 → **673 ml** | 134 → **162 g** | 13,9 → **17,0 h** |
+
+La **faccia esterna non cambia di un micron** — verificato confrontando
+1.064.448 coordinate con il motore precedente, zero differenze: il pezzo ha lo
+stesso aspetto, cambia solo ciò che ha dentro. La cavità è anche limitata a 44° come la faccia
+esterna, con la stessa regola e nella direzione che non assottiglia mai la
+parete: senza quel limite, sui design molto affilati il cielo della cavità
+arrivava a 58° e avrebbe voluto i supporti.
 
 ### La parete spessa — e la trappola dei perimetri fissi
 
@@ -160,8 +227,10 @@ Lo si riverifica senza fidarsi di questa pagina:
 node scripts/tenuta.js          # i preset, più una scansione dell'affilatura
 ```
 
-Il segnale personale (GPX o voce) non peggiora la situazione: alla massima
-intensità toglie 0,06 mm al minimo, il limitatore assorbe il resto.
+Il segnale personale (GPX o voce) non peggiora la situazione, e ora non può
+peggiorarla per costruzione: qualunque forma prenda la faccia esterna, la
+cavità è quella faccia erosa dello spessore voluto. Prima toglieva 0,06 mm al
+minimo — misurato sulla parete radiale, che era comunque il numero sbagliato.
 
 ### Il collo — tiene
 
@@ -202,7 +271,7 @@ I valori che decidono la tenuta, in ordine di importanza.
 |---|---|---|
 | **Generatore di perimetri** *(già nel 3MF)* | **Arachne** | È il parametro che conta più di ogni altro. Adatta la larghezza delle singole passate allo spessore che trova, senza lasciare avanzi. Serviva soprattutto a salvare la vecchia fascia di spalla da 0,90–1,26 mm; ora che la parete è ovunque quella impostata resta comunque la scelta migliore. PrusaSlicer 2.6+ e OrcaSlicer ce l'hanno di serie. |
 | **Larghezza di estrusione** *(già nel 3MF)* | **0,40 mm** | Divide esattamente le pareti «tonde» (2,0 · 2,4 · 2,8 · 3,2 · 4,0 · 4,8 · 5,6 · 6,4 · 7,2 · 8,0): lì i perimetri riempiono senza avanzi. Il cursore si muove di 0,1 mm, quindi le misure intermedie un avanzo ce l'hanno — è esattamente ciò che Arachne assorbe allargando le passate, e il numero di perimetri è arrotondato per eccesso perché l'avanzo resti dentro i cordoli e non diventi riempimento. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
-| **Perimetri** *(già nel 3MF)* | **4 o più, li scrive lo studio** | Quattro per lato coprono 3,2 mm: bastavano finché la parete massima era 3,2. Ora la parete arriva a 8 mm e il numero lo calcola l'export (`recipeFor`), perché il guscio resti fatto **solo** di perimetri. Vedi «La parete spessa» qui sotto: è il punto in cui una parete grossa può diventare più debole di una sottile. Sotto i 4 si perde comunque il perimetro centrale di sicurezza. |
+| **Perimetri** *(già nel 3MF)* | **4 o più, li scrive lo studio** | Quattro per lato coprono 3,2 mm: bastavano finché la parete massima era 3,2. Il numero lo calcola ora l'export (`recipeFor`) su **due** misure del design — la parete, che arriva a 8 mm, e lo spessore massimo locale, perché con la cavità erosa le costole affilate restano piene e il loro nucleo va riempito di cordoli e non di reticolo. Sui preset vengono 6–7 perimetri invece di 4. Il tetto è 16: oltre, il nucleo resta riempimento (è il caso delle costole da venti millimetri, dove riempirle di soli cordoli costerebbe ore) e il materiale dichiarato diventa un limite superiore. Sotto i 4 si perde comunque il perimetro centrale di sicurezza. |
 | **Ventola** | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. |
 | **Temperatura ugello** | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
 | **Fondo pieno** *(già nel 3MF)* | `bottom_solid_min_thickness = 4` | Sostituisce sia i «6 / 6 strati pieni» sia l'aumento del riempimento: il pavimento viene pieno per tutti i suoi 3–4 mm, quindi sotto il liquido non resta reticolo. Costa +9–14 % di materiale. Di conseguenza il pezzo non ha più alcuna zona a riempimento rado e il valore del gyroid è ininfluente. |
