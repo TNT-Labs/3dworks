@@ -20,6 +20,13 @@ import { parseGPX, signalFromAudio, recordVoice } from './studio/signal-io.js';
 
 const $ = id => document.getElementById(id);
 const PIECE_NAMES = { disp:'Dispenser', tooth:'Portaspazzolino' };
+/* il motore geometrico e' caricato come script classico (serve anche al Worker) */
+const VCore = globalThis.VCore;
+/* Materiale della ricetta. Dichiarato qui in alto perche' lo legge anche
+   syncPieceUI: non e' parte del design — non cambia un vertice e non entra
+   nell'impronta — ma decide temperatura e ventola, cioe' se gli strati si
+   saldano o se il pezzo esce di cristallo. */
+let mat = VCore.MATERIAL_DEFAULT;
 
 function fatal(msg){
   $('fatalMsg').innerHTML = msg;
@@ -189,6 +196,7 @@ function syncPieceUI(){
   $('noteTube').hidden = !neck;
   $('dl').querySelector('span').textContent = 'Scarica ' + (format === '3mf' ? '3MF' : 'STL') + ' ' +
     (model.plateMode ? 'del set (2 pezzi)' : model.piece === 'disp' ? 'del dispenser' : 'del portaspazzolino');
+  syncMaterial();                        // l'avviso sul PLA dipende anche dal pezzo
   $('lead').innerHTML = neck
     ? 'Vaso a guscio sottile con <b>collo filettato esterno (norma GPI)</b> e <b>firma incisa sul fondo</b>. La pompa commerciale porta la vite interna e si avvita sopra, come su una bottiglia. Tutto vincolato a ~44° — <b>senza supporti</b>.'
     : 'Bicchiere a guscio sottile con <b>bordo aperto</b> e <b>firma incisa sul fondo</b>, dello stesso DNA del dispenser: stesse costole, stessa inclinazione dell\'elica, stesso codice. Tutto vincolato a ~44° — <b>senza supporti</b>.';
@@ -354,6 +362,27 @@ $('tLink').addEventListener('click', async () => {
 });
 
 /* ====================== export ====================== */
+function syncMaterial(){
+  const m = VCore.materialOf(mat);
+  setActive('segMat', 'm', mat);
+  $('matNote').textContent = m.nome + ' · ' + m.nota;
+  $('rcTemp').textContent = `${m.nozzle} °C ugello (${m.nozzleFirst} il primo) · ${m.bed} °C piano`;
+  $('rcFan').textContent = `${m.fanMin}–${m.fanMax}% · spenta i primi ${m.fanOff} strati`;
+  /* PLA su un contenitore di liquidi: e' la combinazione che produce il pezzo
+     fragile, e vale la pena dirlo dove si sceglie invece che in fondo a una guida */
+  const rischio = mat === 'pla' && model.piece === 'disp';
+  $('matWarn').hidden = !rischio;
+  if (rischio) $('matWarn').innerHTML = '<b>PLA su un dispenser.</b> È il più fragile fra gli '
+    + 'strati e assorbe umidità: è la combinazione che dà i pezzi che si spezzano come il '
+    + 'vetro, e con sapone o detersivo peggiora nel tempo. Va bene per provare la forma; '
+    + 'per il pezzo che userai davvero, <b>PETG</b>.';
+}
+$('segMat').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+  mat = b.dataset.m;
+  syncMaterial();
+}));
+syncMaterial();
+
 let format = 'stl';
 $('segFmt').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
   format = b.dataset.f;
@@ -387,7 +416,7 @@ $('dl').addEventListener('click', () => withBusy($('dl'), 'Genero e verifico…'
   model.profBlend = 1;           // niente dissolvenze a metà nell'STL
   pending = true;
   const code = serial() || model.fingerprint();
-  const job = jobFor(model, 'vessel', { format, serial: code });
+  const job = jobFor(model, 'vessel', { format, serial: code, mat });
   const r = await runJob(job);
   if (!r.ok){ console.error(r.check || r.error); toast('File non salvato · ' + r.error); return; }
 
@@ -405,13 +434,27 @@ $('dl').addEventListener('click', () => withBusy($('dl'), 'Genero e verifico…'
 }));
 
 $('dlTest').addEventListener('click', () => withBusy($('dlTest'), 'Genero lo spool…', async () => {
-  const job = jobFor(model, 'ring', { format, serial: serial() });
+  const job = jobFor(model, 'ring', { format, serial: serial(), mat });
   const r = await runJob(job);
   if (!r.ok){ console.error(r.check || r.error); toast('File non salvato · ' + r.error); return; }
   const three = r.format === '3mf';
   saveBlob(new Blob([r.buffer], { type: three ? 'model/3mf' : 'model/stl' }),
     `vortice-spool-prova_T${job.P.thD.toFixed(1)}mm-P${job.P.pitch.toFixed(1)}.${three ? '3mf' : 'stl'}`);
   toast(`Spool di prova · ${it(r.check.tris)} triangoli · avvita la pompa reale sopra`);
+}));
+
+/* Provino di robustezza: due barrette identiche, una eretta e una coricata.
+   Non serve a verificare il disegno — serve a capire se il pezzo fragile lo e'
+   per come e' stampato invece che per come e' fatto, in venti minuti invece
+   che in venti ore. */
+$('dlCoupon').addEventListener('click', () => withBusy($('dlCoupon'), 'Genero il provino…', async () => {
+  const job = jobFor(model, 'coupon', { format, mat });
+  const r = await runJob(job);
+  if (!r.ok){ console.error(r.error); toast('File non salvato · ' + r.error); return; }
+  const three = r.format === '3mf';
+  saveBlob(new Blob([r.buffer], { type: three ? 'model/3mf' : 'model/stl' }),
+    `vortice-provino_${VCore.materialOf(mat).nome}_parete${model.tgt.w.toFixed(1)}mm.${three ? '3mf' : 'stl'}`);
+  toast(`Provino · parete ${model.tgt.w.toFixed(1)} mm · ≈${Math.round(r.secs/60)} min · fletti entrambe le barrette`);
 }));
 
 /* ====================== progettazione inversa ====================== */

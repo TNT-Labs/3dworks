@@ -1120,6 +1120,75 @@ function makeRingCtx(P){
   return ctx;
 }
 
+/* ============ provino di robustezza: due barrette e un verdetto ============
+ *
+ * A cosa serve. Tre revisioni della geometria non hanno tolto la fragilita' di
+ * un pezzo stampato, e una parete che ora c'e' davvero non basta se gli strati
+ * non si saldano fra loro. Il punto e' che dal pezzo finito non si capisce
+ * quale delle due cose e' rotta, e ogni tentativo costa venti ore di stampa.
+ *
+ * Il provino separa le due cause in venti minuti, e lo fa cambiando una sola
+ * variabile: l'orientamento.
+ *
+ * · la barretta CORICATA ha gli strati paralleli alla flessione. Fletterla
+ *   misura il materiale: e' il riferimento.
+ * · la barretta ERETTA ha gli strati perpendicolari. Fletterla misura la
+ *   SALDATURA fra strati, ed e' l'unica differenza fra le due.
+ *
+ * Verdetto, fletterle fra le dita:
+ * · coricata flette, eretta si spezza di netto con frattura piatta e lucida
+ *   → saldatura: piu' caldo, meno ventola, filo asciutto. Nessuna modifica al
+ *     disegno la aggiusta.
+ * · si spezzano entrambe di netto → materiale: bobina umida o vecchia.
+ * · flettono entrambe e sbiancano → la stampa e' sana, e la fragilita' del
+ *   pezzo grosso va cercata altrove (spessore, urto, aggressione chimica).
+ *
+ * Le barrette hanno lo spessore della parete del design e si stampano con la
+ * ricetta del design: e' lo stesso guscio, in piccolo.
+ */
+const COUPON = { L:40, W:15, gap:18, brim:6 };
+
+/* scatola: 8 vertici, 12 triangoli, normali verso l'esterno */
+function boxMesh(dx, dy, dz){
+  const pos = new Float32Array(8 * 3), ind = new Uint32Array(36);
+  const X = [0, dx], Y = [0, dy], Z = [0, dz];
+  const V = [[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+  for (let k = 0; k < 8; k++){
+    pos[k*3] = X[V[k][0]] - dx/2;            // centrata in XY, appoggiata a z=0
+    pos[k*3+1] = Y[V[k][1]] - dy/2;
+    pos[k*3+2] = Z[V[k][2]];
+  }
+  ind.set([0,2,1, 0,3,2,  4,5,6, 4,6,7,  0,1,5, 0,5,4,
+           3,7,6, 3,6,2,  0,4,7, 0,7,3,  1,2,6, 1,6,5]);
+  return { pos, ind, vol: dx * dy * dz };
+}
+
+function runCoupon(job){
+  const P = job.P, w = Math.max(.4, P.w);
+  const eretta   = boxMesh(COUPON.W, w, COUPON.L);        // alta: strati perpendicolari
+  const coricata = boxMesh(COUPON.L, COUPON.W, w);        // bassa: strati paralleli
+  const parts = [
+    { name: `eretta · strati perpendicolari · parete ${w.toFixed(1)} mm`,
+      pos: eretta.pos,   ind: eretta.ind,   x: 0, y: -COUPON.gap },
+    { name: `coricata · strati paralleli · parete ${w.toFixed(1)} mm`,
+      pos: coricata.pos, ind: coricata.ind, x: 0, y: COUPON.gap },
+  ];
+  for (const m of [eretta, coricata]){
+    const chk = validateMesh(m.pos, m.ind, m.vol);
+    if (!chk.ok) return { ok:false, error:'provino non valido · ' + chk.errors.join(' · ') };
+  }
+  const label = 'VORTICE provino di robustezza: fletti entrambe le barrette';
+  const matVol = eretta.vol + coricata.vol;
+  const summary = { ok:true, check:{ tris:24, errors:[] }, matVol,
+    secs: printSeconds(matVol, 1), Ht: COUPON.L, D: COUPON.L, tris:24, pieces:2 };
+  /* stessa ricetta del pezzo, piu' il bordino: una barretta alta e sottile
+     senza brim si stacca dal piatto e il provino non dice piu' niente */
+  const R = { ...recipeFor(P, 0, job.mat), brim: COUPON.brim };
+  if (job.format === '3mf')
+    return build3MF(parts, label, R).then(buffer => ({ ...summary, buffer, format:'3mf' }));
+  return { ...summary, buffer: plateSTL(parts, label), format:'stl' };
+}
+
 /* ================= STL binario ================= */
 function buildSTLBuffer(pos, ind, label){
   const tris = ind.length / 3;
@@ -1195,7 +1264,7 @@ function runPlate(job){
   const label = 'VORTICE set: ' + parts.map(p => p.name).join(' + ');
   const summary = { ok:true, check:{ tris }, plate:{ W:plan.W, D:plan.D, H:plan.H }, matVol, secs, Ht, tris, pieces:parts.length };
   if (job.format === '3mf')
-    return build3MF(parts, label, recipeForAll(recParts))
+    return build3MF(parts, label, recipeForAll(recParts, job.mat))
       .then(buffer => ({ ...summary, buffer, format:'3mf' }));
   return { ...summary, buffer: plateSTL(parts, label), format:'stl' };
 }
@@ -1318,6 +1387,59 @@ function model3MF(parts, title){
  * riempimento rado (la parete e' gia' tutta perimetri), quindi il materiale
  * torna a essere esattamente il volume della geometria.
  */
+/* ===================== materiale: la parte che decide se il pezzo e' tenace
+ * oppure di cristallo, e che la ricetta non diceva.
+ *
+ * Tre revisioni della geometria non hanno tolto la fragilita' di un pezzo
+ * stampato, e c'e' un motivo: un pezzo che si rompe come il vetro non e'
+ * sottile, e' MAL SALDATO. Fra uno strato e il successivo il polimero deve
+ * rifondere; se arriva troppo freddo, o se una ventola al massimo lo raffredda
+ * prima che il cordolo sopra ci si posi, gli strati restano incollati invece di
+ * fusi. Il pezzo tiene a schiacciarlo e si spezza di netto a fletterlo, con una
+ * frattura piatta e lucida. Nessuno spessore lo compensa: raddoppiando la
+ * parete si raddoppia la sezione di una saldatura che non c'e'.
+ *
+ * Le impostazioni che decidono quella saldatura sono la temperatura e la
+ * ventola. Nel 3MF non c'erano: la ricetta portava strato, perimetri, fondo,
+ * cucitura e riempimento — tutto tranne le due che contano. Chi apriva il file
+ * si ritrovava il proprio profilo PLA di serie, tipicamente 210 gradi con la
+ * ventola al 100%, che e' la ricetta esatta di un pezzo di cristallo.
+ *
+ * Qui ci sono tre materiali, con i valori della guida di stampa del progetto.
+ * Non sono ottimizzati per l'aspetto: sono scelti per la tenacita' fra strati,
+ * che e' un'altra cosa (piu' caldo e meno ventola fanno un pezzo piu' brutto e
+ * molto piu' forte).
+ */
+const MATERIALS = {
+  petg: {
+    nome:'PETG', tipo:'PETG',
+    /* la scelta per un contenitore: salda bene, regge acqua e tensioattivi, e
+       flette invece di delaminare */
+    nozzle:240, nozzleFirst:245, bed:80, bedFirst:80,
+    fanMin:20, fanMax:30, fanOff:5,
+    nota:'la scelta per sapone e detersivo · flette invece di rompersi',
+  },
+  pla: {
+    nome:'PLA', tipo:'PLA',
+    /* si stampa meglio di tutti ed e' il piu' fragile fra gli strati: questi
+       valori sono il PLA tirato verso la tenacita', non verso l'aspetto —
+       piu' caldo del solito e con la ventola tenuta bassa */
+    nozzle:220, nozzleFirst:225, bed:60, bedFirst:60,
+    fanMin:30, fanMax:60, fanOff:3,
+    nota:'solo per il portaspazzolino · fragile fra gli strati e sensibile all\'acqua',
+  },
+  asa: {
+    nome:'ASA', tipo:'ABS',
+    /* regge alcol e oli essenziali, ma su stampante aperta ritira: ventola
+       quasi ferma o delamina da sola */
+    nozzle:255, nozzleFirst:255, bed:100, bedFirst:100,
+    fanMin:0, fanMax:15, fanOff:5,
+    nota:'per alcol e oli essenziali · serve una camera chiusa',
+  },
+};
+const MATERIAL_DEFAULT = 'petg';
+const materialOf = key => MATERIALS[key] || MATERIALS[MATERIAL_DEFAULT];
+
 const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6,
                  pattern:'gyroid', seam:'random', floorSolid:4,
                  /* Le pareti che lo studio propone sono multipli esatti di
@@ -1353,20 +1475,20 @@ function recipeWalls(w, width = RECIPE.width){
    benissimo. Oltre questo numero il nucleo resta riempimento, e il materiale
    dichiarato diventa un limite superiore invece di una misura. */
 const RECIPE_WALLS_MAX = 16;
-function recipeFor(P, thickMax = 0){
+function recipeFor(P, thickMax = 0, mat = MATERIAL_DEFAULT){
   const w = P && Number.isFinite(P.w) ? P.w : 2.4;
   /* i perimetri seguono la parete, ma anche lo spessore massimo locale: e' la
      costola piena, che senza di loro si stamperebbe vuota dentro */
   const walls = Math.min(RECIPE_WALLS_MAX,
     Math.max(recipeWalls(w), thickMax > 0 ? recipeWalls(thickMax) : 0));
-  return { ...RECIPE, walls,
+  return { ...RECIPE, walls, mat: materialOf(mat),
            floorSolid: Math.max(RECIPE.floorSolid, Math.ceil(exportFloorZ(P) - 1e-9)) };
 }
 /* ricetta di un piatto con piu' pezzi: vale la piu' esigente */
-function recipeForAll(list){
-  let r = RECIPE;
+function recipeForAll(list, mat = MATERIAL_DEFAULT){
+  let r = { ...RECIPE, mat: materialOf(mat) };
   for (const it of list){
-    const c = Array.isArray(it) ? recipeFor(it[0], it[1]) : recipeFor(it);
+    const c = Array.isArray(it) ? recipeFor(it[0], it[1], mat) : recipeFor(it, 0, mat);
     if (c.walls > r.walls || c.floorSolid > r.floorSolid)
       r = { ...c, walls: Math.max(r.walls, c.walls), floorSolid: Math.max(r.floorSolid, c.floorSolid) };
   }
@@ -1389,7 +1511,22 @@ const slic3rConfig = (R = RECIPE) => [
   `external_perimeter_extrusion_width = ${R.width}`,
   '; adatta la larghezza delle singole passate allo spessore che trova',
   `perimeter_generator = ${R.generator}`,
-  'support_material = 0', 'brim_width = 0', 'nozzle_diameter = ' + R.nozzle, ''].join('\n');
+  /* Le due righe che decidono se il pezzo e' tenace o di cristallo, e che
+     prima non c'erano: senza, lo slicer usa il profilo del filamento che
+     l'utente ha in memoria — tipicamente 210 gradi e ventola al 100%, cioe'
+     strati incollati invece di fusi. */
+  '; temperatura: piu' + String.fromCharCode(39) + ' caldo salda meglio, ed e' + String.fromCharCode(39) + ' la saldatura che tiene il pezzo',
+  `filament_type = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).tipo}`,
+  `temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzle}`,
+  `first_layer_temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzleFirst}`,
+  `bed_temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).bed}`,
+  `first_layer_bed_temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).bedFirst}`,
+  '; ventola: raffredda il cordolo prima che quello sopra ci si saldi',
+  'cooling = 1', 'fan_always_on = 1',
+  `min_fan_speed = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMin}`,
+  `max_fan_speed = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMax}`,
+  `disable_fan_first_layers = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanOff}`,
+  'support_material = 0', `brim_width = ${R.brim ?? 0}`, 'nozzle_diameter = ' + R.nozzle, ''].join('\n');
 const orcaConfig = (R = RECIPE) => JSON.stringify({
   layer_height: String(R.layer), initial_layer_print_height: String(R.first),
   wall_loops: String(R.walls), top_shell_layers: String(R.top), bottom_shell_layers: String(R.bottom),
@@ -1400,7 +1537,17 @@ const orcaConfig = (R = RECIPE) => JSON.stringify({
   inner_wall_line_width: String(R.width),
   outer_wall_line_width: String(R.width),
   wall_generator: R.generator,
-  enable_support: '0', brim_type: 'no_brim', version: '1.0.0', from: 'VORTICE',
+  /* in Orca le impostazioni del filamento sono vettori, una voce per estrusore */
+  filament_type: [(R.mat || MATERIALS[MATERIAL_DEFAULT]).tipo],
+  nozzle_temperature: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzle)],
+  nozzle_temperature_initial_layer: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzleFirst)],
+  hot_plate_temp: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).bed)],
+  hot_plate_temp_initial_layer: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).bedFirst)],
+  fan_min_speed: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMin)],
+  fan_max_speed: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMax)],
+  close_fan_the_first_x_layers: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanOff)],
+  enable_support: '0', brim_type: R.brim ? 'outer_only' : 'no_brim',
+  brim_width: String(R.brim ?? 0), version: '1.0.0', from: 'VORTICE',
 }, null, 1);
 function build3MF(parts, title, R = RECIPE){
   return zipArchive([
@@ -1748,6 +1895,7 @@ function platePlan(setP, profKey, keys){
 function runExport(job){
   if (job.kind === 'search') return runSearch(job);
   if (job.kind === 'plate') return runPlate(job);
+  if (job.kind === 'coupon') return runCoupon(job);
   const P = job.P;
   let ctx, label, st = null, raster = null;
   if (job.kind === 'ring'){
@@ -1780,7 +1928,8 @@ function runExport(job){
   if (job.format === '3mf'){
     const name = (job.logo && job.logo.serial ? job.logo.serial + ' · ' : '') + pieceOf(P).name;
     /* lo spool di prova e' pieno: non ha parete da riempire, tiene la ricetta base */
-    const R = job.kind === 'ring' ? RECIPE : recipeFor(P, st.thickMax);
+    const R = job.kind === 'ring' ? { ...RECIPE, mat: materialOf(job.mat) }
+                                 : recipeFor(P, st.thickMax, job.mat);
     return build3MF([{ name, pos, ind, x:0, y:0 }], label, R).then(buffer => ({
       ok:true, buffer, check, Ht:ctx.Ht, D: st.maxR * 2, minRi: st.minRi, minWall: st.minWall,
       tilt: Math.atan(st.maxW) * 180 / Math.PI, depth: ctx.Ht - ctx.zs[ctx.jB],
@@ -1797,7 +1946,8 @@ G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, RECIPE
   buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, layoutSerial, fillVessel, vesselVerts, vesselTriCount,
   writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow, exportFloorZ, floorMin, FLOOR_MIN,
   makeExportCtx, makeRingCtx, buildSTLBuffer, validateMesh, discFolds, r95Of, runExport, PIECES, pieceOf, piecePar, pieceRows,
-  matVolOf, printSeconds, rippleQ, build3MF, model3MF, zipArchive, RECIPE, recipeFor, recipeForAll, recipeWalls, BED, BED_MARGIN, PIECE_GAP, pieceExtent, platePlan, runPlate,
+  matVolOf, printSeconds, rippleQ, build3MF, model3MF, zipArchive, RECIPE, recipeFor, recipeForAll, recipeWalls,
+  MATERIALS, MATERIAL_DEFAULT, materialOf, COUPON, boxMesh, runCoupon, BED, BED_MARGIN, PIECE_GAP, pieceExtent, platePlan, runPlate,
   PS, makeCtxFor, evalPiece, evalSignal, evalDesign, runSearch, SEARCH_VARS,
   SIG_N, SIG_SPAN, SIG_SIGMA_MAX, SIG_TOL, B64U, sigValid, sigEncode, sigRaw, smoothNorm,
   shapeAt, sigWeight, sigRig, sigResidual, fitSignal, fitSignalFor, fitProfile, profileFn,
