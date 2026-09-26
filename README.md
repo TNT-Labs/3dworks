@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 136 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
+npm test          # 138 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
 npm run test:e2e  # 15 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -252,10 +252,18 @@ Quelle due impostazioni nel 3MF non c'erano: la ricetta portava strato,
 perimetri, fondo, cucitura e riempimento, tutto tranne le due che contano. Chi
 apriva il file si ritrovava il proprio profilo filamento di serie — tipicamente
 210 °C con la ventola al 100 %, che è la ricetta esatta di un pezzo di cristallo.
-Ora lo studio fa scegliere il materiale (**PETG** di serie, PLA solo per il
-portaspazzolino, ASA per alcol e oli essenziali) e scrive nel file temperatura
-ugello e piano, primo strato compreso, e i limiti di ventola con i primi strati a
-ventola spenta.
+Ora lo studio fa scegliere il materiale (**PETG** di serie, **PLA** tarato per la
+tenacità, ASA per alcol e oli essenziali) e scrive nel file temperatura ugello e
+piano, primo strato compreso, e i limiti di ventola con i primi strati a ventola
+spenta.
+
+Il PLA in particolare non è più solo sconsigliato: è **utilizzabile**, perché la
+fragilità del PLA stampato viene in gran parte dal profilo e non dal polimero. Un
+profilo di serie sta sui 210 °C con la ventola al 100 %, tarato per gli spigoli
+netti; il profilo dello studio sta a **230 °C con la ventola al massimo 25 %**,
+spenta i primi 5 strati. In cambio qualche filo da togliere — un filo si taglia,
+una delaminazione no. Resta l'idrolisi: su un dispenser il pezzo in PLA dura mesi
+e non anni, e sopra i 55-60 °C si ammorbidisce.
 
 **E c'è un provino che dice dove sta il problema, in venti minuti.** Due
 barrette identiche, dello spessore della parete del design e con la sua stessa

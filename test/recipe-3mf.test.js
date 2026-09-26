@@ -230,6 +230,35 @@ test('il materiale scelto cambia la ricetta, e il default è quello che salda', 
   assert.equal(visti.size, Object.keys(V.MATERIALS).length, 'tre materiali, tre temperature');
 });
 
+test('il profilo PLA è tarato per la saldatura, non per l\'aspetto', async () => {
+  /* Il PLA è quello che la gente ha in casa, quindi deve essere utilizzabile e
+     non solo sconsigliato. La fragilità del PLA stampato viene in gran parte dal
+     profilo: 210 °C con la ventola al 100% è tarato per gli spigoli netti ed è
+     la ricetta di un pezzo che si spezza di netto. Queste due soglie sono ciò
+     che rende il PLA un materiale diverso in Z, e non devono tornare indietro. */
+  const pla = V.MATERIALS.pla;
+  assert.ok(pla.nozzle >= 225, `ugello ${pla.nozzle} °C: sotto i 225 il PLA non salda`);
+  assert.ok(pla.nozzle <= 235, `ugello ${pla.nozzle} °C: oltre la finestra dichiarata dei PLA`);
+  assert.ok(pla.fanMax <= 25, `ventola al ${pla.fanMax}%: raffredda la passata prima della saldatura`);
+  assert.ok(pla.fanOff >= 5, `ventola spenta solo i primi ${pla.fanOff} strati`);
+
+  const { files } = await build('vessel', {}, 'pla');
+  const cfg = files.get('Metadata/Slic3r_PE.config');
+  assert.match(cfg, new RegExp('^temperature = ' + pla.nozzle + '$', 'm'));
+  assert.match(cfg, new RegExp('^max_fan_speed = ' + pla.fanMax + '$', 'm'));
+});
+
+test('il provino porta i gradi addosso: serve a ripeterlo a temperature diverse', async () => {
+  /* il ciclo di taratura è «stampa, fletti, +10 °C, ripeti»: senza i gradi nel
+     file le barrette sul tavolo non si distinguono più */
+  const a = await V.runExport({ kind:'coupon', P: PAR, profKey:'clessidra', format:'3mf', mat:'pla', logo: LOGO });
+  assert.equal(a.ok, true, a.error);
+  const modello = unzip(a.buffer).get('3D/3dmodel.model');
+  assert.match(modello, new RegExp('PLA ' + V.MATERIALS.pla.nozzle + 'C'));
+  const b = unzip((await V.runExport({ kind:'coupon', P: PAR, profKey:'clessidra', format:'3mf', mat:'petg', logo: LOGO })).buffer);
+  assert.match(b.get('3D/3dmodel.model'), new RegExp('PETG ' + V.MATERIALS.petg.nozzle + 'C'));
+});
+
 test('il materiale non entra nel design: è una scelta di stampa', async () => {
   /* se finisse nello stato, cambierebbe l'impronta incisa sul fondo e i codici
      di produzione già assegnati non combacerebbero più */

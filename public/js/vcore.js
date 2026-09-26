@@ -1167,17 +1167,21 @@ function runCoupon(job){
   const P = job.P, w = Math.max(.4, P.w);
   const eretta   = boxMesh(COUPON.W, w, COUPON.L);        // alta: strati perpendicolari
   const coricata = boxMesh(COUPON.L, COUPON.W, w);        // bassa: strati paralleli
+  const mat = materialOf(job.mat), firma = `${mat.nome} ${mat.nozzle}C · parete ${w.toFixed(1)} mm`;
   const parts = [
-    { name: `eretta · strati perpendicolari · parete ${w.toFixed(1)} mm`,
+    { name: `eretta · strati perpendicolari · ${firma}`,
       pos: eretta.pos,   ind: eretta.ind,   x: 0, y: -COUPON.gap },
-    { name: `coricata · strati paralleli · parete ${w.toFixed(1)} mm`,
+    { name: `coricata · strati paralleli · ${firma}`,
       pos: coricata.pos, ind: coricata.ind, x: 0, y: COUPON.gap },
   ];
   for (const m of [eretta, coricata]){
     const chk = validateMesh(m.pos, m.ind, m.vol);
     if (!chk.ok) return { ok:false, error:'provino non valido · ' + chk.errors.join(' · ') };
   }
-  const label = 'VORTICE provino di robustezza: fletti entrambe le barrette';
+  /* La temperatura nel nome: il provino si stampa due o tre volte a gradi
+     diversi per trovare la finestra della propria macchina, e senza il numero
+     addosso le barrette si confondono sul tavolo. */
+  const label = `VORTICE provino di robustezza · ${firma} · fletti entrambe le barrette`;
   const matVol = eretta.vol + coricata.vol;
   const summary = { ok:true, check:{ tris:24, errors:[] }, matVol,
     secs: printSeconds(matVol, 1), Ht: COUPON.L, D: COUPON.L, tris:24, pieces:2 };
@@ -1416,24 +1420,32 @@ const MATERIALS = {
     /* la scelta per un contenitore: salda bene, regge acqua e tensioattivi, e
        flette invece di delaminare */
     nozzle:240, nozzleFirst:245, bed:80, bedFirst:80,
-    fanMin:20, fanMax:30, fanOff:5,
+    fanMin:20, fanMax:30, fanOff:5, slowLayer:15,
     nota:'la scelta per sapone e detersivo · flette invece di rompersi',
   },
   pla: {
     nome:'PLA', tipo:'PLA',
-    /* si stampa meglio di tutti ed e' il piu' fragile fra gli strati: questi
-       valori sono il PLA tirato verso la tenacita', non verso l'aspetto —
-       piu' caldo del solito e con la ventola tenuta bassa */
-    nozzle:220, nozzleFirst:225, bed:60, bedFirst:60,
-    fanMin:30, fanMax:60, fanOff:3,
-    nota:'solo per il portaspazzolino · fragile fra gli strati e sensibile all\'acqua',
+    /* PLA TENACE, non PLA bello. Un profilo PLA di serie sta sui 210 gradi con
+       la ventola al 100%: e' tarato per gli spigoli netti e gli sporti puliti,
+       ed e' esattamente la ricetta di un pezzo che si spezza come il vetro. Qui
+       sono ribaltate le due voci che decidono la saldatura fra strati: +20 gradi
+       e ventola tenuta al minimo. In cambio gli sporti vengono meno definiti e
+       qualche filo resta da togliere — un filo si taglia, una delaminazione no.
+       Il vaso non ha sporti oltre i 44°, quindi la ventola non gli serve.
+       230 gradi stanno al limite alto: la maggior parte dei PLA dichiara 190-220,
+       qualcuno 200-230, e il polimero degrada davvero sopra i 240-250. E'
+       voluto, perche' e' proprio li' che la saldatura fra strati cambia; se il
+       filo cola troppo si scende a 225 e si compensa con meno ventola. */
+    nozzle:230, nozzleFirst:235, bed:60, bedFirst:60,
+    fanMin:0, fanMax:25, fanOff:5, slowLayer:20,
+    nota:'tarato per la tenacita\u0301, non per l\'aspetto · 230 \u00b0C e ventola quasi ferma',
   },
   asa: {
     nome:'ASA', tipo:'ABS',
     /* regge alcol e oli essenziali, ma su stampante aperta ritira: ventola
        quasi ferma o delamina da sola */
     nozzle:255, nozzleFirst:255, bed:100, bedFirst:100,
-    fanMin:0, fanMax:15, fanOff:5,
+    fanMin:0, fanMax:15, fanOff:5, slowLayer:20,
     nota:'per alcol e oli essenziali · serve una camera chiusa',
   },
 };
@@ -1526,6 +1538,12 @@ const slic3rConfig = (R = RECIPE) => [
   `min_fan_speed = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMin}`,
   `max_fan_speed = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMax}`,
   `disable_fan_first_layers = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanOff}`,
+  /* Gli strati piccoli — il collo, che e' un anello da Ø28 — si stampano in
+     pochi secondi e senza raffreddamento slumpano. La risposta giusta non e'
+     riaccendere la ventola, che rovinerebbe la saldatura su tutto il pezzo: e'
+     rallentare quegli strati e dargli il tempo di solidificare da soli. */
+  `slowdown_below_layer_time = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).slowLayer}`,
+  'min_print_speed = 15',
   'support_material = 0', `brim_width = ${R.brim ?? 0}`, 'nozzle_diameter = ' + R.nozzle, ''].join('\n');
 const orcaConfig = (R = RECIPE) => JSON.stringify({
   layer_height: String(R.layer), initial_layer_print_height: String(R.first),
@@ -1546,6 +1564,8 @@ const orcaConfig = (R = RECIPE) => JSON.stringify({
   fan_min_speed: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMin)],
   fan_max_speed: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMax)],
   close_fan_the_first_x_layers: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanOff)],
+  slow_down_layer_time: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).slowLayer)],
+  slow_down_min_speed: ['15'],
   enable_support: '0', brim_type: R.brim ? 'outer_only' : 'no_brim',
   brim_width: String(R.brim ?? 0), version: '1.0.0', from: 'VORTICE',
 }, null, 1);

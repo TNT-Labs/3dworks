@@ -254,7 +254,7 @@ sopra la pompa vera.
 | | Tenuta | Note |
 |---|---|---|
 | **PETG** | **la scelta** | Strati che si saldano bene, resiste all'acqua e ai tensioattivi dei saponi. Poco fragile: un pezzo che flette non delamina. |
-| PLA | no per liquidi | Si stampa meglio di tutti ed è il peggiore qui: fragile fra gli strati e soggetto a idrolisi. Va bene per il portaspazzolino. |
+| PLA | **si può, se tarato** | Si stampa meglio di tutti ed è il più fragile fra gli strati — ma la fragilità viene dal *profilo*, non dal materiale: 210 °C con la ventola al 100% è tarato per gli spigoli netti, non per la saldatura. A **230 °C con la ventola al massimo 25%** il PLA diventa un altro materiale in Z. Resta l'idrolisi: con acqua e tensioattivi il pezzo dura mesi, non anni, e sopra i 55-60 °C si ammorbidisce. Vedi «Se hai solo PLA». |
 | ASA / ABS | buona, ma | Regge oli essenziali e alcol, ma su una stampante aperta ritira e delamina: il modo più facile di ottenere un pezzo che trasuda. |
 | PP | ottima chimicamente | Praticamente immune a tutto, praticamente impossibile da far aderire al piatto. Solo se sai già come si fa. |
 
@@ -295,6 +295,60 @@ Attenzione a una cosa: PrusaSlicer e Orca possono tenere il *tuo* profilo
 filamento invece di quello del file. Dopo l'apertura **controlla che i gradi
 siano quelli**. Larghezza di estrusione e generatore di perimetri restano
 dipendenti dalla macchina.
+
+### Se hai solo PLA
+
+Si può, e non è un ripiego rassegnato: la fragilità del PLA stampato viene in
+gran parte dal profilo con cui lo si stampa, non dal polimero. Un profilo PLA di
+serie sta sui **210 °C con la ventola al 100 %** — è tarato per gli spigoli
+netti e gli sporti puliti, cioè per l'aspetto, ed è esattamente la ricetta di un
+pezzo che si spezza di netto. Il vaso non ha sporti oltre i 44°: quella ventola
+non gli serve a niente e gli costa la saldatura fra strati.
+
+Il profilo PLA dello studio è già ribaltato su quelle due voci:
+
+| | PLA di serie | PLA dello studio |
+|---|---|---|
+| ugello | ~210 °C | **230 °C** (235 il primo strato) |
+| ventola | 100 % | **max 25 %**, spenta i primi 5 strati |
+| in cambio | spigoli netti | qualche filo da togliere |
+
+Sui 230 °C serve un'avvertenza onesta: la maggior parte dei PLA dichiara
+190–220, qualcuno 200–230, e 230 sta **al limite alto** — è voluto, perché è
+proprio lì che la saldatura fra strati cambia. Il PLA degrada davvero sopra i
+240–250, quindi 230 è caldo ma non lo rovina. Se il tuo fila troppo o se
+l'estrusore comincia a scricchiolare (heat creep), scendi a 225 o 220 e
+compensa con la ventola ancora più bassa. **Un filo si taglia, una
+delaminazione no.**
+
+Poi il ciclo, con il provino: stampalo, fletti le due barrette. Se la eretta si
+spezza ancora di netto, rifallo a **+10 °C** e confronta. Venti minuti per giro,
+in un'ora hai la finestra della tua macchina. I gradi sono nel nome del file e
+negli oggetti del 3MF, così le barrette non si confondono.
+
+Una cosa che la ricetta fa già per te: gli strati piccoli — il collo, che è un
+anello da Ø28 — si stampano in pochi secondi e senza raffreddamento slumpano. La
+risposta giusta non è riaccendere la ventola, che rovinerebbe la saldatura su
+tutto il resto: è **rallentare quegli strati** (`slowdown_below_layer_time`) e
+dargli il tempo di solidificare da soli. È nel file.
+
+Le altre tre cose che contano, e che lo slicer non può fare:
+
+- **filo asciutto.** Sul PLA l'umidità si presenta come fragilità prima che come
+  bolle. Quattro ore a 50 °C in essiccatore o in forno ventilato.
+- **niente correnti d'aria.** Una finestra aperta dietro la stampante raffredda
+  il pezzo più della ventola. Anche un cartone attorno cambia il risultato.
+- **flusso calibrato.** Un flusso al 95 % lascia fra le passate fessure che
+  nessuna temperatura recupera.
+
+Cosa resta vero anche col PLA tarato: sul **dispenser** l'idrolisi non si
+aggira. Con acqua e sapone il pezzo dura mesi, non anni, e l'acqua calda lo
+ammorbidisce sotto i 60 °C. Usalo, verifica che la pompa avviti, e quando avrai
+del PETG ristampa lo stesso file. Sul **portaspazzolino** il PLA va bene e basta.
+
+Una tentazione da evitare: **non ricuocere il pezzo** (annealing). Aumenta la
+cristallinità e la resistenza al calore, ma ritira l'1-3 % in modo non uniforme
+e il filetto GPI non avvita più.
 
 ### Se il pezzo si rompe come il vetro
 

@@ -368,14 +368,25 @@ function syncMaterial(){
   $('matNote').textContent = m.nome + ' · ' + m.nota;
   $('rcTemp').textContent = `${m.nozzle} °C ugello (${m.nozzleFirst} il primo) · ${m.bed} °C piano`;
   $('rcFan').textContent = `${m.fanMin}–${m.fanMax}% · spenta i primi ${m.fanOff} strati`;
-  /* PLA su un contenitore di liquidi: e' la combinazione che produce il pezzo
-     fragile, e vale la pena dirlo dove si sceglie invece che in fondo a una guida */
-  const rischio = mat === 'pla' && model.piece === 'disp';
-  $('matWarn').hidden = !rischio;
-  if (rischio) $('matWarn').innerHTML = '<b>PLA su un dispenser.</b> È il più fragile fra gli '
-    + 'strati e assorbe umidità: è la combinazione che dà i pezzi che si spezzano come il '
-    + 'vetro, e con sapone o detersivo peggiora nel tempo. Va bene per provare la forma; '
-    + 'per il pezzo che userai davvero, <b>PETG</b>.';
+  /* Il PLA e' quello che la gente ha in casa, quindi non basta dire «usa il
+     PETG»: serve sapere cosa fare col PLA e cosa aspettarsi. */
+  const avviso = mat === 'pla';
+  $('matWarn').hidden = !avviso;
+  if (avviso) $('matWarn').innerHTML =
+    `<b>PLA si può, ma tarato.</b> La ricetta qui sopra è già il PLA tirato verso la tenacità: `
+    + `<b>${m.nozzle} °C</b> invece dei 210 di serie e <b>ventola al massimo ${m.fanMax}%</b>, `
+    + `spenta i primi ${m.fanOff} strati. Sono le due voci che decidono se gli strati fondono o si `
+    + `incollano. In cambio qualche filo da togliere: un filo si taglia, una delaminazione no.<br>`
+    + `<b>Prima del pezzo grosso</b> stampa il provino qui sotto. Se la barretta eretta si spezza `
+    + `ancora di netto, rifallo a +10 °C: venti minuti per giro, e in un'ora hai la finestra della `
+    + `tua macchina. Se il filo è vecchio o ha preso umidità, asciugalo 4 h a 50 °C — sul PLA `
+    + `l'umidità si vede come fragilità prima che come bolle.`
+    + (model.piece === 'disp'
+      ? `<br><b>Sul dispenser, due limiti da sapere.</b> Il PLA con acqua e tensioattivi si degrada `
+        + `lentamente: il pezzo dura mesi, non anni, e l'acqua calda lo ammorbidisce sotto i 60 °C. `
+        + `Va benissimo per usarlo e per verificare che la pompa avviti; quando avrai del PETG, `
+        + `ristampalo con lo stesso file.`
+      : ``);
 }
 $('segMat').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
   mat = b.dataset.m;
@@ -453,7 +464,10 @@ $('dlCoupon').addEventListener('click', () => withBusy($('dlCoupon'), 'Genero il
   if (!r.ok){ console.error(r.error); toast('File non salvato · ' + r.error); return; }
   const three = r.format === '3mf';
   saveBlob(new Blob([r.buffer], { type: three ? 'model/3mf' : 'model/stl' }),
-    `vortice-provino_${VCore.materialOf(mat).nome}_parete${model.tgt.w.toFixed(1)}mm.${three ? '3mf' : 'stl'}`);
+    /* i gradi nel nome: il provino si ripete a temperature diverse e i file
+       devono restare distinguibili */
+    `vortice-provino_${VCore.materialOf(mat).nome}-${VCore.materialOf(mat).nozzle}C`
+    + `_parete${model.tgt.w.toFixed(1)}mm.${three ? '3mf' : 'stl'}`);
   toast(`Provino · parete ${model.tgt.w.toFixed(1)} mm · ≈${Math.round(r.secs/60)} min · fletti entrambe le barrette`);
 }));
 
