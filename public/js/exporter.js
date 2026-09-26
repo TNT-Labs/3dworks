@@ -64,15 +64,17 @@ export function saveBlob(blob, name){
 /**
  * Descrive il lavoro di export a partire da un modello.
  * @param {DesignModel} model
- * @param {'vessel'|'ring'} kind
+ * @param {'vessel'|'ring'|'coupon'} kind
  * @param {{format:string, serial:string|null}} opts
  */
-export function jobFor(model, kind, { format = 'stl', serial = null } = {}){
+export function jobFor(model, kind, { format = 'stl', serial = null, mat = 'petg' } = {}){
   const { piecePar } = globalThis.VCore;
   const logo = { ...model.logo, serial: model.logo.sn ? (serial || model.fingerprint()) : '' };
+  /* `mat` non sta nello stato del design: non cambia la geometria e non deve
+     entrare nell'impronta, quindi viaggia col lavoro di export come il formato */
   if (kind === 'vessel' && model.plateMode)
-    return { kind:'plate', P:{ ...model.tgt }, pieces:['disp', 'tooth'], profKey: model.profKey, format, logo };
-  return { kind, P: piecePar(model.tgt, model.piece), profKey: model.profKey, format, logo };
+    return { kind:'plate', P:{ ...model.tgt }, pieces:['disp', 'tooth'], profKey: model.profKey, format, logo, mat };
+  return { kind, P: piecePar(model.tgt, model.piece), profKey: model.profKey, format, logo, mat };
 }
 
 /** Nome del file scaricato: parlante e ordinabile. */

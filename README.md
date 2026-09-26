@@ -59,7 +59,7 @@ facoltativo e le registrazioni sono aperte. Per configurare copia
 
 ```bash
 npm run dev       # riavvio automatico a ogni modifica
-npm test          # 132 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
+npm test          # 136 test rapidi (spec, geometria, tenuta, ricetta, API, proxy, GDPR, sicurezza)
 npm run test:e2e  # 15 test nel browser vero, lenti
 npm run test:all  # tutti
 ```
@@ -239,6 +239,33 @@ Chi slicia l'STL deve alzarlo a mano: l'STL non trasporta impostazioni.
 
 Ingrossare costa, e la scheda lo dice prima di stampare: su un Aureo da 2,4 a
 6 mm si passa da 183 a 400 g e da 18 a 40 ore, con la capacità da 903 a 729 ml.
+
+**La ricetta porta anche temperatura e ventola: sono quelle che rendono il pezzo
+tenace o di cristallo.** Un pezzo fragile a flessione, con la frattura piatta e
+lucida su una riga di strato, non è sottile: è **mal saldato**. Fra uno strato e
+il successivo il polimero deve rifondere, e se arriva troppo freddo — o se una
+ventola al massimo lo raffredda prima che il cordolo sopra ci si posi — gli
+strati restano incollati. Raddoppiare la parete raddoppia la sezione di una
+saldatura che non c'è.
+
+Quelle due impostazioni nel 3MF non c'erano: la ricetta portava strato,
+perimetri, fondo, cucitura e riempimento, tutto tranne le due che contano. Chi
+apriva il file si ritrovava il proprio profilo filamento di serie — tipicamente
+210 °C con la ventola al 100 %, che è la ricetta esatta di un pezzo di cristallo.
+Ora lo studio fa scegliere il materiale (**PETG** di serie, PLA solo per il
+portaspazzolino, ASA per alcol e oli essenziali) e scrive nel file temperatura
+ugello e piano, primo strato compreso, e i limiti di ventola con i primi strati a
+ventola spenta.
+
+**E c'è un provino che dice dove sta il problema, in venti minuti.** Due
+barrette identiche, dello spessore della parete del design e con la sua stessa
+ricetta, che cambiano una sola cosa: l'orientamento. La coricata ha gli strati
+paralleli alla flessione e misura il materiale; la eretta li ha perpendicolari e
+misura la saldatura. Si piegano fra le dita: se la coricata flette e la eretta si
+spezza di netto è la saldatura (più caldo, meno ventola, filo asciutto); se si
+spezzano entrambe è il materiale; se flettono entrambe la stampa è sana e la
+fragilità va cercata altrove. Venti minuti e 4 g contro le venti ore del pezzo
+intero — e va stampato *prima* di rifare il pezzo grosso.
 
 **La cucitura Z non si incolonna.** Ogni giro di perimetro deve iniziare e finire
 da qualche parte, e lì l'estrusione si interrompe: resta un grumo o un microvuoto.

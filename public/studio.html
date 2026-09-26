@@ -340,16 +340,41 @@
 
   <!-- ====================== ricetta ====================== -->
   <section>
-    <h2 class="sec">Ricetta di stampa · PLA</h2>
+    <h2 class="sec">Ricetta di stampa</h2>
+    <div class="seg mb-12" id="segMat">
+      <button data-m="petg" class="active" type="button">PETG</button>
+      <button data-m="pla" type="button">PLA</button>
+      <button data-m="asa" type="button">ASA</button>
+    </div>
+    <p class="fine mb-12" id="matNote">—</p>
+    <p class="sighint mb-12" id="matWarn" hidden></p>
     <div class="rows">
       <div class="row"><span class="k">Ugello · layer</span><span class="dots"></span><span class="v">0.4 · 0.20 mm</span></div>
+      <div class="row"><span class="k">Temperatura</span><span class="dots"></span><span class="v" id="rcTemp">—</span></div>
+      <div class="row"><span class="k">Ventola</span><span class="dots"></span><span class="v" id="rcFan">—</span></div>
       <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v" id="rcWalls">4 perimetri</span></div>
       <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v" id="rcBase">piena per tutto lo spessore</span></div>
       <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6% · non usato</span></div>
       <div class="row"><span class="k">Cucitura Z</span><span class="dots"></span><span class="v">casuale (antiperdita)</span></div>
       <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
-      <div class="row"><span class="k">Materiale</span><span class="dots"></span><span class="v">PLA prova · PETG bagno</span></div>
     </div>
+    <button id="dlCoupon" class="btn btn--ghost btn--block mt-12" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 17h16"/><path d="M9 7v10"/><path d="M15 7v10"/></svg>
+      <span>Provino di robustezza · 2 barrette (~20 min)</span>
+    </button>
+    <p class="note"><b>Se il pezzo si rompe come il vetro, stampa questo prima di rifare il
+    pezzo grosso.</b> Sono due barrette identiche, dello spessore della tua parete e con
+    la tua stessa ricetta: una in piedi, una coricata. Cambia una cosa sola,
+    l'orientamento — la coricata ha gli strati <i>paralleli</i> alla flessione e misura il
+    materiale, la eretta li ha <i>perpendicolari</i> e misura la <b>saldatura fra strati</b>.
+    Piegale fra le dita:<br>
+    · <b>coricata flette, eretta si spezza di netto</b> con frattura piatta e lucida →
+    è la saldatura. Alza la temperatura, abbassa la ventola, asciuga il filo: nessuna
+    modifica al disegno lo risolve.<br>
+    · <b>si spezzano entrambe di netto</b> → è il materiale: bobina umida o vecchia.<br>
+    · <b>flettono entrambe e sbiancano</b> → la stampa è sana, e la fragilità del pezzo
+    grosso va cercata altrove (spessore, urto, aggressione chimica).<br>
+    Venti minuti e 4 g, contro le venti ore del pezzo intero.</p>
     <p class="note">La tenuta al liquido la fanno i <b>perimetri</b>, non il riempimento:
     sono loro a formare una parete continua. La soglia di tenuta è <b>1,8 mm</b>:
     quattro perimetri stampati alla larghezza di default di PrusaSlicer (0,45 mm,
@@ -387,10 +412,12 @@
       <span>Scarica STL del dispenser</span>
     </button>
     <p class="fine center mt-10">
-      <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano la cucitura Z
-      su «casuale»</b> nello slicer, o il pezzo rischia di perdere<span id="noteStlWalls" hidden></span><br></span>
-      <span id="note3mf" hidden>3MF: geometria <b>e ricetta</b>, cucitura compresa · letta da
-      PrusaSlicer e OrcaSlicer · Cura importa solo la geometria · file ~5× più leggero<br></span>
+      <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano temperatura, ventola
+      e cucitura Z</b> nello slicer — sono quelle a decidere se il pezzo è tenace o di
+      cristallo<span id="noteStlWalls" hidden></span><br></span>
+      <span id="note3mf" hidden>3MF: geometria <b>e ricetta</b> — temperatura, ventola, perimetri e
+      cucitura · letta da PrusaSlicer e OrcaSlicer, che però possono tenere il <i>tuo</i> profilo
+      filamento: controlla che i gradi siano quelli · Cura importa solo la geometria<br></span>
       mesh chiusa e verificata · vaso cavo + collo filettato + firma e codice incisi<br>
       Z-up · base a 0 mm · elaborato nel browser</p>
     <p class="fine center mt-10">

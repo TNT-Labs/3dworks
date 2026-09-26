@@ -272,8 +272,8 @@ I valori che decidono la tenuta, in ordine di importanza.
 | **Generatore di perimetri** *(già nel 3MF)* | **Arachne** | È il parametro che conta più di ogni altro. Adatta la larghezza delle singole passate allo spessore che trova, senza lasciare avanzi. Serviva soprattutto a salvare la vecchia fascia di spalla da 0,90–1,26 mm; ora che la parete è ovunque quella impostata resta comunque la scelta migliore. PrusaSlicer 2.6+ e OrcaSlicer ce l'hanno di serie. |
 | **Larghezza di estrusione** *(già nel 3MF)* | **0,40 mm** | Divide esattamente le pareti «tonde» (2,0 · 2,4 · 2,8 · 3,2 · 4,0 · 4,8 · 5,6 · 6,4 · 7,2 · 8,0): lì i perimetri riempiono senza avanzi. Il cursore si muove di 0,1 mm, quindi le misure intermedie un avanzo ce l'hanno — è esattamente ciò che Arachne assorbe allargando le passate, e il numero di perimetri è arrotondato per eccesso perché l'avanzo resti dentro i cordoli e non diventi riempimento. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
 | **Perimetri** *(già nel 3MF)* | **4 o più, li scrive lo studio** | Quattro per lato coprono 3,2 mm: bastavano finché la parete massima era 3,2. Il numero lo calcola ora l'export (`recipeFor`) su **due** misure del design — la parete, che arriva a 8 mm, e lo spessore massimo locale, perché con la cavità erosa le costole affilate restano piene e il loro nucleo va riempito di cordoli e non di reticolo. Sui preset vengono 6–7 perimetri invece di 4. Il tetto è 16: oltre, il nucleo resta riempimento (è il caso delle costole da venti millimetri, dove riempirle di soli cordoli costerebbe ore) e il materiale dichiarato diventa un limite superiore. Sotto i 4 si perde comunque il perimetro centrale di sicurezza. |
-| **Ventola** | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. |
-| **Temperatura ugello** | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
+| **Ventola** *(ora nel 3MF)* | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. Ed è anche la prima causa di pezzi **fragili**: una passata raffreddata non fonde con quella sopra, resta incollata. |
+| **Temperatura ugello** *(ora nel 3MF)* | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
 | **Fondo pieno** *(già nel 3MF)* | `bottom_solid_min_thickness = 4` | Sostituisce sia i «6 / 6 strati pieni» sia l'aumento del riempimento: il pavimento viene pieno per tutti i suoi 3–4 mm, quindi sotto il liquido non resta reticolo. Costa +9–14 % di materiale. Di conseguenza il pezzo non ha più alcuna zona a riempimento rado e il valore del gyroid è ininfluente. |
 | **Cucitura (Z-seam)** *(nel 3MF: `random`)* | **a becco di flauto** (*scarf joint*) dove c'è; altrimenti vedi la nota qui sotto | La cucitura è la fila di partenze e arresti dei perimetri: è lì che si formano i micro-fori. Sul *scarf joint* non c'è discussione — rampa l'estrusione e il difetto non si forma proprio: se il tuo slicer ce l'ha, usalo. Su cosa fare quando non c'è, questo documento e la ricetta incorporata **non concordano**: vedi «Cucitura: una scelta aperta». |
 | **Strato** | 0,20 mm, primo 0,24 mm | Più fine non aiuta la tenuta e raddoppia il tempo. |
@@ -284,10 +284,39 @@ I valori che decidono la tenuta, in ordine di importanza.
 | **Calibrazione del flusso** | obbligatoria | Un flusso al 95 % lascia fra le passate fessure che nessuna impostazione compensa. Vale la mezz'ora del test a parete singola. |
 
 La ricetta incorporata nei file **3MF** esportati dallo studio (`Slic3r_PE.config`
-e `project_settings.config`) porta già strato, perimetri, strati pieni,
-riempimento e assenza di supporti. Larghezza di estrusione, generatore di
-perimetri, temperature e ventola dipendono dalla stampante e dal filo: vanno
-impostate nel profilo dello slicer.
+e `project_settings.config`) porta strato, perimetri, strati pieni, riempimento,
+assenza di supporti e — da questa revisione — **temperatura, piano e ventola**,
+per il materiale scelto nello studio. Erano le due impostazioni che decidono la
+saldatura fra strati, e prima non viaggiavano affatto: chi apriva il file si
+ritrovava il proprio profilo filamento di serie, tipicamente 210 °C con la
+ventola al 100 %, che è la ricetta esatta di un pezzo di cristallo.
+
+Attenzione a una cosa: PrusaSlicer e Orca possono tenere il *tuo* profilo
+filamento invece di quello del file. Dopo l'apertura **controlla che i gradi
+siano quelli**. Larghezza di estrusione e generatore di perimetri restano
+dipendenti dalla macchina.
+
+### Se il pezzo si rompe come il vetro
+
+Non è lo spessore. Un pezzo fragile a flessione, con la frattura piatta e
+lucida su una riga di strato, è **mal saldato**: fra uno strato e il successivo
+il polimero non ha rifuso. Raddoppiare la parete raddoppia la sezione di una
+saldatura che non c'è, e infatti non serve a niente.
+
+Il **provino di robustezza** dello studio separa le due cause in venti minuti,
+cambiando una sola variabile — l'orientamento. Sono due barrette identiche,
+dello spessore della tua parete e con la tua stessa ricetta: una in piedi
+(strati *perpendicolari* alla flessione: misura la saldatura) e una coricata
+(strati *paralleli*: misura il materiale). Si piegano fra le dita:
+
+| cosa vedi | cosa è | cosa fai |
+|---|---|---|
+| coricata flette, **eretta si spezza di netto**, frattura piatta e lucida | saldatura fra strati | +10–15 °C, ventola giù, asciuga il filo. Nessuna modifica al disegno lo risolve |
+| **si spezzano entrambe** di netto | materiale | bobina umida o vecchia: asciugala 4 h a 55–65 °C, o cambiala |
+| **flettono entrambe** e sbiancano | la stampa è sana | la fragilità del pezzo grosso è altrove: spessore, urto, aggressione chimica |
+
+Venti minuti e 4 g, contro le venti ore del pezzo intero. Va stampato **prima**
+di rifare il pezzo grosso, non dopo.
 
 #### Cucitura: una scelta aperta
 
@@ -332,6 +361,9 @@ PLA.
 
 Una stampa che sembra perfetta può trasudare. Si verifica così, in quest'ordine:
 
+0. **Provino di robustezza** — dal pannello «Ricetta» dello studio. Venti
+   minuti, e dice se la macchina salda gli strati. Se non li salda, tutto il
+   resto è inutile: vedi «Se il pezzo si rompe come il vetro».
 1. **Spool di prova** — dal pannello «Collo» dello studio. Dieci minuti. Ci
    avviti sopra la pompa vera: se avvita stretto, scendi di 0,2–0,3 mm sul Ø T
    nella modalità «Personali» e riprova. Fallo *prima* di stampare il pezzo

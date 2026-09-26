@@ -46,8 +46,8 @@ const PAR = { h:185, r:62, petals:6, twist:60, sharp:.36, w:2.4,
 const LOGO = { on:true, text:'Made by Umberto Molteni', size:7, depth:.8,
                arc:true, rot:0, sn:true, serial:'VRT-ABCDE' };
 
-const build = async (kind = 'vessel', over = {}) => {
-  const r = await V.runExport({ kind, P: { ...PAR, ...over }, profKey:'clessidra', format:'3mf', logo: LOGO });
+const build = async (kind = 'vessel', over = {}, mat = undefined) => {
+  const r = await V.runExport({ kind, P: { ...PAR, ...over }, profKey:'clessidra', format:'3mf', logo: LOGO, mat });
   assert.equal(r.ok, true, r.error);
   return { r, files: unzip(r.buffer) };
 };
@@ -184,6 +184,88 @@ test('il set sul piatto porta la ricetta come il pezzo singolo', async () => {
   assert.equal(r.ok, true, r.error);
   const files = unzip(r.buffer);
   assert.match(files.get('Metadata/Slic3r_PE.config'), /^seam_position = random$/m);
+});
+
+/*
+ * Temperatura e ventola. Sono le due impostazioni che decidono se gli strati si
+ * fondono o si incollano, cioè se il pezzo è tenace o si spezza come il vetro —
+ * e nella ricetta non c'erano: il 3MF portava strato, perimetri, fondo,
+ * cucitura e riempimento, tutto tranne quelle due. Chi apriva il file si
+ * ritrovava il proprio profilo filamento di serie, tipicamente 210 gradi con la
+ * ventola al 100%, che è la ricetta esatta di un pezzo fragile.
+ */
+test('la ricetta porta temperatura e ventola, che decidono la saldatura fra strati', async () => {
+  const { files } = await build();
+  const cfg = files.get('Metadata/Slic3r_PE.config');
+  const m = V.MATERIALS[V.MATERIAL_DEFAULT];
+  assert.match(cfg, new RegExp('^temperature = ' + m.nozzle + '$', 'm'));
+  assert.match(cfg, new RegExp('^first_layer_temperature = ' + m.nozzleFirst + '$', 'm'));
+  assert.match(cfg, new RegExp('^bed_temperature = ' + m.bed + '$', 'm'));
+  assert.match(cfg, new RegExp('^max_fan_speed = ' + m.fanMax + '$', 'm'));
+  assert.match(cfg, new RegExp('^disable_fan_first_layers = ' + m.fanOff + '$', 'm'));
+  assert.match(cfg, new RegExp('^filament_type = ' + m.tipo + '$', 'm'));
+
+  const orca = JSON.parse(files.get('Metadata/project_settings.config'));
+  /* in Orca le voci del filamento sono vettori, una per estrusore */
+  assert.deepEqual(orca.nozzle_temperature, [String(m.nozzle)]);
+  assert.deepEqual(orca.fan_max_speed, [String(m.fanMax)]);
+  assert.deepEqual(orca.close_fan_the_first_x_layers, [String(m.fanOff)]);
+});
+
+test('il materiale scelto cambia la ricetta, e il default è quello che salda', async () => {
+  /* PETG di serie: la guida di stampa del progetto lo indica come la scelta per
+     un contenitore, e il PLA come «fragile fra gli strati» */
+  assert.equal(V.MATERIAL_DEFAULT, 'petg');
+  const visti = new Set();
+  for (const key of Object.keys(V.MATERIALS)){
+    const { files } = await build('vessel', {}, key);
+    const cfg = files.get('Metadata/Slic3r_PE.config');
+    const t = Number(cfg.match(/^temperature = (\d+)$/m)[1]);
+    assert.equal(t, V.MATERIALS[key].nozzle, key);
+    visti.add(t);
+    /* per ogni materiale la ventola deve restare spenta sui primi strati: è lì
+       che un pezzo si stacca o delamina */
+    assert.ok(Number(cfg.match(/^disable_fan_first_layers = (\d+)$/m)[1]) >= 2, key);
+  }
+  assert.equal(visti.size, Object.keys(V.MATERIALS).length, 'tre materiali, tre temperature');
+});
+
+test('il materiale non entra nel design: è una scelta di stampa', async () => {
+  /* se finisse nello stato, cambierebbe l'impronta incisa sul fondo e i codici
+     di produzione già assegnati non combacerebbero più */
+  const { designFingerprint, defaultState, encodeState } = await import('../public/js/design-spec.js');
+  const s = defaultState();
+  const prima = designFingerprint(s);
+  assert.ok(!/mat|petg|pla|asa/i.test(encodeState(s)), 'il link non nomina il materiale');
+  assert.equal(designFingerprint(s), prima);
+});
+
+test('il provino di robustezza è stampabile e cambia una cosa sola', async () => {
+  /* Due barrette identiche, una eretta e una coricata: la differenza è
+     l'orientamento degli strati, quindi fletterle separa la saldatura fra
+     strati dal materiale. Serve quando il pezzo grosso è fragile e non si sa
+     perché: venti minuti invece di venti ore. */
+  const r = await V.runExport({ kind:'coupon', P: PAR, profKey:'clessidra', format:'3mf', mat:'petg', logo: LOGO });
+  assert.equal(r.ok, true, r.error);
+  assert.equal(r.pieces, 2);
+  const files = unzip(r.buffer);
+  const modello = files.get('3D/3dmodel.model');
+  assert.match(modello, /eretta/, 'la barretta eretta è nel file');
+  assert.match(modello, /coricata/, 'e anche quella coricata');
+  /* stessa ricetta del pezzo: è lo stesso guscio in piccolo, o non predice niente */
+  const cfg = files.get('Metadata/Slic3r_PE.config');
+  assert.match(cfg, new RegExp('^temperature = ' + V.MATERIALS.petg.nozzle + '$', 'm'));
+  assert.match(cfg, /^perimeters = \d+$/m);
+  /* col brim: una barretta alta e sottile senza bordino si stacca dal piatto */
+  assert.match(cfg, /^brim_width = [1-9]\d*$/m);
+
+  /* le barrette hanno lo spessore della parete del design */
+  for (const w of [2.0, 6.0]){
+    const q = await V.runExport({ kind:'coupon', P:{ ...PAR, w }, profKey:'clessidra', format:'stl', mat:'petg', logo: LOGO });
+    assert.equal(q.ok, true, q.error);
+    const atteso = 2 * V.COUPON.L * V.COUPON.W * w;
+    assert.ok(Math.abs(q.matVol - atteso) < 1, `parete ${w}: ${q.matVol} invece di ${atteso}`);
+  }
 });
 
 test("l'STL non trasporta la ricetta: è una differenza da dichiarare", async () => {
