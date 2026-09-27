@@ -101,7 +101,7 @@ test('nessun file di progetto: i profili dell\'utente non vengono sostituiti', a
 });
 
 /* Solo chiavi che gli slicer ammettono per oggetto (PrintObjectConfig e
-   PrintRegionConfig, verificate sui sorgenti di PrusaSlicer 2.7 e Orca): una
+   PrintRegionConfig, verificate sui sorgenti di PrusaSlicer 2.7 e 2.9.4 e di Orca): una
    chiave globale in un oggetto verrebbe ignorata in silenzio. */
 const PRUSA_PER_OGGETTO = new Set(['name', 'layer_height', 'perimeters', 'top_solid_layers',
   'bottom_solid_layers', 'bottom_solid_min_thickness', 'fill_density', 'fill_pattern',

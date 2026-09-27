@@ -298,6 +298,21 @@ oggetto, e l'unico modo di imporli è il file di progetto — che PrusaSlicer e 
 caricano **sopra i profili di default**, sostituendo anche il profilo della tua
 stampante con uno generico (piano 200 × 200, G-code iniziale di due righe).
 
+#### Dove si impostano in PrusaSlicer 2.9
+
+Le impostazioni per oggetto sono verificate anche sul sorgente della 2.9.4:
+chiavi, valori e lettura del file sono gli stessi della 2.7 su cui il 3MF è
+stato slicciato. Le tre cose da mettere a mano (modalità **Esperto**):
+
+| cosa | dove |
+|---|---|
+| temperatura | Impostazioni filamento → Filamento → Temperatura: primo strato e altri strati |
+| ventola | Impostazioni filamento → Raffreddamento: velocità minima e massima, «mantieni la ventola sempre accesa» |
+| spostamenti | Impostazioni di stampa → Strati e perimetri → Avanzate: «evita di attraversare i perimetri» · Impostazioni stampante → Estrusore 1 → Retrazione: «pulisci durante la retrazione» (wipe) attivo, «sollevamento Z» a 0 |
+
+Dopo l'apertura del 3MF, sotto il pezzo nella lista oggetti compare la voce
+delle impostazioni: lì si vedono perimetri, fondo pieno e cucitura del design.
+
 #### Il 3MF che non veniva letto
 
 Fino a questa revisione il 3MF portava proprio quel file di progetto, scritto
