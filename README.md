@@ -240,22 +240,18 @@ Chi slicia l'STL deve alzarlo a mano: l'STL non trasporta impostazioni.
 Ingrossare costa, e la scheda lo dice prima di stampare: su un Aureo da 2,4 a
 6 mm si passa da 183 a 400 g e da 18 a 40 ore, con la capacità da 903 a 729 ml.
 
-**La ricetta porta anche temperatura e ventola: sono quelle che rendono il pezzo
-tenace o di cristallo.** Un pezzo fragile a flessione, con la frattura piatta e
-lucida su una riga di strato, non è sottile: è **mal saldato**. Fra uno strato e
-il successivo il polimero deve rifondere, e se arriva troppo freddo — o se una
-ventola al massimo lo raffredda prima che il cordolo sopra ci si posi — gli
-strati restano incollati. Raddoppiare la parete raddoppia la sezione di una
-saldatura che non c'è.
+**Temperatura e ventola rendono il pezzo tenace o di cristallo.** Un pezzo
+fragile a flessione, con la frattura piatta e lucida su una riga di strato, non è
+sottile: è **mal saldato**. Fra uno strato e il successivo il polimero deve
+rifondere, e se arriva troppo freddo — o se una ventola al massimo lo raffredda
+prima che il cordolo sopra ci si posi — gli strati restano incollati.
+Raddoppiare la parete raddoppia la sezione di una saldatura che non c'è.
 
-Quelle due impostazioni nel 3MF non c'erano: la ricetta portava strato,
-perimetri, fondo, cucitura e riempimento, tutto tranne le due che contano. Chi
-apriva il file si ritrovava il proprio profilo filamento di serie — tipicamente
-210 °C con la ventola al 100 %, che è la ricetta esatta di un pezzo di cristallo.
-Ora lo studio fa scegliere il materiale (**PETG** di serie, PLA solo per il
-portaspazzolino, ASA per alcol e oli essenziali) e scrive nel file temperatura
-ugello e piano, primo strato compreso, e i limiti di ventola con i primi strati a
-ventola spenta.
+Lo studio fa scegliere il materiale (**PETG** di serie, PLA solo per il
+portaspazzolino, ASA per alcol e oli essenziali) e mostra temperatura ugello e
+piano e i limiti di ventola **da impostare nel profilo filamento**: sono
+impostazioni globali che il 3MF non può imporre senza sostituire i profili
+dell'utente (vedi sotto, «Il 3MF porta impostazioni per oggetto»).
 
 **E c'è un provino che dice dove sta il problema, in venti minuti.** Due
 barrette identiche, dello spessore della parete del design e con la sua stessa
@@ -267,16 +263,28 @@ spezzano entrambe è il materiale; se flettono entrambe la stampa è sana e la
 fragilità va cercata altrove. Venti minuti e 4 g contro le venti ore del pezzo
 intero — e va stampato *prima* di rifare il pezzo grosso.
 
-**La cucitura Z non si incolonna.** Ogni giro di perimetro deve iniziare e finire
-da qualche parte, e lì l'estrusione si interrompe: resta un grumo o un microvuoto.
-Il default di PrusaSlicer e di Orca è `aligned`, che impila quei punti sulla stessa
-verticale per farli sembrare una riga sola — ordinato a vedersi, ma in un
-contenitore diventa un canale continuo dal fondo al collo. La ricetta incorporata
-nel 3MF impone `seam_position = random` e le cuciture dei perimetri interni
-sfalsate: i difetti restano isolati e lo strato sopra copre quello sotto.
+**Cucitura allineata.** La ricetta metteva la cucitura `random`, per non
+impilare i punti di partenza in un canale. Un pezzo con parete da 5 mm è uscito
+coperto di peli: con 12–14 giri per contorno ogni partenza sparsa è una goccia e
+un filo. Ora è `aligned` (finisce nelle valli fra le costole) con le cuciture
+interne sfalsate, che bastano a impedire il canale. Gli spostamenti — dentro la
+parete, wipe, niente z-hop — sono globali e lo studio li mostra da impostare.
 
-L'STL non trasporta impostazioni, quindi chi lo esporta deve mettere la cucitura
-su «casuale» a mano — lo Studio lo dice sotto il pulsante quando è selezionato.
+**Il 3MF porta impostazioni per oggetto, non un file di progetto.** Fino a poco
+fa il 3MF conteneva `Slic3r_PE.config` e `project_settings.config`. Slicciato
+con PrusaSlicer 2.7, il primo risultava **ignorato per intero** (righe senza il
+`; ` che PrusaSlicer si aspetta): il pezzo usciva con 3 perimetri e riempimento
+al 20 % dentro la parete, a temperatura e ventola di serie. Scritto bene sarebbe
+stato peggio, perché PrusaSlicer e Orca caricano un file di progetto sopra i
+profili di default e sostituiscono anche quello della stampante. Ora la ricetta
+del pezzo viaggia in `Slic3r_PE_model.config` e `model_settings.config` come
+impostazioni dell'oggetto — perimetri, strati pieni, fondo, riempimento,
+cucitura, generatore, larghezze — che si sommano ai profili dell'utente. Nel set
+sul piatto ogni pezzo porta i suoi perimetri. Verificato slicciando: 12
+perimetri, nessun riempimento rado nella parete, profilo stampante intatto.
+
+L'STL non trasporta impostazioni: lo Studio ricorda sotto il pulsante cosa
+impostare a mano.
 
 **Il fondo è pieno per tutto il suo spessore.** Il fondo è alto 3–4 mm di geometria
 piena, ma con i soli strati solidi di ricetta ne venivano stampati pieni appena
@@ -335,7 +343,7 @@ slicer chiude la parete o ci lascia una fessura.
 
 **[STAMPA.md](STAMPA.md)** raccoglie le misure caso per caso, le impostazioni
 dello slicer in ordine di importanza, il protocollo di prova con acqua in
-pressione — e una nota su cosa resta una scelta aperta, la cucitura Z.
+pressione — e cosa fare se il pezzo esce peloso o con una fessura.
 
 ### Sicurezza
 
