@@ -359,6 +359,9 @@
       <div class="row"><span class="k">Spostamenti</span><span class="dots"></span><span class="v">dentro la parete · wipe · no z-hop</span></div>
       <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
     </div>
+    <p class="fine mt-10"><b>Temperatura, ventola e spostamenti vanno impostati a mano</b> nel
+    profilo filamento e stampante: sono impostazioni globali, e nessuno slicer le accetta dal
+    file senza sostituire i tuoi profili. Tutte le altre righe viaggiano nel 3MF.</p>
     <button id="dlCoupon" class="btn btn--ghost btn--block mt-12" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 17h16"/><path d="M9 7v10"/><path d="M15 7v10"/></svg>
       <span>Provino di robustezza · 2 barrette (~20 min)</span>
@@ -395,9 +398,9 @@
     vede. Sparsa a caso, sul PETG, ogni partenza diventa una goccia e un filo, e con una
     parete spessa la superficie esce coperta di peli. Un canale di perdita non si forma:
     le cuciture dei perimetri interni sono sfalsate, e una fessura dovrebbe bucare tutti i
-    giri nello stesso punto. Gli spostamenti a vuoto restano <b>dentro la parete</b>,
-    l'ugello si pulisce prima di staccarsi e non si solleva: sono i tre accorgimenti che
-    tolgono i fili dalla faccia esterna. Se restano fili, il filo è umido — asciugalo
+    giri nello stesso punto. Gli spostamenti a vuoto vanno tenuti <b>dentro la parete</b>
+    («evita di attraversare i perimetri»), con il <i>wipe</i> e senza z-hop: sono i tre
+    accorgimenti che tolgono i fili dalla faccia esterna, e si impostano nello slicer. Se restano fili, il filo è umido — asciugalo
     4–6 h a 65 °C: il PETG in 20–40 ore di stampa all'aria ne assorbe abbastanza da
     friggere nell'ugello.<br><br>
     <b>Fondo.</b> È pieno per tutto il suo spessore, non solo nei primi strati: sotto
@@ -420,9 +423,10 @@
       <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano temperatura, ventola,
       cucitura Z allineata e «evita di attraversare i perimetri»</b> nello slicer — sono quelle a decidere se il pezzo è tenace o di
       cristallo<span id="noteStlWalls" hidden></span><br></span>
-      <span id="note3mf" hidden>3MF: geometria <b>e ricetta</b> — temperatura, ventola, perimetri e
-      cucitura · letta da PrusaSlicer e OrcaSlicer, che però possono tenere il <i>tuo</i> profilo
-      filamento: controlla che i gradi siano quelli · Cura importa solo la geometria<br></span>
+      <span id="note3mf" hidden>3MF: geometria <b>e ricetta del pezzo</b> — perimetri, fondo pieno,
+      cucitura, riempimento — come impostazioni dell'oggetto in PrusaSlicer, OrcaSlicer e Bambu
+      Studio, senza toccare i tuoi profili. <b>Temperatura, ventola e spostamenti impostali tu</b>
+      nel profilo filamento: il file non può portarli · Cura importa solo la geometria<br></span>
       mesh chiusa e verificata · vaso cavo + collo filettato + firma e codice incisi<br>
       Z-up · base a 0 mm · elaborato nel browser</p>
     <p class="fine center mt-10">

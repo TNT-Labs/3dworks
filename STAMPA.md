@@ -254,7 +254,7 @@ sopra la pompa vera.
 | | Tenuta | Note |
 |---|---|---|
 | **PETG** | **la scelta** | Strati che si saldano bene, resiste all'acqua e ai tensioattivi dei saponi. Poco fragile: un pezzo che flette non delamina. |
-| PLA | no per liquidi | Si stampa meglio di tutti ed è il peggiore qui: fragile fra gli strati e soggetto a idrolisi. Va bene per il portaspazzolino. Nel 3MF: **225 °C, ventola 15–60 %** — con la parete spessa uno strato del corpo dura 2–3 minuti e lo slicer resta alla ventola minima per tutto il corpo, quindi è il minimo a decidere la saldatura. |
+| PLA | no per liquidi | Si stampa meglio di tutti ed è il peggiore qui: fragile fra gli strati e soggetto a idrolisi. Va bene per il portaspazzolino. Da impostare: **225 °C, ventola 15–60 %** — con la parete spessa uno strato del corpo dura 2–3 minuti e lo slicer resta alla ventola minima per tutto il corpo, quindi è il minimo a decidere la saldatura. |
 | ASA / ABS | buona, ma | Regge oli essenziali e alcol, ma su una stampante aperta ritira e delamina: il modo più facile di ottenere un pezzo che trasuda. |
 | PP | ottima chimicamente | Praticamente immune a tutto, praticamente impossibile da far aderire al piatto. Solo se sai già come si fa. |
 
@@ -272,11 +272,11 @@ I valori che decidono la tenuta, in ordine di importanza.
 | **Generatore di perimetri** *(già nel 3MF)* | **Arachne** | È il parametro che conta più di ogni altro. Adatta la larghezza delle singole passate allo spessore che trova, senza lasciare avanzi. Serviva soprattutto a salvare la vecchia fascia di spalla da 0,90–1,26 mm; ora che la parete è ovunque quella impostata resta comunque la scelta migliore. PrusaSlicer 2.6+ e OrcaSlicer ce l'hanno di serie. |
 | **Larghezza di estrusione** *(già nel 3MF)* | **0,40 mm** | Divide esattamente le pareti «tonde» (2,0 · 2,4 · 2,8 · 3,2 · 4,0 · 4,8 · 5,6 · 6,4 · 7,2 · 8,0): lì i perimetri riempiono senza avanzi. Il cursore si muove di 0,1 mm, quindi le misure intermedie un avanzo ce l'hanno — è esattamente ciò che Arachne assorbe allargando le passate, e il numero di perimetri è arrotondato per eccesso perché l'avanzo resti dentro i cordoli e non diventi riempimento. A 0,45 — il default di PrusaSlicer per un ugello da 0,4 — una parete da 2,4 mm lascia 0,15 mm di fessura che corre per tutta l'altezza del pezzo. |
 | **Perimetri** *(già nel 3MF)* | **4 o più, li scrive lo studio** | Quattro per lato coprono 3,2 mm: bastavano finché la parete massima era 3,2. Il numero lo calcola ora l'export (`recipeFor`) su **due** misure del design — la parete, che arriva a 8 mm, e lo spessore massimo locale, perché con la cavità erosa le costole affilate restano piene e il loro nucleo va riempito di cordoli e non di reticolo. Sui preset vengono 6–7 perimetri invece di 4. Il tetto è 16: oltre, il nucleo resta riempimento (è il caso delle costole da venti millimetri, dove riempirle di soli cordoli costerebbe ore) e il materiale dichiarato diventa un limite superiore. Sotto i 4 si perde comunque il perimetro centrale di sicurezza. |
-| **Ventola** *(ora nel 3MF)* | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. Ed è anche la prima causa di pezzi **fragili**: una passata raffreddata non fonde con quella sopra, resta incollata. |
-| **Temperatura ugello** *(ora nel 3MF)* | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
+| **Ventola** *(da impostare: profilo filamento)* | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. Ed è anche la prima causa di pezzi **fragili**: una passata raffreddata non fonde con quella sopra, resta incollata. |
+| **Temperatura ugello** *(da impostare: profilo filamento)* | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
 | **Fondo pieno** *(già nel 3MF)* | `bottom_solid_min_thickness = 4` | Sostituisce sia i «6 / 6 strati pieni» sia l'aumento del riempimento: il pavimento viene pieno per tutti i suoi 3–4 mm, quindi sotto il liquido non resta reticolo. Costa +9–14 % di materiale. Di conseguenza il pezzo non ha più alcuna zona a riempimento rado e il valore del gyroid è ininfluente. |
 | **Cucitura (Z-seam)** *(nel 3MF: `aligned`)* | **allineata**, o *scarf joint* dove c'è | La cucitura è la fila di partenze e arresti dei perimetri. Allineata, lo slicer la porta negli spigoli concavi — le valli fra le costole. Casuale era la scelta precedente ed è stata smentita da un pezzo stampato: vedi «Cucitura: la prova della stampa». Il *scarf joint*, se lo slicer ce l'ha, rampa l'estrusione e il difetto non si forma proprio. |
-| **Spostamenti** *(ora nel 3MF)* | **dentro la parete**, wipe, **niente z-hop** | Un ugello che cola e attraversa la faccia esterna ci lascia un filo ogni volta. `avoid_crossing_perimeters` (Orca: *evita di attraversare le pareti*) tiene gli spostamenti dentro il pezzo, `wipe` pulisce l'ugello sulla passata appena fatta, e senza z-hop il PETG non tira un filo a ogni salto. La **lunghezza** di ritrazione resta del tuo profilo stampante: dipende dall'estrusore. |
+| **Spostamenti** *(da impostare: profilo stampa e stampante)* | **dentro la parete**, wipe, **niente z-hop** | Un ugello che cola e attraversa la faccia esterna ci lascia un filo ogni volta. `avoid_crossing_perimeters` (Orca: *evita di attraversare le pareti*) tiene gli spostamenti dentro il pezzo, `wipe` pulisce l'ugello sulla passata appena fatta, e senza z-hop il PETG non tira un filo a ogni salto. La **lunghezza** di ritrazione resta del tuo profilo stampante: dipende dall'estrusore. |
 | **Strato** | 0,20 mm, primo 0,24 mm | Più fine non aiuta la tenuta e raddoppia il tempo. |
 | **Compensazione zampa d'elefante** | 0,15 mm | Senza, la base svasa e il codice inciso si chiude. |
 | **Stiratura** *(ironing)* | attiva sulle superfici superiori | Le uniche superfici superiori sono la battuta del collo e il pavimento della cavità: lisciarle costa pochi secondi e la guarnizione della pompa appoggia su una superficie piana invece che su righe. |
@@ -284,18 +284,39 @@ I valori che decidono la tenuta, in ordine di importanza.
 | **Brim** | 0, ma **8 mm sui pezzi alti e stretti** | Un tornado da 235 mm su una base da Ø60 si stacca. |
 | **Calibrazione del flusso** | obbligatoria | Un flusso al 95 % lascia fra le passate fessure che nessuna impostazione compensa. Vale la mezz'ora del test a parete singola. |
 
-La ricetta incorporata nei file **3MF** esportati dallo studio (`Slic3r_PE.config`
-e `project_settings.config`) porta strato, perimetri, strati pieni, riempimento,
-assenza di supporti e — da questa revisione — **temperatura, piano e ventola**,
-per il materiale scelto nello studio. Erano le due impostazioni che decidono la
-saldatura fra strati, e prima non viaggiavano affatto: chi apriva il file si
-ritrovava il proprio profilo filamento di serie, tipicamente 210 °C con la
-ventola al 100 %, che è la ricetta esatta di un pezzo di cristallo.
+Il **3MF** esportato dallo studio porta la ricetta del pezzo come **impostazioni
+dell'oggetto** (`Slic3r_PE_model.config` per PrusaSlicer, `model_settings.config`
+per Orca e Bambu Studio): strato, perimetri, strati pieni, fondo pieno,
+riempimento, cucitura, generatore, larghezze, niente supporti — e il brim sul
+provino. Aprendo il file le vedi nella lista oggetti, sotto il pezzo, e si
+sommano ai tuoi profili senza toccarli.
 
-Attenzione a una cosa: PrusaSlicer e Orca possono tenere il *tuo* profilo
-filamento invece di quello del file. Dopo l'apertura **controlla che i gradi
-siano quelli**. Larghezza di estrusione e generatore di perimetri restano
-dipendenti dalla macchina.
+**Temperatura, ventola e spostamenti non viaggiano nel file, e vanno impostati a
+mano** nel profilo filamento e stampante: lo studio li mostra nel pannello
+«Ricetta di stampa». Non è una dimenticanza. Nessuno slicer li accetta per
+oggetto, e l'unico modo di imporli è il file di progetto — che PrusaSlicer e Orca
+caricano **sopra i profili di default**, sostituendo anche il profilo della tua
+stampante con uno generico (piano 200 × 200, G-code iniziale di due righe).
+
+#### Il 3MF che non veniva letto
+
+Fino a questa revisione il 3MF portava proprio quel file di progetto, scritto
+nel formato sbagliato: PrusaSlicer legge `Slic3r_PE.config` come la coda di un
+G-code, solo le righe `; chiave = valore`, e le nostre non avevano il `; `.
+Veniva scartato per intero, senza un avviso. Verificato slicciando lo stesso
+file con PrusaSlicer 2.7:
+
+| | 3MF di prima | 3MF di adesso |
+|---|---|---|
+| perimetri | 3 (profilo di serie) | 12 (parete da 5 mm) |
+| riempimento dentro la parete | 20 %, 2258 tratti | **nessuno** |
+| materiale nel G-code | 194 cm³ | 330 cm³ |
+| profilo della stampante | intatto | intatto |
+
+Un dispenser con parete da 5 mm usciva quindi come **1,2 mm di cordoli per lato
+e reticolo al 20 % in mezzo**, a 200–210 °C con la ventola al 100 %: un guscio
+vuoto e mal saldato, che si apre su una riga di strato a stringerlo in mano. È
+il pezzo della foto.
 
 ### Se il pezzo si rompe come il vetro
 
@@ -338,9 +359,9 @@ tabella). La questione è chiusa dalla stampa, non dal ragionamento.
 
 | cosa vedi | cosa è | cosa fai |
 |---|---|---|
-| **peli sottili su tutta la superficie**, ragnatele dentro il collo | fili: ugello che cola durante gli spostamenti | usa il **3MF** e controlla che cucitura, «evita di attraversare le pareti» e wipe siano quelli della ricetta. Se restano, **il filo è umido**: asciugalo 4–6 h a 65 °C. Su 20–40 ore di stampa il PETG all'aria ne assorbe abbastanza da sfrigolare nell'ugello — se lo senti scoppiettare, è quello |
+| **peli sottili su tutta la superficie**, ragnatele dentro il collo | fili: ugello che cola durante gli spostamenti | usa il **3MF** e imposta nello slicer «evita di attraversare i perimetri», wipe e niente z-hop (sono globali, il file non li porta). Se restano, **il filo è umido**: asciugalo 4–6 h a 65 °C. Su 20–40 ore di stampa il PETG all'aria ne assorbe abbastanza da sfrigolare nell'ugello — se lo senti scoppiettare, è quello |
 | **superficie spugnosa e opaca**, bollicine | filo umido | asciugalo; stampa dall'essiccatore se il pezzo supera le 10 ore |
-| **si apre su una riga di strato a stringerlo**, in PLA | saldatura fra strati: filo umido o vecchio, oppure lo slicer ha usato il tuo profilo PLA (≈210 °C, ventola 100 %) invece della ricetta | **piega un pezzo di filo della bobina**: se si spezza invece di piegarsi, la bobina è umida o degradata — asciugala 4–6 h a 50 °C o cambiala. Poi usa il 3MF e verifica **225 °C e ventola 15–60 %** nello slicer. Il provino di robustezza lo conferma in venti minuti. Per un dispenser vero, PETG |
+| **si apre su una riga di strato a stringerlo**, in PLA | saldatura fra strati: filo umido o vecchio, oppure temperatura e ventola sono quelle del tuo profilo PLA (≈210 °C, ventola 100 %) — il 3MF non le porta | **piega un pezzo di filo della bobina**: se si spezza invece di piegarsi, la bobina è umida o degradata — asciugala 4–6 h a 50 °C o cambiala. Poi usa il 3MF e imposta **225 °C e ventola 15–60 %** nel profilo filamento. Il provino di robustezza lo conferma in venti minuti. Per un dispenser vero, PETG |
 | **fessura orizzontale** alta qualche strato su un tratto della circonferenza, con dentro materiale | estrusione interrotta per qualche strato: filo aggrovigliato o frenato sulla bobina, ingranaggio che ha mangiato il filo, ugello parzialmente intasato | non è la geometria — la faccia esterna dei preset non supera i 30° in nessun punto del corpo. Controlla che la bobina giri libera, pulisci l'ingranaggio dell'estrusore, e **non alzare la ritrazione** per combattere i fili: con 12–14 giri per contorno ogni ritrazione in più è un'occasione per mangiare il filo |
 | **frattura piatta e lucida** su una riga di strato | saldatura fra strati | vedi «Se il pezzo si rompe come il vetro» |
 

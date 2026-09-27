@@ -376,9 +376,9 @@ function syncMaterial(){
     + 'strati e assorbe umidità: è la combinazione che dà i pezzi che si spezzano come il '
     + 'vetro, e con sapone o detersivo peggiora nel tempo. Va bene per provare la forma; '
     + 'per il pezzo che userai davvero, <b>PETG</b>. Se lo stampi comunque in PLA: '
-    + 'usa il <b>3MF</b>, controlla che lo slicer non abbia rimesso il tuo profilo '
-    + '(210 °C e ventola al 100% danno strati incollati, non fusi), asciuga il filo e '
-    + 'stampa prima il provino qui sotto.';
+    + `usa il <b>3MF</b>, imposta nel profilo filamento <b>${m.nozzle} °C e ventola `
+    + `${m.fanMin}–${m.fanMax}%</b> (quelli di serie, ~210 °C e ventola al 100%, danno `
+    + 'strati incollati, non fusi), asciuga il filo e stampa prima il provino qui sotto.';
 }
 $('segMat').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
   mat = b.dataset.m;

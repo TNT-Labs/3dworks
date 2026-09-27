@@ -1256,7 +1256,9 @@ function runPlate(job){
     if (!m.check.ok) errs.push(pieceOf(it.P).name + ': ' + m.check.errors.join(' · '));
     tris += m.check.tris; matVol += matVolOf(m.st); secs += printSeconds(matVolOf(m.st), rippleQ(m.pos, m.ctx)); Ht = Math.max(Ht, m.ctx.Ht);
     const code = job.logo && job.logo.serial ? job.logo.serial + ' · ' : '';
-    parts.push({ name: code + pieceOf(it.P).name, pos:m.pos, ind:m.ind, x:it.x, y:it.y });
+    /* ogni pezzo porta la sua ricetta: le impostazioni sono per oggetto */
+    parts.push({ name: code + pieceOf(it.P).name, pos:m.pos, ind:m.ind, x:it.x, y:it.y,
+                 recipe: recipeFor(it.P, m.st.thickMax, job.mat) });
     recParts.push([it.P, m.st.thickMax]);
   }
   if (errs.length) return { ok:false, error:'mesh non valida · ' + errs.join(' | ') };
@@ -1272,8 +1274,8 @@ function runPlate(job){
 /* ================= 3MF =================
    ZIP (deflate-raw quando il browser lo offre, altrimenti non compresso) con:
    · 3D/3dmodel.model  — geometria standard, multi-oggetto, letta da qualsiasi slicer
-   · Metadata/Slic3r_PE.config      — ricetta per PrusaSlicer
-   · Metadata/project_settings.config — ricetta per OrcaSlicer / famiglia Bambu
+   · Metadata/Slic3r_PE_model.config — impostazioni per oggetto, PrusaSlicer
+   · Metadata/model_settings.config  — impostazioni per oggetto, Orca / Bambu Studio
    Cura importa la sola geometria: le impostazioni vanno messe a mano. */
 const CRC_T = (() => {
   const t = new Uint32Array(256);
@@ -1374,12 +1376,14 @@ function model3MF(parts, title){
  * costole — dove non si vede.
  *
  * `travel` sono gli spostamenti a vuoto, l'altra fonte dei peli: un ugello che
- * cola e attraversa la faccia esterna ci lascia un filo ogni volta. Gli
- * spostamenti restano dentro la parete (`avoid_crossing_perimeters`), l'ugello
- * si pulisce sulla passata appena fatta prima di staccarsi (`wipe`) e non si
- * solleva: sul PETG lo z-hop tira un filo a ogni salto. La lunghezza di
- * ritrazione resta del profilo stampante: dipende dall'estrusore (diretto o
- * Bowden) e un valore sbagliato fa piu' danni di quello di serie.
+ * cola e attraversa la faccia esterna ci lascia un filo ogni volta. Vanno
+ * tenuti dentro la parete (`avoid_crossing_perimeters`), con l'ugello che si
+ * pulisce prima di staccarsi (`wipe`) e senza z-hop, che sul PETG tira un filo
+ * a ogni salto. Sono impostazioni globali della stampa e della stampante, che
+ * il 3MF non puo' imporre senza portarsi via il profilo della stampante (vedi
+ * sotto, «Come la ricetta arriva allo slicer»): lo studio le mostra da
+ * impostare. La lunghezza di ritrazione non la tocchiamo nemmeno a parole:
+ * dipende dall'estrusore, diretto o Bowden.
  */
 /*
  * `floorSolid` merita anch'essa una spiegazione. Il fondo e' alto 3-4 mm di
@@ -1407,10 +1411,11 @@ function model3MF(parts, title){
  * parete si raddoppia la sezione di una saldatura che non c'e'.
  *
  * Le impostazioni che decidono quella saldatura sono la temperatura e la
- * ventola. Nel 3MF non c'erano: la ricetta portava strato, perimetri, fondo,
- * cucitura e riempimento — tutto tranne le due che contano. Chi apriva il file
- * si ritrovava il proprio profilo PLA di serie, tipicamente 210 gradi con la
- * ventola al 100%, che e' la ricetta esatta di un pezzo di cristallo.
+ * ventola, e sono impostazioni del filamento: il 3MF non puo' imporle senza
+ * sostituire i profili dell'utente (vedi «Come la ricetta arriva allo
+ * slicer»). Lo studio le mostra da impostare; senza, resta il profilo di
+ * serie — tipicamente 210 gradi con la ventola al 100%, che e' la ricetta
+ * esatta di un pezzo di cristallo.
  *
  * Qui ci sono tre materiali, con i valori della guida di stampa del progetto.
  * Non sono ottimizzati per l'aspetto: sono scelti per la tenacita' fra strati,
@@ -1509,79 +1514,107 @@ function recipeForAll(list, mat = MATERIAL_DEFAULT){
   }
   return r;
 }
-const slic3rConfig = (R = RECIPE) => [
-  '; ricetta VORTICE — tenuta al liquido affidata ai perimetri',
-  `layer_height = ${R.layer}`, `first_layer_height = ${R.first}`,
-  `perimeters = ${R.walls}`, `top_solid_layers = ${R.top}`, `bottom_solid_layers = ${R.bottom}`,
-  `fill_density = ${R.infill}%`, `fill_pattern = ${R.pattern}`,
-  '; cucitura nelle valli fra le costole: una sparsa sul PETG è una goccia e un filo per strato',
-  `seam_position = ${R.seam}`,
-  '; e le cuciture dei perimetri interni non cadono sopra quella esterna: nessun canale',
-  'staggered_inner_seams = 1',
-  '; spostamenti dentro la parete, ugello pulito e senza salti: niente fili sulla faccia esterna',
-  `avoid_crossing_perimeters = ${R.travel.avoidCrossing ? 1 : 0}`,
-  `wipe = ${R.travel.wipe ? 1 : 0}`,
-  `retract_layer_change = ${R.travel.retractLayer ? 1 : 0}`,
-  `retract_lift = ${R.travel.zHop}`,
-  '; fondo pieno per tutto lo spessore: sotto il liquido non resta riempimento rado',
-  `bottom_solid_min_thickness = ${R.floorSolid}`,
-  '; larghezza di estrusione che divide esattamente le pareti proposte',
-  `extrusion_width = ${R.width}`,
-  `perimeter_extrusion_width = ${R.width}`,
-  `external_perimeter_extrusion_width = ${R.width}`,
-  '; adatta la larghezza delle singole passate allo spessore che trova',
-  `perimeter_generator = ${R.generator}`,
-  /* Le due righe che decidono se il pezzo e' tenace o di cristallo, e che
-     prima non c'erano: senza, lo slicer usa il profilo del filamento che
-     l'utente ha in memoria — tipicamente 210 gradi e ventola al 100%, cioe'
-     strati incollati invece di fusi. */
-  '; temperatura: piu' + String.fromCharCode(39) + ' caldo salda meglio, ed e' + String.fromCharCode(39) + ' la saldatura che tiene il pezzo',
-  `filament_type = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).tipo}`,
-  `temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzle}`,
-  `first_layer_temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzleFirst}`,
-  `bed_temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).bed}`,
-  `first_layer_bed_temperature = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).bedFirst}`,
-  '; ventola: raffredda il cordolo prima che quello sopra ci si saldi',
-  'cooling = 1', 'fan_always_on = 1',
-  `min_fan_speed = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMin}`,
-  `max_fan_speed = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMax}`,
-  `disable_fan_first_layers = ${(R.mat || MATERIALS[MATERIAL_DEFAULT]).fanOff}`,
-  'support_material = 0', `brim_width = ${R.brim ?? 0}`, 'nozzle_diameter = ' + R.nozzle, ''].join('\n');
-const orcaConfig = (R = RECIPE) => JSON.stringify({
-  layer_height: String(R.layer), initial_layer_print_height: String(R.first),
-  wall_loops: String(R.walls), top_shell_layers: String(R.top), bottom_shell_layers: String(R.bottom),
-  sparse_infill_density: R.infill + '%', sparse_infill_pattern: R.pattern,
-  seam_position: R.seam,
-  staggered_inner_seams: '1',
-  reduce_crossing_wall: R.travel.avoidCrossing ? '1' : '0',
-  /* ritrazione e z-hop in Orca sono per estrusore, quindi vettori */
-  wipe: [R.travel.wipe ? '1' : '0'],
-  retract_when_changing_layer: [R.travel.retractLayer ? '1' : '0'],
-  z_hop: [String(R.travel.zHop)],
-  bottom_shell_thickness: String(R.floorSolid),
-  line_width: String(R.width),
-  inner_wall_line_width: String(R.width),
-  outer_wall_line_width: String(R.width),
-  wall_generator: R.generator,
-  /* in Orca le impostazioni del filamento sono vettori, una voce per estrusore */
-  filament_type: [(R.mat || MATERIALS[MATERIAL_DEFAULT]).tipo],
-  nozzle_temperature: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzle)],
-  nozzle_temperature_initial_layer: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).nozzleFirst)],
-  hot_plate_temp: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).bed)],
-  hot_plate_temp_initial_layer: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).bedFirst)],
-  fan_min_speed: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMin)],
-  fan_max_speed: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanMax)],
-  close_fan_the_first_x_layers: [String((R.mat || MATERIALS[MATERIAL_DEFAULT]).fanOff)],
-  enable_support: '0', brim_type: R.brim ? 'outer_only' : 'no_brim',
-  brim_width: String(R.brim ?? 0), version: '1.0.0', from: 'VORTICE',
-}, null, 1);
+/*
+ * Come la ricetta arriva allo slicer — e come NON ci arrivava.
+ *
+ * Fino a questa revisione il 3MF portava due file di progetto,
+ * Metadata/Slic3r_PE.config e Metadata/project_settings.config. Verificato con
+ * PrusaSlicer 2.7 e sul sorgente di entrambi gli slicer, erano sbagliati in due
+ * modi diversi:
+ *
+ *  · PrusaSlicer legge Slic3r_PE.config come la coda di un G-code: solo le righe
+ *    «; chiave = valore». Le nostre erano «chiave = valore» e venivano scartate
+ *    tutte. Il pezzo usciva con il profilo di serie — 200 °C, ventola al 100%,
+ *    3 perimetri e riempimento al 20% dentro una parete da 5 mm — ed e' il pezzo
+ *    che si e' aperto su una riga di strato a stringerlo in mano.
+ *  · Scritta nel formato giusto sarebbe stata peggio: un file di progetto viene
+ *    caricato SOPRA I PROFILI DI DEFAULT (Plater: FullPrintConfig::defaults() +
+ *    config caricata, poi load_config_model), e quindi sostituisce anche il
+ *    profilo della stampante con uno generico — piano 200x200, G-code iniziale
+ *    di due righe. Orca fa lo stesso con project_settings.config.
+ *
+ * La strada giusta sono le IMPOSTAZIONI PER OGGETTO: Metadata/Slic3r_PE_model.config
+ * per PrusaSlicer e Metadata/model_settings.config per Orca e Bambu Studio. Si
+ * sommano ai profili dell'utente senza toccarli, si vedono nella lista oggetti e
+ * valgono per pezzo, quindi il set sul piatto porta a ciascun pezzo i suoi
+ * perimetri. Passano solo le chiavi che gli slicer ammettono per oggetto
+ * (PrintObjectConfig e PrintRegionConfig): perimetri, strati pieni, fondo,
+ * riempimento, cucitura, generatore, larghezze, supporti, brim.
+ *
+ * Temperatura, ventola, spostamenti e ritrazione sono impostazioni globali del
+ * filamento e della stampante: nessuno slicer le accetta per oggetto, e l'unico
+ * modo di imporle sarebbe il file di progetto che si porta via il profilo della
+ * stampante. Restano nella ricetta perche' lo studio le mostri da impostare.
+ */
+const recipeObjectKeys = {
+  prusa: R => [
+    ['layer_height', R.layer],
+    ['perimeters', R.walls],
+    ['top_solid_layers', R.top], ['bottom_solid_layers', R.bottom],
+    ['bottom_solid_min_thickness', R.floorSolid],
+    ['fill_density', R.infill + '%'], ['fill_pattern', R.pattern],
+    ['seam_position', R.seam], ['staggered_inner_seams', 1],
+    ['perimeter_generator', R.generator],
+    ['extrusion_width', R.width],
+    ['perimeter_extrusion_width', R.width],
+    ['external_perimeter_extrusion_width', R.width],
+    ['support_material', 0],
+    ...(R.brim ? [['brim_type', 'outer_only'], ['brim_width', R.brim]] : []),
+  ],
+  orca: R => [
+    ['layer_height', R.layer],
+    ['wall_loops', R.walls],
+    ['top_shell_layers', R.top], ['bottom_shell_layers', R.bottom],
+    ['bottom_shell_thickness', R.floorSolid],
+    ['sparse_infill_density', R.infill + '%'], ['sparse_infill_pattern', R.pattern],
+    ['seam_position', R.seam], ['staggered_inner_seams', 1],
+    ['wall_generator', R.generator],
+    ['line_width', R.width],
+    ['inner_wall_line_width', R.width],
+    ['outer_wall_line_width', R.width],
+    ['enable_support', 0],
+    ...(R.brim ? [['brim_type', 'outer_only'], ['brim_width', R.brim]] : []),
+  ],
+};
+/* PrusaSlicer: con i metadati di un oggetto vanno dichiarati anche i suoi
+   volumi, altrimenti l'oggetto resta senza geometria */
+function slic3rModelConfig(parts, R = RECIPE){
+  const L = ['<?xml version="1.0" encoding="UTF-8"?>', '<config>'];
+  parts.forEach((p, k) => {
+    const r = p.recipe || R, tris = p.ind.length / 3;
+    L.push(` <object id="${k+1}" instances_count="1">`,
+      `  <metadata type="object" key="name" value="${xmlEsc(p.name)}"/>`);
+    for (const [key, v] of recipeObjectKeys.prusa(r))
+      L.push(`  <metadata type="object" key="${key}" value="${xmlEsc(v)}"/>`);
+    L.push(`  <volume firstid="0" lastid="${tris - 1}">`,
+      `   <metadata type="volume" key="name" value="${xmlEsc(p.name)}"/>`,
+      '  </volume>', ' </object>');
+  });
+  L.push('</config>', '');
+  return L.join('\n');
+}
+/* Orca / Bambu Studio: i volumi senza dichiarazione prendono la geometria
+   dell'oggetto, quindi bastano i metadati */
+function orcaModelConfig(parts, R = RECIPE){
+  const L = ['<?xml version="1.0" encoding="UTF-8"?>', '<config>'];
+  parts.forEach((p, k) => {
+    const r = p.recipe || R;
+    L.push(`  <object id="${k+1}">`, `    <metadata key="name" value="${xmlEsc(p.name)}"/>`);
+    for (const [key, v] of recipeObjectKeys.orca(r))
+      L.push(`    <metadata key="${key}" value="${xmlEsc(v)}"/>`);
+    L.push('  </object>');
+  });
+  L.push('</config>', '');
+  return L.join('\n');
+}
+/* parti: [{name, pos, ind, x, y, recipe?}] — la ricetta di una parte vince su R */
 function build3MF(parts, title, R = RECIPE){
   return zipArchive([
     { name:'[Content_Types].xml', data:'<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/><Default Extension="config" ContentType="text/plain"/></Types>' },
     { name:'_rels/.rels', data:'<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rel0" Target="/3D/3dmodel.model" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>' },
     { name:'3D/3dmodel.model', data: model3MF(parts, title) },
-    { name:'Metadata/Slic3r_PE.config', data: slic3rConfig(R) },
-    { name:'Metadata/project_settings.config', data: orcaConfig(R) },
+    { name:'Metadata/Slic3r_PE_model.config', data: slic3rModelConfig(parts, R) },
+    { name:'Metadata/model_settings.config', data: orcaModelConfig(parts, R) },
   ]);
 }
 
