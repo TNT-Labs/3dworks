@@ -267,16 +267,17 @@ spezzano entrambe è il materiale; se flettono entrambe la stampa è sana e la
 fragilità va cercata altrove. Venti minuti e 4 g contro le venti ore del pezzo
 intero — e va stampato *prima* di rifare il pezzo grosso.
 
-**La cucitura Z non si incolonna.** Ogni giro di perimetro deve iniziare e finire
-da qualche parte, e lì l'estrusione si interrompe: resta un grumo o un microvuoto.
-Il default di PrusaSlicer e di Orca è `aligned`, che impila quei punti sulla stessa
-verticale per farli sembrare una riga sola — ordinato a vedersi, ma in un
-contenitore diventa un canale continuo dal fondo al collo. La ricetta incorporata
-nel 3MF impone `seam_position = random` e le cuciture dei perimetri interni
-sfalsate: i difetti restano isolati e lo strato sopra copre quello sotto.
+**Cucitura allineata e spostamenti dentro la parete.** La ricetta metteva la
+cucitura `random`, per non impilare i punti di partenza in un canale. Un pezzo in
+PETG con parete da 5 mm è uscito coperto di peli: con 12–14 giri per contorno ogni
+partenza sparsa è una goccia e un filo. Ora il 3MF porta `seam_position = aligned`
+(la cucitura finisce nelle valli fra le costole) con le cuciture interne sfalsate,
+che bastano a impedire il canale, e gli spostamenti: `avoid_crossing_perimeters`,
+`wipe`, ritrazione al cambio strato e niente z-hop. La lunghezza di ritrazione resta
+del profilo stampante, perché dipende dall'estrusore.
 
-L'STL non trasporta impostazioni, quindi chi lo esporta deve mettere la cucitura
-su «casuale» a mano — lo Studio lo dice sotto il pulsante quando è selezionato.
+L'STL non trasporta impostazioni: lo Studio ricorda sotto il pulsante cosa
+impostare a mano.
 
 **Il fondo è pieno per tutto il suo spessore.** Il fondo è alto 3–4 mm di geometria
 piena, ma con i soli strati solidi di ricetta ne venivano stampati pieni appena
@@ -335,7 +336,7 @@ slicer chiude la parete o ci lascia una fessura.
 
 **[STAMPA.md](STAMPA.md)** raccoglie le misure caso per caso, le impostazioni
 dello slicer in ordine di importanza, il protocollo di prova con acqua in
-pressione — e una nota su cosa resta una scelta aperta, la cucitura Z.
+pressione — e cosa fare se il pezzo esce peloso o con una fessura.
 
 ### Sicurezza
 

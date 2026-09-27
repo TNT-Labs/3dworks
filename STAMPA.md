@@ -275,7 +275,8 @@ I valori che decidono la tenuta, in ordine di importanza.
 | **Ventola** *(ora nel 3MF)* | **max 30 %, spenta sui primi 5 strati** | Sul PETG è la prima causa di perdite: raffredda la passata prima che si saldi a quella sotto e il pezzo trasuda lungo le righe di strato. Ed è anche la prima causa di pezzi **fragili**: una passata raffreddata non fonde con quella sopra, resta incollata. |
 | **Temperatura ugello** *(ora nel 3MF)* | **240 °C** (245 il primo strato) | Più caldo salda meglio. Se compaiono fili, si tolgono dopo; una delaminazione non si toglie. |
 | **Fondo pieno** *(già nel 3MF)* | `bottom_solid_min_thickness = 4` | Sostituisce sia i «6 / 6 strati pieni» sia l'aumento del riempimento: il pavimento viene pieno per tutti i suoi 3–4 mm, quindi sotto il liquido non resta reticolo. Costa +9–14 % di materiale. Di conseguenza il pezzo non ha più alcuna zona a riempimento rado e il valore del gyroid è ininfluente. |
-| **Cucitura (Z-seam)** *(nel 3MF: `random`)* | **a becco di flauto** (*scarf joint*) dove c'è; altrimenti vedi la nota qui sotto | La cucitura è la fila di partenze e arresti dei perimetri: è lì che si formano i micro-fori. Sul *scarf joint* non c'è discussione — rampa l'estrusione e il difetto non si forma proprio: se il tuo slicer ce l'ha, usalo. Su cosa fare quando non c'è, questo documento e la ricetta incorporata **non concordano**: vedi «Cucitura: una scelta aperta». |
+| **Cucitura (Z-seam)** *(nel 3MF: `aligned`)* | **allineata**, o *scarf joint* dove c'è | La cucitura è la fila di partenze e arresti dei perimetri. Allineata, lo slicer la porta negli spigoli concavi — le valli fra le costole. Casuale era la scelta precedente ed è stata smentita da un pezzo stampato: vedi «Cucitura: la prova della stampa». Il *scarf joint*, se lo slicer ce l'ha, rampa l'estrusione e il difetto non si forma proprio. |
+| **Spostamenti** *(ora nel 3MF)* | **dentro la parete**, wipe, **niente z-hop** | Un ugello che cola e attraversa la faccia esterna ci lascia un filo ogni volta. `avoid_crossing_perimeters` (Orca: *evita di attraversare le pareti*) tiene gli spostamenti dentro il pezzo, `wipe` pulisce l'ugello sulla passata appena fatta, e senza z-hop il PETG non tira un filo a ogni salto. La **lunghezza** di ritrazione resta del tuo profilo stampante: dipende dall'estrusore. |
 | **Strato** | 0,20 mm, primo 0,24 mm | Più fine non aiuta la tenuta e raddoppia il tempo. |
 | **Compensazione zampa d'elefante** | 0,15 mm | Senza, la base svasa e il codice inciso si chiude. |
 | **Stiratura** *(ironing)* | attiva sulle superfici superiori | Le uniche superfici superiori sono la battuta del collo e il pavimento della cavità: lisciarle costa pochi secondi e la guarnizione della pompa appoggia su una superficie piana invece che su righe. |
@@ -318,32 +319,34 @@ dello spessore della tua parete e con la tua stessa ricetta: una in piedi
 Venti minuti e 4 g, contro le venti ore del pezzo intero. Va stampato **prima**
 di rifare il pezzo grosso, non dopo.
 
-#### Cucitura: una scelta aperta
+#### Cucitura: la prova della stampa
 
-Due analisi indipendenti di questo repository sono arrivate a conclusioni
-opposte, e vale la pena che resti scritto invece di sparire in un merge.
+Due analisi di questo repository erano arrivate a conclusioni opposte — allineata
+per concentrare il difetto in una riga, casuale per non impilare le interruzioni
+in un canale — e la ricetta usava `random`. Un dispenser in PETG con parete da
+5 mm è uscito **coperto di peli dal fondo al collo**, con ragnatele dentro il
+foro del collo. Con quella parete lo slicer fa 12–14 giri per contorno: ogni
+giro che parte in un punto a caso è una goccia e un filo, migliaia per pezzo.
 
-**Per l'allineata.** La cucitura è un difetto: concentrarlo in una riga sola
-lascia pulito tutto il resto del pezzo, e quella riga si può nascondere in un
-solco fra due costole. Sparpagliarlo significa averne uno ovunque.
+Il canale che la casuale voleva evitare, invece, non può formarsi: la parete è
+fatta di almeno quattro giri per lato e `staggered_inner_seams` sfalsa le
+cuciture interne, quindi una fessura dovrebbe bucare tutti i giri nello stesso
+punto. La ricetta ora usa **`aligned`** e porta anche gli spostamenti (vedi la
+tabella). La questione è chiusa dalla stampa, non dal ragionamento.
 
-**Per la casuale.** Allineare significa impilare le interruzioni sulla stessa
-verticale: se l'estrusione parte male in modo sistematico — filamento umido,
-ritrazione tarata larga, un ugello che cola — quel difetto diventa un canale
-continuo dal fondo al collo. Sparpagliandolo, ogni difetto è coperto dallo
-strato sopra e sotto.
+### Se il pezzo esce peloso o con una fessura orizzontale
 
-**Cosa si può dire con certezza.** Con la parete fatta di cinque o sei passate
-e le cuciture dei perimetri interni sfalsate (`staggered_inner_seams`), nessuna
-delle due crea un passaggio che attraversi la parete: servirebbe che la fessura
-bucasse tutte le passate nello stesso punto. La differenza riguarda il margine
-contro l'imprevisto, non un difetto dimostrato.
+| cosa vedi | cosa è | cosa fai |
+|---|---|---|
+| **peli sottili su tutta la superficie**, ragnatele dentro il collo | fili: ugello che cola durante gli spostamenti | usa il **3MF** e controlla che cucitura, «evita di attraversare le pareti» e wipe siano quelli della ricetta. Se restano, **il filo è umido**: asciugalo 4–6 h a 65 °C. Su 20–40 ore di stampa il PETG all'aria ne assorbe abbastanza da sfrigolare nell'ugello — se lo senti scoppiettare, è quello |
+| **superficie spugnosa e opaca**, bollicine | filo umido | asciugalo; stampa dall'essiccatore se il pezzo supera le 10 ore |
+| **fessura orizzontale** alta qualche strato su un tratto della circonferenza, con dentro materiale | estrusione interrotta per qualche strato: filo aggrovigliato o frenato sulla bobina, ingranaggio che ha mangiato il filo, ugello parzialmente intasato | non è la geometria — la faccia esterna dei preset non supera i 30° in nessun punto del corpo. Controlla che la bobina giri libera, pulisci l'ingranaggio dell'estrusore, e **non alzare la ritrazione** per combattere i fili: con 12–14 giri per contorno ogni ritrazione in più è un'occasione per mangiare il filo |
+| **frattura piatta e lucida** su una riga di strato | saldatura fra strati | vedi «Se il pezzo si rompe come il vetro» |
 
-La ricetta incorporata usa `random` perché sbaglia in modo più innocuo: un
-problema sistematico resta sparso invece di diventare una riga. Se preferisci
-l'aspetto pulito dell'allineata, cambiala nello slicer — la geometria non ne
-risente. Il modo di chiudere la questione è una prova con acqua in pressione
-(sotto) su due pezzi identici, uno per scelta.
+Se hai slicciato l'**STL**, nessuna di queste impostazioni è arrivata allo
+slicer: il pezzo è stato stampato con il tuo profilo di serie, e con una parete
+da 5 mm e 2–3 perimetri, dentro la parete resta reticolo rado — una scatola vuota
+che si apre alla prima fessura.
 
 ---
 

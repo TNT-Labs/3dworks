@@ -355,7 +355,8 @@
       <div class="row"><span class="k">Pareti</span><span class="dots"></span><span class="v" id="rcWalls">4 perimetri</span></div>
       <div class="row"><span class="k">Base</span><span class="dots"></span><span class="v" id="rcBase">piena per tutto lo spessore</span></div>
       <div class="row"><span class="k">Riempimento</span><span class="dots"></span><span class="v">Gyroid 6% · non usato</span></div>
-      <div class="row"><span class="k">Cucitura Z</span><span class="dots"></span><span class="v">casuale (antiperdita)</span></div>
+      <div class="row"><span class="k">Cucitura Z</span><span class="dots"></span><span class="v">allineata nelle valli</span></div>
+      <div class="row"><span class="k">Spostamenti</span><span class="dots"></span><span class="v">dentro la parete · wipe · no z-hop</span></div>
       <div class="row"><span class="k">Supporti</span><span class="dots"></span><span class="v">non necessari</span></div>
     </div>
     <button id="dlCoupon" class="btn btn--ghost btn--block mt-12" type="button">
@@ -388,13 +389,17 @@
     sono più spesse della parete: senza, il loro nucleo non sarebbe guscio ma
     reticolo al 6% chiuso dentro il pezzo. La riga «Pareti» qui sopra è quella del design che stai
     guardando; il gyroid resta nella ricetta e non viene usato.<br><br>
-    <b>Cucitura Z.</b> Ogni giro di perimetro deve iniziare e finire da qualche parte,
-    e lì l'estrusione si interrompe. Il default degli slicer è <i>allineata</i>: impila
-    quei punti sulla stessa verticale per farli sembrare una riga sola — ordinato a
-    vedersi, ma in un contenitore quei microvuoti si incolonnano in un canale continuo
-    dal fondo al collo. La ricetta la mette <b>casuale</b>: i difetti restano isolati e
-    lo strato sopra copre quello sotto. In cambio resta una punteggiatura fine sulla
-    superficie, quasi invisibile su un vaso a costole ritorte.<br><br>
+    <b>Cucitura Z e fili.</b> Ogni giro di perimetro deve iniziare e finire da qualche
+    parte, e lì l'estrusione si interrompe. La ricetta la mette <b>allineata</b>: gli
+    slicer la portano negli spigoli concavi, cioè nelle valli fra le costole, dove non si
+    vede. Sparsa a caso, sul PETG, ogni partenza diventa una goccia e un filo, e con una
+    parete spessa la superficie esce coperta di peli. Un canale di perdita non si forma:
+    le cuciture dei perimetri interni sono sfalsate, e una fessura dovrebbe bucare tutti i
+    giri nello stesso punto. Gli spostamenti a vuoto restano <b>dentro la parete</b>,
+    l'ugello si pulisce prima di staccarsi e non si solleva: sono i tre accorgimenti che
+    tolgono i fili dalla faccia esterna. Se restano fili, il filo è umido — asciugalo
+    4–6 h a 65 °C: il PETG in 20–40 ore di stampa all'aria ne assorbe abbastanza da
+    friggere nell'ugello.<br><br>
     <b>Fondo.</b> È pieno per tutto il suo spessore, non solo nei primi strati: sotto
     il liquido non resta riempimento rado. Di conseguenza il pezzo non ha più alcuna
     zona a riempimento — la parete è tutta perimetri e il fondo tutto pieno — e il
@@ -412,8 +417,8 @@
       <span>Scarica STL del dispenser</span>
     </button>
     <p class="fine center mt-10">
-      <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano temperatura, ventola
-      e cucitura Z</b> nello slicer — sono quelle a decidere se il pezzo è tenace o di
+      <span id="noteStl">l'STL porta solo la geometria: <b>imposta a mano temperatura, ventola,
+      cucitura Z allineata e «evita di attraversare i perimetri»</b> nello slicer — sono quelle a decidere se il pezzo è tenace o di
       cristallo<span id="noteStlWalls" hidden></span><br></span>
       <span id="note3mf" hidden>3MF: geometria <b>e ricetta</b> — temperatura, ventola, perimetri e
       cucitura · letta da PrusaSlicer e OrcaSlicer, che però possono tenere il <i>tuo</i> profilo

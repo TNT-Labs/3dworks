@@ -1363,16 +1363,23 @@ function model3MF(parts, title){
  *
  * `seam` merita una riga di spiegazione. Ogni giro di perimetro deve iniziare e
  * finire da qualche parte, e in quel punto l'estrusione si interrompe: resta un
- * grumo o un microvuoto. Il default di PrusaSlicer e di Orca è `aligned`, che
- * impila di proposito tutte le cuciture sulla stessa verticale per farle sembrare
- * una riga sola — bello a vedersi, pessimo in un contenitore, perché quei
- * microvuoti si incolonnano e formano un canale continuo dal fondo al collo.
- * Con `random` ogni strato parte da un angolo diverso: i difetti restano isolati
- * e lo strato sopra copre quello sotto. Non esiste piu' un percorso continuo.
+ * grumo o un microvuoto. Una revisione precedente la metteva `random` per non
+ * incolonnare i microvuoti in un canale. Il pezzo stampato ha smentito la
+ * scelta: sul PETG ogni partenza sparsa e' una goccia e un filo, e con la
+ * parete spessa (fino a 14 giri per contorno) la superficie esce coperta di
+ * peli dal fondo al collo. E il canale non puo' formarsi comunque: la parete e'
+ * fatta di almeno quattro giri per lato e `staggered_inner_seams` sfalsa le
+ * cuciture interne, quindi una fessura dovrebbe bucare tutti i giri nello stesso
+ * punto. `aligned` mette la cucitura negli spigoli concavi — le valli fra le
+ * costole — dove non si vede.
  *
- * Nota: la cucitura casuale lascia una punteggiatura fine sulla superficie. Su un
- * vaso a costole ritorte è praticamente invisibile, e comunque la tenuta viene
- * prima dell'estetica in un pezzo che deve contenere sapone.
+ * `travel` sono gli spostamenti a vuoto, l'altra fonte dei peli: un ugello che
+ * cola e attraversa la faccia esterna ci lascia un filo ogni volta. Gli
+ * spostamenti restano dentro la parete (`avoid_crossing_perimeters`), l'ugello
+ * si pulisce sulla passata appena fatta prima di staccarsi (`wipe`) e non si
+ * solleva: sul PETG lo z-hop tira un filo a ogni salto. La lunghezza di
+ * ritrazione resta del profilo stampante: dipende dall'estrusore (diretto o
+ * Bowden) e un valore sbagliato fa piu' danni di quello di serie.
  */
 /*
  * `floorSolid` merita anch'essa una spiegazione. Il fondo e' alto 3-4 mm di
@@ -1441,7 +1448,8 @@ const MATERIAL_DEFAULT = 'petg';
 const materialOf = key => MATERIALS[key] || MATERIALS[MATERIAL_DEFAULT];
 
 const RECIPE = { layer:.2, first:.24, nozzle:.4, walls:4, top:5, bottom:5, infill:6,
-                 pattern:'gyroid', seam:'random', floorSolid:4,
+                 pattern:'gyroid', seam:'aligned', floorSolid:4,
+                 travel:{ avoidCrossing:true, wipe:true, retractLayer:true, zHop:0 },
                  /* Le pareti che lo studio propone sono multipli esatti di
                     0,40: i perimetri le riempiono senza avanzi. Col default di
                     PrusaSlicer per un ugello da 0,4 (0,45) una parete da 2,4
@@ -1499,10 +1507,15 @@ const slic3rConfig = (R = RECIPE) => [
   `layer_height = ${R.layer}`, `first_layer_height = ${R.first}`,
   `perimeters = ${R.walls}`, `top_solid_layers = ${R.top}`, `bottom_solid_layers = ${R.bottom}`,
   `fill_density = ${R.infill}%`, `fill_pattern = ${R.pattern}`,
-  '; cucitura sparsa: i punti di partenza non si incolonnano in un canale',
+  '; cucitura nelle valli fra le costole: una sparsa sul PETG è una goccia e un filo per strato',
   `seam_position = ${R.seam}`,
-  '; e le cuciture dei perimetri interni non cadono sopra quella esterna',
+  '; e le cuciture dei perimetri interni non cadono sopra quella esterna: nessun canale',
   'staggered_inner_seams = 1',
+  '; spostamenti dentro la parete, ugello pulito e senza salti: niente fili sulla faccia esterna',
+  `avoid_crossing_perimeters = ${R.travel.avoidCrossing ? 1 : 0}`,
+  `wipe = ${R.travel.wipe ? 1 : 0}`,
+  `retract_layer_change = ${R.travel.retractLayer ? 1 : 0}`,
+  `retract_lift = ${R.travel.zHop}`,
   '; fondo pieno per tutto lo spessore: sotto il liquido non resta riempimento rado',
   `bottom_solid_min_thickness = ${R.floorSolid}`,
   '; larghezza di estrusione che divide esattamente le pareti proposte',
@@ -1532,6 +1545,12 @@ const orcaConfig = (R = RECIPE) => JSON.stringify({
   wall_loops: String(R.walls), top_shell_layers: String(R.top), bottom_shell_layers: String(R.bottom),
   sparse_infill_density: R.infill + '%', sparse_infill_pattern: R.pattern,
   seam_position: R.seam,
+  staggered_inner_seams: '1',
+  reduce_crossing_wall: R.travel.avoidCrossing ? '1' : '0',
+  /* ritrazione e z-hop in Orca sono per estrusore, quindi vettori */
+  wipe: [R.travel.wipe ? '1' : '0'],
+  retract_when_changing_layer: [R.travel.retractLayer ? '1' : '0'],
+  z_hop: [String(R.travel.zHop)],
   bottom_shell_thickness: String(R.floorSolid),
   line_width: String(R.width),
   inner_wall_line_width: String(R.width),

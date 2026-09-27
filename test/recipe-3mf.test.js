@@ -1,9 +1,8 @@
 /* =====================================================================
    RICETTA NEL 3MF · le impostazioni che non stanno nella geometria.
-   La cucitura Z è l'ultimo punto debole per la tenuta: ogni giro di
-   perimetro si interrompe da qualche parte, e il default degli slicer
-   (`aligned`) incolonna di proposito quei punti in una linea continua.
-   Il 3MF è l'unico modo che l'app ha di dirlo — l'STL non trasporta nulla.
+   Perimetri, fondo, cucitura, spostamenti, temperatura e ventola: tutto
+   ciò che decide se il pezzo tiene e com'è la sua superficie. Il 3MF è
+   l'unico modo che l'app ha di dirlo — l'STL non trasporta nulla.
    ===================================================================== */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -60,20 +59,45 @@ test('il 3MF contiene geometria e ricette per entrambi gli slicer', async () => 
   assert.match(files.get('3D/3dmodel.model'), /<triangle /, 'il modello contiene triangoli');
 });
 
-test('la cucitura è sparsa, non incolonnata — PrusaSlicer', async () => {
+/*
+ * Cucitura e spostamenti. La cucitura era `random` per non incolonnare i
+ * microvuoti; il pezzo stampato in PETG è uscito coperto di peli, perché ogni
+ * partenza sparsa è una goccia e un filo. Il canale che `random` voleva evitare
+ * non si forma comunque con le cuciture interne sfalsate su almeno quattro giri
+ * per lato — ed è per questo che quella riga è sorvegliata insieme alla cucitura.
+ */
+test('cucitura allineata, cuciture interne sfalsate — PrusaSlicer', async () => {
   const { files } = await build();
   const cfg = files.get('Metadata/Slic3r_PE.config');
-  assert.match(cfg, /^seam_position = random$/m,
-    'senza questa riga PrusaSlicer usa «aligned» e impila le cuciture in un canale continuo');
+  assert.match(cfg, /^seam_position = aligned$/m,
+    'sparsa sul PETG lascia una goccia e un filo per strato su tutta la superficie');
   assert.match(cfg, /^staggered_inner_seams = 1$/m,
-    'le cuciture dei perimetri interni non devono cadere sopra quella esterna');
-  assert.ok(!/seam_position = aligned/.test(cfg));
+    'senza, le cuciture allineate di tutti i giri si impilano in un canale');
+  assert.ok(!/seam_position = random/.test(cfg));
 });
 
-test('la cucitura è sparsa, non incolonnata — OrcaSlicer', async () => {
+test('cucitura allineata, cuciture interne sfalsate — OrcaSlicer', async () => {
   const { files } = await build();
   const cfg = JSON.parse(files.get('Metadata/project_settings.config'));
-  assert.equal(cfg.seam_position, 'random');
+  assert.equal(cfg.seam_position, 'aligned');
+  assert.equal(cfg.staggered_inner_seams, '1');
+});
+
+test('gli spostamenti non attraversano la faccia esterna e non tirano fili', async () => {
+  const { files } = await build();
+  const cfg = files.get('Metadata/Slic3r_PE.config');
+  assert.match(cfg, /^avoid_crossing_perimeters = 1$/m);
+  assert.match(cfg, /^wipe = 1$/m);
+  assert.match(cfg, /^retract_layer_change = 1$/m);
+  assert.match(cfg, /^retract_lift = 0$/m, 'lo z-hop sul PETG tira un filo a ogni salto');
+  /* la lunghezza di ritrazione dipende dall'estrusore: resta del profilo stampante */
+  assert.ok(!/^retract_length\b/m.test(cfg));
+  const orca = JSON.parse(files.get('Metadata/project_settings.config'));
+  assert.equal(orca.reduce_crossing_wall, '1');
+  assert.deepEqual(orca.wipe, ['1']);
+  assert.deepEqual(orca.retract_when_changing_layer, ['1']);
+  assert.deepEqual(orca.z_hop, ['0']);
+  assert.equal(orca.retraction_length, undefined);
 });
 
 test('il fondo è pieno per tutto lo spessore, non solo nei primi strati', async () => {
@@ -175,7 +199,7 @@ test('lo spool di prova del filetto porta la stessa cucitura del pezzo vero', as
   /* se lo spool avesse impostazioni diverse non predirebbe come si avvita
      davvero la pompa sul collo del dispenser */
   const { files } = await build('ring');
-  assert.match(files.get('Metadata/Slic3r_PE.config'), /^seam_position = random$/m);
+  assert.match(files.get('Metadata/Slic3r_PE.config'), /^seam_position = aligned$/m);
 });
 
 test('il set sul piatto porta la ricetta come il pezzo singolo', async () => {
@@ -183,7 +207,7 @@ test('il set sul piatto porta la ricetta come il pezzo singolo', async () => {
     profKey:'clessidra', format:'3mf', logo: LOGO });
   assert.equal(r.ok, true, r.error);
   const files = unzip(r.buffer);
-  assert.match(files.get('Metadata/Slic3r_PE.config'), /^seam_position = random$/m);
+  assert.match(files.get('Metadata/Slic3r_PE.config'), /^seam_position = aligned$/m);
 });
 
 /*
