@@ -1429,10 +1429,17 @@ const MATERIALS = {
   pla: {
     nome:'PLA', tipo:'PLA',
     /* si stampa meglio di tutti ed e' il piu' fragile fra gli strati: questi
-       valori sono il PLA tirato verso la tenacita', non verso l'aspetto —
-       piu' caldo del solito e con la ventola tenuta bassa */
-    nozzle:220, nozzleFirst:225, bed:60, bedFirst:60,
-    fanMin:30, fanMax:60, fanOff:3,
+       valori sono il PLA tirato verso la tenacita', non verso l'aspetto.
+       Un dispenser in PLA con parete da 5 mm si e' aperto su una riga di strato
+       a stringerlo in mano. Con la parete spessa uno strato del corpo dura 2-3
+       minuti: lo slicer resta alla ventola MINIMA per tutto il corpo (sale solo
+       sotto i ~60 s, cioe' sul collo), e lo strato sotto arriva freddo. Il
+       minimo scende quindi a 15%, e la temperatura sale a 225: la saldatura del
+       PLA cresce con la temperatura fino a ~230. Nessuno sbalzo supera i 44°,
+       quindi sul corpo la ventola non serve alla forma; il massimo resta per il
+       collo, dove gli strati sono brevi. */
+    nozzle:225, nozzleFirst:230, bed:60, bedFirst:60,
+    fanMin:15, fanMax:60, fanOff:3,
     nota:'solo per il portaspazzolino · fragile fra gli strati e sensibile all\'acqua',
   },
   asa: {

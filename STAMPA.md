@@ -254,7 +254,7 @@ sopra la pompa vera.
 | | Tenuta | Note |
 |---|---|---|
 | **PETG** | **la scelta** | Strati che si saldano bene, resiste all'acqua e ai tensioattivi dei saponi. Poco fragile: un pezzo che flette non delamina. |
-| PLA | no per liquidi | Si stampa meglio di tutti ed è il peggiore qui: fragile fra gli strati e soggetto a idrolisi. Va bene per il portaspazzolino. |
+| PLA | no per liquidi | Si stampa meglio di tutti ed è il peggiore qui: fragile fra gli strati e soggetto a idrolisi. Va bene per il portaspazzolino. Nel 3MF: **225 °C, ventola 15–60 %** — con la parete spessa uno strato del corpo dura 2–3 minuti e lo slicer resta alla ventola minima per tutto il corpo, quindi è il minimo a decidere la saldatura. |
 | ASA / ABS | buona, ma | Regge oli essenziali e alcol, ma su una stampante aperta ritira e delamina: il modo più facile di ottenere un pezzo che trasuda. |
 | PP | ottima chimicamente | Praticamente immune a tutto, praticamente impossibile da far aderire al piatto. Solo se sai già come si fa. |
 
@@ -340,6 +340,7 @@ tabella). La questione è chiusa dalla stampa, non dal ragionamento.
 |---|---|---|
 | **peli sottili su tutta la superficie**, ragnatele dentro il collo | fili: ugello che cola durante gli spostamenti | usa il **3MF** e controlla che cucitura, «evita di attraversare le pareti» e wipe siano quelli della ricetta. Se restano, **il filo è umido**: asciugalo 4–6 h a 65 °C. Su 20–40 ore di stampa il PETG all'aria ne assorbe abbastanza da sfrigolare nell'ugello — se lo senti scoppiettare, è quello |
 | **superficie spugnosa e opaca**, bollicine | filo umido | asciugalo; stampa dall'essiccatore se il pezzo supera le 10 ore |
+| **si apre su una riga di strato a stringerlo**, in PLA | saldatura fra strati: filo umido o vecchio, oppure lo slicer ha usato il tuo profilo PLA (≈210 °C, ventola 100 %) invece della ricetta | **piega un pezzo di filo della bobina**: se si spezza invece di piegarsi, la bobina è umida o degradata — asciugala 4–6 h a 50 °C o cambiala. Poi usa il 3MF e verifica **225 °C e ventola 15–60 %** nello slicer. Il provino di robustezza lo conferma in venti minuti. Per un dispenser vero, PETG |
 | **fessura orizzontale** alta qualche strato su un tratto della circonferenza, con dentro materiale | estrusione interrotta per qualche strato: filo aggrovigliato o frenato sulla bobina, ingranaggio che ha mangiato il filo, ugello parzialmente intasato | non è la geometria — la faccia esterna dei preset non supera i 30° in nessun punto del corpo. Controlla che la bobina giri libera, pulisci l'ingranaggio dell'estrusore, e **non alzare la ritrazione** per combattere i fili: con 12–14 giri per contorno ogni ritrazione in più è un'occasione per mangiare il filo |
 | **frattura piatta e lucida** su una riga di strato | saldatura fra strati | vedi «Se il pezzo si rompe come il vetro» |
 
