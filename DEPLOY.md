@@ -152,14 +152,18 @@ container giusto, con una regola sul percorso.
    |---|---|
    | Subdomain | *(vuoto)* |
    | Domain | `shopbeautylab.it` |
-   | Path | `^/bolli` |
+   | Path | `bolli` |
    | Type | `HTTP` |
    | URL | `bolli:3100` |
 
 3. **Ordine**: le regole si valutano dall'alto e vince la prima che corrisponde. Quella
-   con il percorso `^/bolli` deve stare **sopra** la regola generale `shopbeautylab.it →
+   con il percorso `bolli` deve stare **sopra** la regola generale `shopbeautylab.it →
    vortice:3000` (trascinala in cima), altrimenti `/bolli/` finisce a VORTICE e
    risponde con la sua pagina 404.
+
+Nel campo Path va scritta **solo la parola** `bolli` (è un'espressione regolare valutata sul
+percorso; nessun indirizzo di VORTICE contiene «bolli»). Lasciato vuoto, la regola cattura
+l'intero dominio e VORTICE non riceve più traffico.
 
 Se il container `bolli` non è avviato, `/bolli/` risponde 502 e il resto del sito
 continua a funzionare.
@@ -308,7 +312,8 @@ docker compose down -v       # ATTENZIONE: cancella anche il database
 |---|---|
 | **Error 502** da Cloudflare | Il container non è ancora `healthy`, oppure nel Public Hostname hai messo `localhost:3000` invece di `vortice:3000`: dentro `cloudflared`, `localhost` è `cloudflared` stesso. |
 | **Error 502 a intermittenza** e nel log di cloudflared `lookup vortice … no such host` | C'è un secondo connettore sullo stesso tunnel che non sta sulla rete di VORTICE (§3, «Un solo connettore per tunnel»): `docker ps | grep cloudflared`, ferma quello in più. |
-| **`/bolli/` mostra la pagina 404 di VORTICE** | La regola `^/bolli` del tunnel manca o sta sotto quella generale (§3). |
+| **`/bolli/` mostra la pagina 404 di VORTICE** | La regola `bolli` del tunnel manca o sta sotto quella generale (§3). |
+| **Tutto il sito risponde `404` in testo semplice e `/` porta a `/bolli/`** | La regola di bolli ha il campo Path vuoto e cattura ogni richiesta: scrivi `bolli` nel Path (solo la parola: niente `^`, `/` o `*`). Verifica con `docker logs vortice-tunnel 2>&1 \| grep "Updated to new configuration" \| tail -1`: la prima regola deve avere `"path":"bolli"`. |
 | **Error 1033** | Il tunnel non è connesso: `docker compose logs cloudflared`. Di solito è il `TUNNEL_TOKEN` copiato male. |
 | **`Provided Tunnel token is not valid`** e `vortice-tunnel` che riparte in continuazione | Il token è stato rifiutato da Cloudflare. Il controllo all'avvio (`vortice-tunnel-check`) intercetta i casi di copia-incolla: se invece l'ha lasciato passare, il formato è giusto ma il token non vale più — il tunnel è stato cancellato o qualcuno ha premuto *Refresh token*. Rigenera il token dal pannello (§3), aggiorna il `.env` e `docker compose up -d`. |
 | **`service "tunnel-check" didn't complete successfully: exit 1`** | Non è un guasto: è il controllo del token che ha fermato l'avvio del tunnel. Con `up -d` il motivo non compare a schermo — leggilo con **`docker compose logs tunnel-check`**. Corretto il `.env`, `docker compose run --rm tunnel-check` lo riprova in un istante senza avviare nulla. Il sito intanto gira: manca solo l'accesso da fuori. |
