@@ -50,7 +50,7 @@ $('shell').hidden = false;
 $('outBtn').addEventListener('click', async () => {
   if (library.dirty && !confirm('Hai modifiche non salvate. Uscire comunque?')) return;
   await api.auth.logout().catch(() => {});
-  location.href = '/';
+  location.href = '/vortice';
 });
 
 /* ====================== modello e scena ====================== */

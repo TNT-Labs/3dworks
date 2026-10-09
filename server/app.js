@@ -105,7 +105,7 @@ export function createApp(){
   /* ---------------------------- pagine ---------------------------- */
   /* /p/VRT-7K3QX è il link da stampare accanto al codice: leggibile e condivisibile */
   app.get('/p/:code', (req, res) => {
-    if (!normCode(req.params.code)) return res.redirect('/?codice=nonvalido');
+    if (!normCode(req.params.code)) return res.redirect('/vortice?codice=nonvalido');
     /* la pagina è un guscio identico per ogni codice, ma rivalidarla a ogni
        visita evita che una CDN serva una versione vecchia dopo un aggiornamento */
     res.set('Cache-Control', 'no-cache');

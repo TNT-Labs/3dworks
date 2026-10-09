@@ -65,12 +65,12 @@ after(async () => {
 });
 
 test('la landing rifiuta un codice mal formato senza navigare', async () => {
-  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.goto(base + '/vortice', { waitUntil: 'networkidle' });
   await page.fill('#codeIn', 'XX');
   await page.click('#codeGo');
   await page.waitForSelector('#codeErr:not([hidden])');
   assert.match(await page.textContent('#codeErr'), /5 caratteri/);
-  assert.equal(new URL(page.url()).pathname, '/', 'resta sulla landing');
+  assert.equal(new URL(page.url()).pathname, '/vortice', 'resta sulla landing');
 });
 
 test('il campo codice accetta ogni modo di scriverlo', async () => {
@@ -201,7 +201,7 @@ test('la scheda pubblica mostra lo stesso pezzo, senza comandi di modifica', asy
 
 test('la scheda pubblica è raggiungibile digitando il codice dalla landing', async () => {
   const anon = await browser.newPage();
-  await anon.goto(base + '/', { waitUntil: 'networkidle' });
+  await anon.goto(base + '/vortice', { waitUntil: 'networkidle' });
   await anon.fill('#codeIn', code.toLowerCase());
   await Promise.all([anon.waitForURL(`**/p/${code}`, { timeout: SLOW }), anon.click('#codeGo')]);
   await anon.waitForSelector('#app:not([hidden])', { timeout: SLOW });
@@ -256,7 +256,7 @@ test('dalla pagina account si scaricano i propri dati e si elimina tutto', async
   assert.match(await page.textContent('#err'), /ELIMINA/);
 
   await page.fill('#delWord', 'ELIMINA');
-  await Promise.all([page.waitForURL('**/?eliminato=1**', { timeout: SLOW }), page.click('#delBtn')]);
+  await Promise.all([page.waitForURL('**/vortice?eliminato=1**', { timeout: SLOW }), page.click('#delBtn')]);
   assert.match(await page.textContent('.notice--ok'), /Account eliminato/);
 
   /* e il codice inciso non porta più a nulla */

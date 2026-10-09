@@ -136,7 +136,7 @@ test('gli asset statici non ricevono cookie: una CDN può metterli in cache', as
 });
 
 test('le pagine ricevono il cookie CSRF e non vanno in cache', async () => {
-  for (const path of ['/', '/accedi.html', '/p/VRT-00000']){
+  for (const path of ['/', '/vortice', '/accedi.html', '/p/VRT-00000']){
     const r = await fetch(base + path);
     const cookies = r.headers.getSetCookie().join(';');
     assert.match(cookies, /vt_csrf=/, `${path} deve poter firmare il primo accesso`);

@@ -1,0 +1,24 @@
+/* Pagina d'ingresso: scelta fra VORTICE e Distinte bolli flotte. */
+.scelta{max-width:920px;margin:0 auto;padding:clamp(40px,9vh,96px) 20px 40px}
+.scelta-head{margin-bottom:34px}
+.scelta-head .lead{max-width:56ch}
+
+.app-list{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.app-card{
+  height:100%;display:flex;flex-direction:column;gap:10px;padding:24px 24px 22px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);color:var(--ink);
+  transition:border-color .15s ease,transform .15s ease,background .15s ease;
+}
+.app-card:hover{text-decoration:none;border-color:rgba(255,106,43,.55);background:var(--panel2);transform:translateY(-2px)}
+.app-card:focus-visible{outline-offset:3px}
+.app-tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc)}
+.app-name{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.app-desc{font-size:14px;line-height:1.62;color:var(--mut)}
+.app-go{margin-top:auto;padding-top:8px;font-weight:600;font-size:14px;color:var(--acc)}
+.app-note{font-family:var(--mono);font-size:10px;letter-spacing:.04em;line-height:1.6;color:var(--dim)}
+
+/* l'area riservata ha un accento proprio: si capisce prima di cliccare che serve un accesso */
+.app-card--riservata .app-tag,.app-card--riservata .app-go{color:var(--warn)}
+.app-card--riservata:hover{border-color:rgba(224,163,74,.55)}
+
+@media (prefers-reduced-motion: reduce){ .app-card:hover{transform:none} }

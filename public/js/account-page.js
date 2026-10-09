@@ -85,7 +85,7 @@ $('acceptPrivacyBtn')?.addEventListener('click', async () => {
 
 $('outBtn').addEventListener('click', async () => {
   await api.auth.logout().catch(() => {});
-  location.href = '/';
+  location.href = '/vortice';
 });
 
 $('logoutAllBtn').addEventListener('click', async () => {
@@ -122,5 +122,5 @@ submitting($('delForm'), async () => {
   const r = await api.auth.deleteAccount($('delPw').value);
   /* niente toast: la pagina sta per cambiare, e la conferma deve restare
      leggibile su quella dopo */
-  location.href = `/?eliminato=1&creazioni=${r.deletedDesigns}`;
+  location.href = `/vortice?eliminato=1&creazioni=${r.deletedDesigns}`;
 });
