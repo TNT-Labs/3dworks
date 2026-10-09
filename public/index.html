@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0f0e0c">
 <title>shopbeautylab.it · scegli l’applicazione</title>
-<meta name="description" content="Scegli l’applicazione: VORTICE, lo studio generativo per dispenser e portaspazzolino stampabili in 3D, oppure Distinte bolli flotte, l’area riservata per le distinte dei bolli auto.">
+<meta name="description" content="Scegli l’applicazione: VORTICE, lo studio generativo per dispenser e portaspazzolino stampabili in 3D; Distinte bolli flotte, l’area riservata per le distinte dei bolli auto; Padel Stats, l’analisi video delle partite di padel.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/favicon.svg">
 <link rel="stylesheet" href="/vendor/fonts/fonts.css">
@@ -15,16 +15,16 @@
 </head>
 <body>
 
-<!-- Pagina d'ingresso di shopbeautylab.it: nessuno script, solo due collegamenti.
-     /vortice è questa applicazione; /bolli/ è un'applicazione separata
-     (repository distinte-bolli-flotte) a cui il tunnel Cloudflare inoltra
-     direttamente le richieste: vedi DEPLOY.md, «Più applicazioni sullo stesso dominio». -->
+<!-- Pagina d'ingresso di shopbeautylab.it: nessuno script, solo collegamenti.
+     /vortice è questa applicazione; /bolli/ e /padel/ sono applicazioni separate
+     (repository distinte-bolli-flotte e padelstatsML) a cui il tunnel Cloudflare
+     inoltra direttamente le richieste: vedi DEPLOY.md, «Più applicazioni sullo stesso dominio». -->
 <main class="scelta">
   <header class="scelta-head">
     <p class="kicker">shopbeautylab.it</p>
     <h1>Scegli l’applicazione</h1>
     <div class="rule"></div>
-    <p class="lead">Due servizi, un unico indirizzo: entra in quello che ti serve.</p>
+    <p class="lead">Tre servizi, un unico indirizzo: entra in quello che ti serve.</p>
   </header>
 
   <ul class="app-list">
@@ -43,6 +43,16 @@
         <span class="app-name">Distinte bolli flotte</span>
         <span class="app-desc">Preparazione e controllo delle distinte dei bolli auto delle flotte,
         con l’archivio di veicoli e scadenze condiviso tra gli utenti abilitati.</span>
+        <span class="app-note">Accesso con nome utente e password assegnati dall’amministratore</span>
+        <span class="app-go">Accedi <span aria-hidden="true">→</span></span>
+      </a>
+    </li>
+    <li>
+      <a class="app-card app-card--riservata" href="/padel/">
+        <span class="app-tag">Area riservata</span>
+        <span class="app-name">Padel Stats</span>
+        <span class="app-desc">Analisi video delle partite di padel: distanza percorsa, velocità,
+        zone del campo, mappe di calore e scambi di ogni giocatore.</span>
         <span class="app-note">Accesso con nome utente e password assegnati dall’amministratore</span>
         <span class="app-go">Accedi <span aria-hidden="true">→</span></span>
       </a>
