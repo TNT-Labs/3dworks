@@ -12,6 +12,15 @@ L'originale resta in [`legacy/`](legacy/) come riferimento.
 
 ---
 
+## Pagina d'ingresso del dominio
+
+`https://shopbeautylab.it/` non è più la home di VORTICE ma una pagina di scelta
+(`public/index.html`, statica, senza script) fra **VORTICE** (`/vortice`) e
+**Distinte bolli flotte** (`/bolli/`), un'applicazione separata a cui il tunnel
+Cloudflare inoltra direttamente i percorsi `/bolli…`: vedi DEPLOY.md §3,
+«Più applicazioni sullo stesso dominio». I link «Home» e il marchio delle pagine di
+VORTICE portano a `/vortice`.
+
 ## Le due metà dell'applicazione
 
 **Studio** — `/studio.html`, dietro accesso.
@@ -20,7 +29,7 @@ collo filettato GPI, incisione sul fondo, segnale personale da traccia GPX o dal
 voce, progettazione inversa ed export STL/3MF. In più: le creazioni si salvano sul
 server e si ritrovano da qualsiasi dispositivo.
 
-**Area pubblica** — `/` e `/p/CODICE`, senza account.
+**Area pubblica** — `/vortice` e `/p/CODICE`, senza account.
 Si digita il codice di produzione inciso sul fondo del pezzo e si vede il modello
 in 3D con la sua scheda tecnica. Si può orbitare, ingrandire e sezionare: **non
 c'è un solo comando che modifichi il design**, nessuno slider, nessun campo di
@@ -134,7 +143,7 @@ public/
   js/stage.js         scena Three.js                        (studio + viewer)
   js/studio.js        interfaccia di creazione
   js/viewer.js        scheda pubblica in sola lettura
-  index.html · prodotto.html · studio.html · accedi.html
+  index.html (scelta app) · vortice.html · prodotto.html · studio.html · accedi.html
   account.html        dati dell'account e diritti: export, rettifica, cancellazione
   privacy.html · cookie.html   informativa e cookie, riempite da /api/legal
 
