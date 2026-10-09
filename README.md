@@ -15,9 +15,10 @@ L'originale resta in [`legacy/`](legacy/) come riferimento.
 ## Pagina d'ingresso del dominio
 
 `https://shopbeautylab.it/` non è più la home di VORTICE ma una pagina di scelta
-(`public/index.html`, statica, senza script) fra **VORTICE** (`/vortice`) e
-**Distinte bolli flotte** (`/bolli/`), un'applicazione separata a cui il tunnel
-Cloudflare inoltra direttamente i percorsi `/bolli…`: vedi DEPLOY.md §3,
+(`public/index.html`, statica, senza script) fra **VORTICE** (`/vortice`),
+**Distinte bolli flotte** (`/bolli/`) e **Padel Stats** (`/padel/`), applicazioni
+separate a cui il tunnel Cloudflare inoltra direttamente i percorsi `/bolli…` e
+`/padel…`: vedi DEPLOY.md §3,
 «Più applicazioni sullo stesso dominio». I link «Home» e il marchio delle pagine di
 VORTICE portano a `/vortice`.
 

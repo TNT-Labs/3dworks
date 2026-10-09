@@ -135,38 +135,39 @@ Nel pannello **Cloudflare → Zero Trust → Networks → Tunnels**:
 
 Il record DNS viene creato da Cloudflare: non devi aggiungerlo a mano.
 
-### Più applicazioni sullo stesso dominio: `/bolli/`
+### Più applicazioni sullo stesso dominio: `/bolli/` e `/padel/`
 
 La radice `https://shopbeautylab.it/` è una pagina di scelta (`public/index.html`)
-fra **VORTICE**, la cui home ora sta su `/vortice`, e **Distinte bolli flotte**, che
-è un'applicazione separata (repository `TNT-Labs/distinte-bolli-flotte`, container
-`bolli`). VORTICE non fa da proxy: è il tunnel a mandare `/bolli/` direttamente al
-container giusto, con una regola sul percorso.
+fra **VORTICE**, la cui home ora sta su `/vortice`, **Distinte bolli flotte**
+(repository `TNT-Labs/distinte-bolli-flotte`, container `bolli`) e **Padel Stats**
+(repository `TNT-Labs/padelstatsML`, container `padel-api`, alias `padel`). Le ultime
+due sono applicazioni separate: VORTICE non fa da proxy, è il tunnel a mandare
+`/bolli/` e `/padel/` direttamente al container giusto, con una regola sul percorso.
 
 1. Avvia prima questo compose (crea la rete `3dworks_interna`; il prefisso è il nome
-   della cartella: verifica con `docker network ls | grep interna`), poi l'app bolli
-   con il suo compose, che si aggancia a quella rete con il nome `bolli`.
-2. Nel tunnel, **Public Hostnames → Add a public hostname**:
+   della cartella: verifica con `docker network ls | grep interna`), poi le altre app
+   con i loro compose, che si agganciano a quella rete con il nome `bolli` e `padel`.
+2. Nel tunnel, **Public Hostnames → Add a public hostname**, una regola per app:
 
-   | campo | valore |
-   |---|---|
-   | Subdomain | *(vuoto)* |
-   | Domain | `shopbeautylab.it` |
-   | Path | `bolli` |
-   | Type | `HTTP` |
-   | URL | `bolli:3100` |
+   | campo | bolli | padel |
+   |---|---|---|
+   | Subdomain | *(vuoto)* | *(vuoto)* |
+   | Domain | `shopbeautylab.it` | `shopbeautylab.it` |
+   | Path | `bolli` | `padel` |
+   | Type | `HTTP` | `HTTP` |
+   | URL | `bolli:3100` | `padel:8000` |
 
-3. **Ordine**: le regole si valutano dall'alto e vince la prima che corrisponde. Quella
-   con il percorso `bolli` deve stare **sopra** la regola generale `shopbeautylab.it →
-   vortice:3000` (trascinala in cima), altrimenti `/bolli/` finisce a VORTICE e
-   risponde con la sua pagina 404.
+3. **Ordine**: le regole si valutano dall'alto e vince la prima che corrisponde. Quelle
+   con il percorso (`bolli`, `padel`) devono stare **sopra** la regola generale
+   `shopbeautylab.it → vortice:3000` (trascinale in cima), altrimenti finiscono a
+   VORTICE e rispondono con la sua pagina 404.
 
-Nel campo Path va scritta **solo la parola** `bolli` (è un'espressione regolare valutata sul
-percorso; nessun indirizzo di VORTICE contiene «bolli»). Lasciato vuoto, la regola cattura
-l'intero dominio e VORTICE non riceve più traffico.
+Nel campo Path va scritta **solo la parola** (`bolli`, `padel`: è un'espressione regolare
+valutata sul percorso; nessun indirizzo di VORTICE contiene queste parole). Lasciato
+vuoto, la regola cattura l'intero dominio e VORTICE non riceve più traffico.
 
-Se il container `bolli` non è avviato, `/bolli/` risponde 502 e il resto del sito
-continua a funzionare.
+Se il container di un'app non è avviato, il suo percorso risponde 502 e il resto del
+sito continua a funzionare.
 
 **Un solo connettore per tunnel.** Non avviare sullo stesso Pi un altro `cloudflared`
 con le credenziali di questo tunnel (per esempio quello di un vecchio stack): Cloudflare
@@ -312,7 +313,7 @@ docker compose down -v       # ATTENZIONE: cancella anche il database
 |---|---|
 | **Error 502** da Cloudflare | Il container non è ancora `healthy`, oppure nel Public Hostname hai messo `localhost:3000` invece di `vortice:3000`: dentro `cloudflared`, `localhost` è `cloudflared` stesso. |
 | **Error 502 a intermittenza** e nel log di cloudflared `lookup vortice … no such host` | C'è un secondo connettore sullo stesso tunnel che non sta sulla rete di VORTICE (§3, «Un solo connettore per tunnel»): `docker ps | grep cloudflared`, ferma quello in più. |
-| **`/bolli/` mostra la pagina 404 di VORTICE** | La regola `bolli` del tunnel manca o sta sotto quella generale (§3). |
+| **`/bolli/` o `/padel/` mostra la pagina 404 di VORTICE** | La regola `bolli`/`padel` del tunnel manca o sta sotto quella generale (§3). |
 | **Tutto il sito risponde `404` in testo semplice e `/` porta a `/bolli/`** | La regola di bolli ha il campo Path vuoto e cattura ogni richiesta: scrivi `bolli` nel Path (solo la parola: niente `^`, `/` o `*`). Verifica con `docker logs vortice-tunnel 2>&1 \| grep "Updated to new configuration" \| tail -1`: la prima regola deve avere `"path":"bolli"`. |
 | **Error 1033** | Il tunnel non è connesso: `docker compose logs cloudflared`. Di solito è il `TUNNEL_TOKEN` copiato male. |
 | **`Provided Tunnel token is not valid`** e `vortice-tunnel` che riparte in continuazione | Il token è stato rifiutato da Cloudflare. Il controllo all'avvio (`vortice-tunnel-check`) intercetta i casi di copia-incolla: se invece l'ha lasciato passare, il formato è giusto ma il token non vale più — il tunnel è stato cancellato o qualcuno ha premuto *Refresh token*. Rigenera il token dal pannello (§3), aggiorna il `.env` e `docker compose up -d`. |
