@@ -1136,7 +1136,7 @@ function makeRingCtx(P){
  *   SALDATURA fra strati, ed e' l'unica differenza fra le due.
  *
  * Verdetto, fletterle fra le dita:
- * · coricata flette, eretta si spezza di netto con frattura piatta e lucida
+ * · coricata flette, eretta si spezza senza forza con frattura piatta e lucida
  *   → saldatura: piu' caldo, meno ventola, filo asciutto. Nessuna modifica al
  *     disegno la aggiusta.
  * · si spezzano entrambe di netto → materiale: bobina umida o vecchia.
@@ -1145,6 +1145,15 @@ function makeRingCtx(P){
  *
  * Le barrette hanno lo spessore della parete del design e si stampano con la
  * ricetta del design: e' lo stesso guscio, in piccolo.
+ *
+ * Tranne la ventola, se non la si fissa. Uno strato della eretta e' una
+ * sezione 15 x parete: si stampa in pochi secondi, sotto qualunque soglia di
+ * «tempo minimo per strato», e lo slicer la raffredda alla ventola MASSIMA per
+ * tutta l'altezza. Il corpo invece ha strati da 2-3 minuti e resta alla
+ * MINIMA. Senza intervento la eretta misura quindi una saldatura peggiore di
+ * quella del pezzo, e si spezza anche quando il pezzo saldato sarebbe sano.
+ * La ventola e' globale e il 3MF non la puo' imporre: il nome delle barrette
+ * lo dice nello slicer, e lo studio lo dice dove si scarica il provino.
  */
 const COUPON = { L:40, W:15, gap:18, brim:6 };
 
@@ -1164,11 +1173,11 @@ function boxMesh(dx, dy, dz){
 }
 
 function runCoupon(job){
-  const P = job.P, w = Math.max(.4, P.w);
+  const P = job.P, w = Math.max(.4, P.w), fan = materialOf(job.mat).fanMin;
   const eretta   = boxMesh(COUPON.W, w, COUPON.L);        // alta: strati perpendicolari
   const coricata = boxMesh(COUPON.L, COUPON.W, w);        // bassa: strati paralleli
   const parts = [
-    { name: `eretta · strati perpendicolari · parete ${w.toFixed(1)} mm`,
+    { name: `eretta · strati perpendicolari · parete ${w.toFixed(1)} mm · ventola fissa ${fan}%`,
       pos: eretta.pos,   ind: eretta.ind,   x: 0, y: -COUPON.gap },
     { name: `coricata · strati paralleli · parete ${w.toFixed(1)} mm`,
       pos: coricata.pos, ind: coricata.ind, x: 0, y: COUPON.gap },

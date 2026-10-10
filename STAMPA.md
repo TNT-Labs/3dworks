@@ -344,11 +344,24 @@ Il **provino di robustezza** dello studio separa le due cause in venti minuti,
 cambiando una sola variabile — l'orientamento. Sono due barrette identiche,
 dello spessore della tua parete e con la tua stessa ricetta: una in piedi
 (strati *perpendicolari* alla flessione: misura la saldatura) e una coricata
-(strati *paralleli*: misura il materiale). Si piegano fra le dita:
+(strati *paralleli*: misura il materiale).
+
+**Prima di slicciarlo, fissa la ventola: massima = minima** (PETG 20 %, PLA
+15 %, ASA 0 %), poi rimetti i valori della ricetta. Uno strato della eretta è una
+sezione 15 mm × parete e si stampa in pochi secondi: sotto la soglia di «tempo
+minimo per strato» lo slicer la raffredda alla ventola **massima** — il 100 % di
+un profilo PLA di serie — per tutta l'altezza. Il corpo, con strati da 2–3
+minuti, resta alla **minima**. Senza fissarla la eretta misura una saldatura
+peggiore di quella del pezzo e si spezza anche quando il pezzo sarebbe sano. Il
+3MF non può imporla (è globale): lo ricorda il nome della barretta nello slicer.
+
+Si piegano fra le dita. Anche ben saldata, la eretta cede prima della coricata —
+è la direzione debole di ogni stampa FDM: conta **quanta forza** serve e **com'è
+la frattura**.
 
 | cosa vedi | cosa è | cosa fai |
 |---|---|---|
-| coricata flette, **eretta si spezza di netto**, frattura piatta e lucida | saldatura fra strati | +10–15 °C, ventola giù, asciuga il filo. Nessuna modifica al disegno lo risolve |
+| coricata flette, **eretta si spezza senza forza**, frattura piatta e lucida | saldatura fra strati | +10–15 °C, ventola giù, asciuga il filo. Nessuna modifica al disegno lo risolve |
 | **si spezzano entrambe** di netto | materiale | bobina umida o vecchia: asciugala 4 h a 55–65 °C, o cambiala |
 | **flettono entrambe** e sbiancano | la stampa è sana | la fragilità del pezzo grosso è altrove: spessore, urto, aggressione chimica |
 

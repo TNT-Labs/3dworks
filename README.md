@@ -267,7 +267,10 @@ dell'utente (vedi sotto, «Il 3MF porta impostazioni per oggetto»).
 barrette identiche, dello spessore della parete del design e con la sua stessa
 ricetta, che cambiano una sola cosa: l'orientamento. La coricata ha gli strati
 paralleli alla flessione e misura il materiale; la eretta li ha perpendicolari e
-misura la saldatura. Si piegano fra le dita: se la coricata flette e la eretta si
+misura la saldatura. Va slicciato con la **ventola fissa alla minima** della
+ricetta: gli strati della eretta durano pochi secondi e lo slicer li
+raffredderebbe alla massima, una condizione più dura del corpo (strati da
+minuti, ventola minima). Si piegano fra le dita: se la coricata flette e la eretta si
 spezza di netto è la saldatura (più caldo, meno ventola, filo asciutto); se si
 spezzano entrambe è il materiale; se flettono entrambe la stampa è sana e la
 fragilità va cercata altrove. Venti minuti e 4 g contro le venti ore del pezzo

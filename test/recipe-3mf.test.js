@@ -316,6 +316,10 @@ test('il provino di robustezza è stampabile e cambia una cosa sola', async () =
   const modello = files.get('3D/3dmodel.model');
   assert.match(modello, /eretta/, 'la barretta eretta è nel file');
   assert.match(modello, /coricata/, 'e anche quella coricata');
+  /* la eretta ha strati da pochi secondi: senza ventola fissa lo slicer la
+     stampa alla massima e misura una saldatura peggiore di quella del corpo.
+     La ventola non viaggia nel file, quindi lo dice il nome */
+  assert.match(modello, new RegExp(`eretta[^"]*ventola fissa ${V.MATERIALS.petg.fanMin}%`));
   /* stessa ricetta del pezzo, su entrambe le barrette: è lo stesso guscio in
      piccolo, o non predice niente */
   const barrette = prusaObjects(files.get(PRUSA));

@@ -368,6 +368,7 @@ function syncMaterial(){
   $('matNote').textContent = m.nome + ' · ' + m.nota;
   $('rcTemp').textContent = `${m.nozzle} °C ugello (${m.nozzleFirst} il primo) · ${m.bed} °C piano`;
   $('rcFan').textContent = `${m.fanMin}–${m.fanMax}% · spenta i primi ${m.fanOff} strati`;
+  $('cpFan').textContent = `${m.fanMin}%`;
   /* PLA su un contenitore di liquidi: e' la combinazione che produce il pezzo
      fragile, e vale la pena dirlo dove si sceglie invece che in fondo a una guida */
   const rischio = mat === 'pla' && model.piece === 'disp';
@@ -457,7 +458,8 @@ $('dlCoupon').addEventListener('click', () => withBusy($('dlCoupon'), 'Genero il
   const three = r.format === '3mf';
   saveBlob(new Blob([r.buffer], { type: three ? 'model/3mf' : 'model/stl' }),
     `vortice-provino_${VCore.materialOf(mat).nome}_parete${model.tgt.w.toFixed(1)}mm.${three ? '3mf' : 'stl'}`);
-  toast(`Provino · parete ${model.tgt.w.toFixed(1)} mm · ≈${Math.round(r.secs/60)} min · fletti entrambe le barrette`);
+  toast(`Provino · parete ${model.tgt.w.toFixed(1)} mm · ≈${Math.round(r.secs/60)} min · `
+    + `ventola fissa al ${VCore.materialOf(mat).fanMin}% per stamparlo`);
 }));
 
 /* ====================== progettazione inversa ====================== */
