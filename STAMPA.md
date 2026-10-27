@@ -234,14 +234,20 @@ minimo — misurato sulla parete radiale, che era comunque il numero sbagliato.
 
 ### Il collo — tiene
 
-Parete **3,0 mm** costanti (fondo filetto Ø25,7 contro foro Ø19,7 sul 28/410),
+Parete **3,0 mm** costanti (fondo filetto Ø25,0 contro foro Ø19,0 sul 28/400),
 e in cima una **battuta piana larga 3,0 mm** su cui appoggia la guarnizione
 della pompa: gli ultimi 2,4 mm di collo sono lisci, il filetto è già sfumato.
 È la geometria giusta per una tenuta a compressione.
 
 Il filetto è un cordolo elicoidale a sezione arrotondata, non il profilo GPI
-esatto: le quote di listino (T = 28,2 su un nominale di 28) portano già
-l'abbondanza tipica della stampa. **Il verdetto è lo spool di prova**, il
+esatto, ma diametro e passo sono quelli della norma: sul 28 mm **T = 27,4 mm e
+passo 4,23 mm** (6 filetti/pollice), il fondo filetto cade sull'E di 25,0 mm e
+il collo è alto quanto l'H (≈10,2 mm sul 28/400, ≈17,7 sul 28/410). Le versioni
+precedenti usavano T 28,2 e passo 3,18 — il passo dei colli da 24 mm: la ghiera
+di una pompa 28/400 o 28/410 si piantava dopo un quarto di giro. I design salvati
+con quelle misure le conservano (lo studio li mostra come «Personali»): per
+renderli compatibili basta riselezionare 28/400 o 28/410 nella sezione «Collo».
+**Il verdetto è lo spool di prova**, il
 bottone nella sezione «Collo» dello studio: dieci minuti di stampa e ci avviti
 sopra la pompa vera.
 
