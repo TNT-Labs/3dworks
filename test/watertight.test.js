@@ -11,7 +11,7 @@ globalThis.self = globalThis;
 await import('../public/js/vcore.js');
 const V = globalThis.VCore;
 const { DesignModel, WALL_SEAL_MIN, EXTRUSION_W, PERIMETERS } = await import('../public/js/design-model.js');
-const { defaultState, PRESETS, RANGES } = await import('../public/js/design-spec.js');
+const { defaultState, PRESETS, RANGES, THREAD_STD } = await import('../public/js/design-spec.js');
 
 const LOGO = { on:true, text:'Made by Umberto Molteni', size:7, depth:.8,
                arc:true, rot:0, sn:true, serial:'VRT-ABCDE' };
@@ -458,5 +458,28 @@ test('il collo segue lo slider della parete quando questa supera i 3 mm', () => 
     assert.equal(neck(w).passaggio, PASS_MIN_BORE, `w ${w}: il passaggio non scende sotto Ø12`);
     assert.ok(neck(w).parete >= WALL_SEAL_MIN, `w ${w}: collo ${neck(w).parete.toFixed(2)} mm`);
     assert.ok(neck(w).parete < w, 'oltre la saturazione il collo non segue più lo slider');
+  }
+});
+
+test('lo spool di prova è un tubo passante: la pompa ci entra fino in battuta', () => {
+  for (const [key, t] of Object.entries(THREAD_STD)){
+    const P = par({ thD:t.d, pitch:t.p, turns:t.t });
+    const r = V.runExport({ kind:'ring', P, profKey:'clessidra', format:'stl', logo: LOGO });
+    assert.equal(r.ok, true, `${key}: ${r.error}`);
+    assert.equal(r.check.errors.length, 0, key);
+    /* nessun vertice dentro il foro: niente fondo che fermi il cilindro della pompa */
+    const n = V.neckSpec(P), ctx = V.makeRingCtx(P);
+    const pos = new Float32Array(2 * ctx.zs.length * ctx.nTh * 3);
+    V.fillVessel(pos, ctx);
+    let rMin = Infinity, zMin = Infinity;
+    for (let k = 0; k < pos.length; k += 3){
+      rMin = Math.min(rMin, Math.hypot(pos[k], pos[k+1]));
+      zMin = Math.min(zMin, pos[k+2]);
+    }
+    assert.ok(rMin > n.neckBoreR - .01, `${key}: foro Ø${(2*rMin).toFixed(2)}`);
+    assert.ok(Math.abs(zMin) < 1e-6, `${key}: appoggia sul piatto`);
+    /* volume = anello pieno fra foro e fondo filetto, più il cordolo */
+    const anello = Math.PI * (n.rootR ** 2 - n.neckBoreR ** 2) * r.Ht;
+    assert.ok(r.check.vol > anello * .98 && r.check.vol < anello * 1.4, `${key}: volume ${r.check.vol}`);
   }
 });

@@ -249,7 +249,10 @@ con quelle misure le conservano (lo studio li mostra come «Personali»): per
 renderli compatibili basta riselezionare 28/400 o 28/410 nella sezione «Collo».
 **Il verdetto è lo spool di prova**, il
 bottone nella sezione «Collo» dello studio: dieci minuti di stampa e ci avviti
-sopra la pompa vera.
+sopra la pompa vera. Lo spool è un anello **passante**, senza fondo: il cilindro
+del pistone e la cannuccia scendono liberi e la ghiera arriva in battuta come sul
+dispenser. Il foro è quello del collo vero (Ø 19,0 sul 28 mm): se la pompa passa
+nello spool, passa anche nel pezzo.
 
 ---
 

@@ -965,6 +965,9 @@ function fillVessel(pos, ctx){
     if (j >= jB) qI.set(pI);
   }
 
+  /* lo spool di prova è un tubo passante: nessun disco del fondo */
+  if (ctx.tube) return { maxR, maxW, maxWz, maxWall, capV, wallV, solidV, minRi,
+                         minWall: minWall === 1e9 ? 0 : minWall, floored, pinched, thickMax };
   /* disco del fondo: anelli 1..K-1 con nD campioni angolari propri (nD = m·nTh);
      l'anello K è la riga 0 del guscio, già scritta, raccordata dalla cerniera */
   const nD = ctx.nD || nTh, DTHD = TAU / nD;
@@ -1035,6 +1038,29 @@ function writeVesselIndex(ind, rows, nTh, jB, K, nD = nTh){
 function vesselIndex(rows, nTh, jB, K, nD = nTh){
   const ind = new Uint32Array(vesselTriCount(rows, nTh, jB, K, nD) * 3);
   writeVesselIndex(ind, rows, nTh, jB, K, nD);
+  return ind;
+}
+/* tubo passante (spool di prova): guscio esterno e parete interna sulle stesse
+   righe, chiusi da due corone piane, sopra e sotto. Stessi indici O/I del vaso
+   con jB = 0, così fillVessel scrive i vertici senza saperne niente. */
+const tubeVerts = (rows, nTh) => 2 * rows * nTh;
+function tubeIndex(rows, nTh){
+  const ind = new Uint32Array(4 * rows * nTh * 3);
+  const O = (j,i) => j*nTh + (i % nTh), I = (j,i) => rows*nTh + j*nTh + (i % nTh);
+  let p = 0;
+  for (let j = 0; j < rows-1; j++) for (let i = 0; i < nTh; i++){
+    let A=O(j,i), B=O(j,i+1), C=O(j+1,i), D=O(j+1,i+1);
+    ind[p++]=A; ind[p++]=B; ind[p++]=D;  ind[p++]=A; ind[p++]=D; ind[p++]=C;
+    A=I(j,i); B=I(j,i+1); C=I(j+1,i); D=I(j+1,i+1);
+    ind[p++]=A; ind[p++]=D; ind[p++]=B;  ind[p++]=A; ind[p++]=C; ind[p++]=D;
+  }
+  const t = rows - 1;
+  for (let i = 0; i < nTh; i++){
+    ind[p++]=O(t,i); ind[p++]=O(t,i+1); ind[p++]=I(t,i+1);              // corona in cima
+    ind[p++]=O(t,i); ind[p++]=I(t,i+1); ind[p++]=I(t,i);
+    ind[p++]=O(0,i); ind[p++]=I(0,i+1); ind[p++]=O(0,i+1);              // corona sul piatto
+    ind[p++]=O(0,i); ind[p++]=I(0,i);   ind[p++]=I(0,i+1);
+  }
   return ind;
 }
 
@@ -1114,7 +1140,12 @@ function makeRingCtx(P){
   ctx.Bo = new Float64Array(zs.length).fill(n.rootR);
   ctx.Bi = new Float64Array(zs.length).fill(n.neckBoreR);
   ctx.n = n;
-  ctx.jB = 1; ctx.zBase = base; ctx.Ht = Ht; ctx.ring = true; ctx.engrave = false;
+  /* Tubo PASSANTE, senza fondo: sotto la ghiera la pompa ha il cilindro del
+     pistone e la cannuccia, e con un fondo pieno il cilindro ci sbatte prima
+     che la ghiera arrivi in battuta. Il foro è lo stesso del collo vero: se la
+     pompa passa qui, passa anche nel dispenser. I primi 2,4 mm restano lisci,
+     così il piede di elefante del primo strato non tocca il filetto. */
+  ctx.jB = 0; ctx.zBase = base; ctx.Ht = Ht; ctx.ring = true; ctx.tube = true; ctx.engrave = false;
   ctx.r95 = n.rootR;
   for (let k = 0; k < 3; k++) ctx.radK[k] = n.rootR * (.3 + .3*k);
   return ctx;
@@ -1968,15 +1999,18 @@ function runExport(job){
       ? 'dispenser cavo, collo GPI esterno, firma incisa sul fondo'
       : pieceOf(P).name.toLowerCase() + ' aperto, guscio cavo, firma incisa sul fondo');
   }
-  const pos = new Float32Array(vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3);
+  const pos = new Float32Array((ctx.tube ? tubeVerts(ctx.zs.length, ctx.nTh)
+                                         : vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD)) * 3);
   st = fillVessel(pos, ctx);
-  const ind = vesselIndex(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD);
+  const ind = ctx.tube ? tubeIndex(ctx.zs.length, ctx.nTh)
+                       : vesselIndex(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD);
   const check = validateMesh(pos, ind, job.kind === 'ring' ? 0 : st.solidV + st.wallV);
-  const folds = discFolds(pos, ind, ctx);
+  const folds = ctx.tube ? 0 : discFolds(pos, ind, ctx);
   if (folds){ check.ok = false; check.errors.push(folds + ' triangoli del fondo ripiegati (disco oltre la parete)'); }
   /* La mesh puo' essere chiusa e il pezzo perdere lo stesso: un guscio piu'
      sottile di quanto lo slicer riesce a chiudere non tiene il liquido.
-     Vale solo per i pezzi cavi; lo spool di prova del filetto e' pieno. */
+     Vale solo per i pezzi cavi; lo spool di prova del filetto e' un tubo
+     aperto con la parete del collo, che non deve tenere liquido. */
   if (job.kind !== 'ring' && st.minWall > 0 && st.minWall < WALL_SEAL_MIN - .01){
     check.ok = false;
     check.errors.push(`parete di soli ${st.minWall.toFixed(2)} mm ` +
@@ -1986,7 +2020,7 @@ function runExport(job){
   if (!check.ok) return { ok:false, error:'mesh non valida: ' + check.errors.join(' · '), check };
   if (job.format === '3mf'){
     const name = (job.logo && job.logo.serial ? job.logo.serial + ' · ' : '') + pieceOf(P).name;
-    /* lo spool di prova e' pieno: non ha parete da riempire, tiene la ricetta base */
+    /* lo spool di prova e' un anello di 3 mm: tiene la ricetta base */
     const R = job.kind === 'ring' ? { ...RECIPE, mat: materialOf(job.mat) }
                                  : recipeFor(P, st.thickMax, job.mat);
     return build3MF([{ name, pos, ind, x:0, y:0 }], label, R).then(buffer => ({
