@@ -64,12 +64,21 @@ export const PRESETS = {
   marea:    { h:155, r:58, petals:9, twist:30, sharp:.28, profile:'bulbo'     },
 };
 
+/* Quote GPI lato bottiglia: d = T (Ø creste), p = passo. Fino a 24 mm il GPI usa
+   8 filetti/pollice (3,18 mm), da 28 mm in su 6 filetti/pollice (4,23 mm): con il
+   passo sbagliato la ghiera della pompa si pianta dopo un quarto di giro.
+   28/400: T 27,38 ± 0,25, E 24,99, H 10,16. 28/410: T 27,33, H 17,73.
+   t è la lunghezza dell'elica del cordolo, scelta perché l'altezza del collo
+   (raccordo + t·p + battuta) arrivi all'H della norma: la gonna della ghiera deve
+   scendere tutta senza toccare la spalla, e il tratto a profondità piena copre
+   il giro di presa della ghiera. */
 export const THREAD_STD = {
   '24/410': { d:24.2, p:3.18, t:1.5 },
   '24/415': { d:24.2, p:3.18, t:2.0 },
-  '28/410': { d:28.2, p:3.18, t:1.5 },
+  '28/400': { d:27.4, p:4.23, t:1.5 },
+  '28/410': { d:27.4, p:4.23, t:3.0 },
 };
-export const THREAD_DEFAULT = '28/410';
+export const THREAD_DEFAULT = '28/400';
 export const Z_MAX = 250;
 export const BED = 220;
 
