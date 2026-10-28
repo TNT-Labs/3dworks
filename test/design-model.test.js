@@ -173,3 +173,14 @@ test('il portaspazzolino è all\'80% del dispenser, in altezza totale e in base'
     assert.ok(Math.abs(o.Bo[0] / d.Bo[0] - .8) < .005, `${tk} ${pk}: base ${(o.Bo[0] / d.Bo[0]).toFixed(3)}`);
   }
 });
+
+test('il set oltre il piatto resta visibile: entrambi i pezzi hanno una posizione', () => {
+  const s = defaultState(); s.piece = 'plate';   // Aureo: col portaspazzolino all'80% non sta sul 220
+  const m = still(s);
+  assert.equal(m.metrics.plate.fits, false);
+  for (const slot of m.slots){
+    assert.ok(slot.visible, 'visibile');
+    assert.ok(Number.isFinite(slot.place.x) && Number.isFinite(slot.place.y), 'posizione valida');
+  }
+  assert.ok(Math.abs(m.slots[0].place.x - m.slots[1].place.x) > 100, 'affiancati, non sovrapposti');
+});

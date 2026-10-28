@@ -346,3 +346,19 @@ test("l'STL non trasporta la ricetta: è una differenza da dichiarare", async ()
   const b = Buffer.from(r.buffer);
   assert.equal(b.length, 84 + b.readUInt32LE(80) * 50);
 });
+
+test('il set oltre il piatto si esporta lo stesso, in fila, due oggetti separati', async () => {
+  for (const format of ['3mf', 'stl']){
+    const r = await V.runExport({ kind:'plate', P: { ...PAR }, pieces:['disp','tooth'],
+      profKey:'clessidra', format, logo: LOGO });
+    assert.equal(r.ok, true, `${format}: ${r.error}`);
+    assert.equal(r.plate.fits, false, 'Aureo pieno non sta sul 220');
+    assert.ok(r.plate.why, 'il motivo resta per l\'avviso');
+    assert.ok(r.plate.W > 210 && Number.isFinite(r.plate.D), `${format}: ingombro ${r.plate.W}`);
+    if (format === '3mf'){
+      const model = unzip(r.buffer).get('3D/3dmodel.model');
+      assert.equal((model.match(/<object id=/g) || []).length, 2, 'due oggetti: lo slicer li separa');
+      assert.ok(!/NaN/.test(model), 'nessuna coordinata non valida');
+    }
+  }
+});

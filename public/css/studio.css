@@ -150,11 +150,12 @@ input[type=range]::-moz-range-thumb{
 /* ---------------------------- scena ---------------------------- */
 .stage-caption{display:flex;align-items:center;gap:8px}
 .stage-caption .ic{width:13px;height:13px;flex:0 0 auto;display:none}
-.stage-caption.ok .ic,.stage-caption.bad .ic{display:block}
+.stage-caption.ok .ic,.stage-caption.bad .ic,.stage-caption.warn .ic{display:block}
 .stage-caption.ok{color:var(--mut)}
 .stage-caption.bad{color:#f2b9b4;border-color:rgba(255,93,82,.4)}
 .stage-caption.ok .ic{color:var(--ok)}
 .stage-caption.bad .ic{color:var(--bad)}
+.stage-caption.warn .ic{color:var(--warn)}
 
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 #flash.go{animation:flash .34s ease-out}

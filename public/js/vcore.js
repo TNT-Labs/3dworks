@@ -1304,9 +1304,11 @@ function runPlate(job){
     recParts.push([it.P, m.st.thickMax]);
   }
   if (errs.length) return { ok:false, error:'mesh non valida · ' + errs.join(' | ') };
-  if (!plan.fits) return { ok:false, error:'i pezzi non stanno insieme sul piatto · ' + plan.why };
+  /* oltre il piatto il file si scrive lo stesso, in fila: i pezzi sono oggetti
+     separati e lo slicer li ridistribuisce o li stampa in due volte */
   const label = 'VORTICE set: ' + parts.map(p => p.name).join(' + ');
-  const summary = { ok:true, check:{ tris }, plate:{ W:plan.W, D:plan.D, H:plan.H }, matVol, secs, Ht, tris, pieces:parts.length };
+  const summary = { ok:true, check:{ tris }, plate:{ W:plan.W, D:plan.D, H:plan.H, fits:plan.fits, why:plan.why || null },
+                    matVol, secs, Ht, tris, pieces:parts.length };
   if (job.format === '3mf')
     return build3MF(parts, label, recipeForAll(recParts, job.mat))
       .then(buffer => ({ ...summary, buffer, format:'3mf' }));
@@ -1963,20 +1965,25 @@ function pieceExtent(P, profKey){
   return { R, H: zs[rows-1], name: pieceOf(P).name };
 }
 /* disposizione: prima affiancati lungo X (più leggibile), altrimenti in diagonale
-   agli angoli opposti, dove un piatto quadrato offre molto più spazio */
+   agli angoli opposti, dove un piatto quadrato offre molto più spazio.
+   Se non entrano restano comunque in fila, oltre il bordo: l'anteprima li mostra
+   e l'export li scrive, poi si separano nello slicer (fits:false, why). */
 function platePlan(setP, profKey, keys){
   const items = keys.map(k => { const P = piecePar(setP, k); const e = pieceExtent(P, profKey); return { key:k, P, ...e }; });
   const free = BED - 2 * BED_MARGIN, half = free / 2;
   let H = 0; for (const it of items) H = Math.max(H, it.H);
-  const tooBig = items.find(it => 2 * it.R > free);
-  if (tooBig) return { items, H, free, fits:false, why:`${tooBig.name}: Ø ${Math.ceil(2*tooBig.R)} mm su ${free} utili` };
   let W = 0; for (const it of items) W += 2 * it.R;
   W += PIECE_GAP * (items.length - 1);
-  if (W <= free){                                   // affiancati e centrati
+  const D = Math.max(...items.map(i => 2*i.R));
+  const row = () => {                               // affiancati e centrati
     let x = -W / 2;
     for (const it of items){ it.x = x + it.R; it.y = 0; x += 2 * it.R + PIECE_GAP; }
-    return { items, H, free, fits:true, layout:'fila', W, D: Math.max(...items.map(i => 2*i.R)) };
-  }
+  };
+  row();
+  const tooBig = items.find(it => 2 * it.R > free);
+  if (tooBig) return { items, H, free, fits:false, layout:'fila', W, D,
+                       why:`${tooBig.name}: Ø ${Math.ceil(2*tooBig.R)} mm su ${free} utili` };
+  if (W <= free) return { items, H, free, fits:true, layout:'fila', W, D };
   if (items.length === 2){                          // diagonale: angoli opposti
     const [a, b] = items;
     const pa = half - a.R, pb = half - b.R;
@@ -1987,9 +1994,10 @@ function platePlan(setP, profKey, keys){
         W: Math.max(a.x + a.R, b.x + b.R) - Math.min(a.x - a.R, b.x - b.R),
         D: Math.max(a.y + a.R, b.y + b.R) - Math.min(a.y - a.R, b.y - b.R) };
     }
-    return { items, H, free, fits:false, W, why:`servono ${Math.ceil(a.R + b.R + PIECE_GAP)} mm tra i centri, ne restano ${Math.floor(dist)} in diagonale` };
+    return { items, H, free, fits:false, layout:'fila', W, D,
+             why:`servono ${Math.ceil(a.R + b.R + PIECE_GAP)} mm tra i centri, ne restano ${Math.floor(dist)} in diagonale` };
   }
-  return { items, H, free, fits:false, W, why:`servono ${Math.ceil(W)} mm in fila su ${free} utili` };
+  return { items, H, free, fits:false, layout:'fila', W, D, why:`servono ${Math.ceil(W)} mm in fila su ${free} utili` };
 }
 
 /* ================= lavoro di esportazione completo ================= */

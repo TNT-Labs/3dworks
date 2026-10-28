@@ -430,7 +430,8 @@ $('dl').addEventListener('click', () => withBusy($('dl'), 'Genero e verifico…'
   const sn = job.kind !== 'plate' && job.logo.on && job.logo.serial && !r.serialOk
     ? ' · codice NON inciso (non entra)' : '';
   const what = job.kind === 'plate'
-    ? `${it(r.tris)} triangoli · ${Math.ceil(r.plate.W)} × ${Math.ceil(r.plate.D)} mm sul piatto`
+    ? `${it(r.tris)} triangoli · ${Math.ceil(r.plate.W)} × ${Math.ceil(r.plate.D)} mm` +
+      (r.plate.fits ? ' sul piatto' : ' · oltre il piatto: separa i pezzi nello slicer')
     : `mesh chiusa · parete ${r.minWall.toFixed(2)} mm · profondità ${Math.round(r.depth)} mm`;
   toast(`${job.kind === 'plate' ? 'Set (2 pezzi)' : PIECE_NAMES[model.piece]} ${code} · ` +
         `${r.format === '3mf' ? '3MF' : 'STL'} ${fmtBytes(r.buffer.byteLength)} · ${what}${sn}${warn}`);
