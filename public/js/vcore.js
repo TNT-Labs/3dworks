@@ -244,20 +244,31 @@ function logoDepth(raster, depth, x, y, r95){
 /* ============ collo filettato ESTERNO: quote critiche (lato bottiglia) ============ */
 /* ---- pezzi del set: stesso DNA (profilo, costole, torsione, segnale), misure derivate.
    Il codice del design identifica il SET: entrambi i pezzi lo portano inciso. ---- */
+/* hK = altezza del pezzo come frazione dell'altezza TOTALE del dispenser, collo
+   compreso (è quella che si vede sul lavabo); rK = raggio come frazione del suo */
 const PIECES = {
-  disp:  { name:'Dispenser',       hK:1,   rK:1,   neck:true  },
-  tooth: { name:'Portaspazzolino', hK:.58, rK:.62, neck:false },
+  disp:  { name:'Dispenser',       hK:1,  rK:1,  neck:true  },
+  tooth: { name:'Portaspazzolino', hK:.8, rK:.8, neck:false },
 };
 const pieceOf = P => PIECES[P && P.piece] || PIECES.disp;
+/* fattori effettivi su P.h e P.r: il collo del dispenser dipende dal filetto,
+   quindi il fattore sull'altezza del corpo cambia con lo standard scelto */
+function pieceK(P, key){
+  const pc = PIECES[key] || PIECES.disp;
+  if (pc === PIECES.disp) return { h:1, r:1 };
+  const Ht = P.h + neckSpec({ ...P, piece:'disp' }).Hn;
+  return { h: pc.hK * Ht / P.h, r: pc.rK };
+}
 /* misure del pezzo a partire dai parametri del set */
 function piecePar(P, key){
   const pc = PIECES[key] || PIECES.disp;
   if (pc === PIECES.disp) return { ...P, piece:'disp' };
+  const k = pieceK(P, key);
   /* la torsione scala con l'altezza: i pezzi del set condividono l'INCLINAZIONE
      dell'elica delle costole, non l'angolo totale (che su un pezzo più basso
      darebbe un'elica più ripida e mangerebbe il budget dei 44°) */
-  return { ...P, piece:key, h: clamp(P.h * pc.hK, 40, 235), r: clamp(P.r * pc.rK, 20, 110),
-           twist: P.twist * pc.hK };
+  return { ...P, piece:key, h: clamp(P.h * k.h, 40, 235), r: clamp(P.r * k.r, 20, 110),
+           twist: P.twist * k.h };
 }
 function neckSpec(P){
   if (!pieceOf(P).neck)                      // pezzo aperto: nessun collo, nessun filetto
@@ -2035,7 +2046,7 @@ function runExport(job){
            depth: ctx.Ht - ctx.zs[ctx.jB], serialOk: !!(raster && raster.serialOk) };
 }
 
-G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, RECIPE_WALLS_MAX, layoutLogo, buildLogoRaster, logoDepth, neckSpec,
+G.VCore = { TAU, sstep, clamp, PROFILES, RRES, WALL_FLOOR, WALL_SEAL_MIN, RECIPE_WALLS_MAX, layoutLogo, buildLogoRaster, logoDepth, neckSpec, pieceK,
   buildRows, clampProfile, targetR95, buildRadK, buildRadKBands, layoutSerial, fillVessel, vesselVerts, vesselTriCount,
   writeVesselIndex, vesselIndex, PN, PE, discCounts, discSpec, mkScratch, baseCtx, firstInnerRow, exportFloorRow, exportFloorZ, floorMin, FLOOR_MIN,
   makeExportCtx, makeRingCtx, buildSTLBuffer, validateMesh, discFolds, r95Of, runExport, PIECES, pieceOf, piecePar, pieceRows,

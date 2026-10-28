@@ -16,7 +16,7 @@ const V = globalThis.VCore;
 if (!V) throw new Error('VCore non caricato: includi /js/vcore.js prima di questo modulo');
 
 const {
-  PROFILES, PIECES, piecePar, platePlan, clamp, neckSpec, buildRows, clampProfile,
+  PROFILES, PIECES, pieceK, piecePar, platePlan, clamp, neckSpec, buildRows, clampProfile,
   targetR95, fillVessel, vesselTriCount, writeVesselIndex, PN, PE, discCounts, discSpec,
   r95Of, SIG_SPAN, SIG_SIGMA_MAX, sigRaw, smoothNorm, shapeAt, sigWeight, fitSignal,
   fitProfile, fitRing, ringTable, shapeCirc, normZero, baseCtx, firstInnerRow,
@@ -76,7 +76,7 @@ export class DesignModel {
     this.piece = d.piece === 'plate' ? 'disp' : d.piece;
     this.plateMode = d.piece === 'plate';
     /* il cambio pezzo è una transizione, non un salto: questi fattori sono animati */
-    this.pieceK = { h: PIECES[this.piece].hK, r: PIECES[this.piece].rK };
+    this.pieceK = pieceK(this.tgt, this.piece);
 
     this.sig = { ...d.sig };
     this.sigStore = { gpx:null, voce:null };   // ultimo dato per fonte: cambiare scheda non lo perde
@@ -174,7 +174,7 @@ export class DesignModel {
     if (!PIECES[key] || key === this.piece) return;
     this.plateMode = false;
     this.piece = key;
-    if (!animate){ this.pieceK.h = PIECES[key].hK; this.pieceK.r = PIECES[key].rK; }
+    if (!animate) this.pieceK = pieceK(this.tgt, key);
     this.#syncPieceP();
     this.rebuildLogoRaster();
   }
@@ -266,7 +266,7 @@ export class DesignModel {
     this.plateMode = s.piece === 'plate';
     if (piece !== this.piece){
       this.piece = piece;
-      if (!animate){ this.pieceK.h = PIECES[piece].hK; this.pieceK.r = PIECES[piece].rK; }
+      if (!animate) this.pieceK = pieceK(this.tgt, piece);
     }
 
     Object.assign(this.sig, s.sig);
@@ -284,8 +284,7 @@ export class DesignModel {
   settle(){
     for (const k of ANIM_KEYS) this.cur[k] = this.tgt[k];
     this.cur.petals = this.tgt.petals;
-    this.pieceK.h = PIECES[this.piece].hK;
-    this.pieceK.r = PIECES[this.piece].rK;
+    this.pieceK = pieceK(this.tgt, this.piece);
     this.profFrom = this.profTo = PROFILES[this.profKey];
     this.profBlend = 1;
     this.#syncPieceP();
@@ -301,8 +300,11 @@ export class DesignModel {
       else if (this.cur[k] !== this.tgt[k]){ this.cur[k] = this.tgt[k]; moved = true; }
     }
     if (this.cur.petals !== this.tgt.petals){ this.cur.petals = this.tgt.petals; moved = true; }
+    /* il traguardo si legge da tgt: il fattore sull'altezza dipende da h e dal
+       collo, e su cur varrebbe altro durante l'animazione d'ingresso */
+    const goal = pieceK(this.tgt, this.piece);
     for (const k of ['h', 'r']){
-      const t = PIECES[this.piece][k + 'K'], d = t - this.pieceK[k];
+      const t = goal[k], d = t - this.pieceK[k];
       if (Math.abs(d) > .002){ this.pieceK[k] += d * Math.min(1, dt * 7); moved = true; }
       else this.pieceK[k] = t;
     }

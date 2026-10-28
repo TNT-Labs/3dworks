@@ -161,3 +161,15 @@ test("l'animazione converge sul bersaglio e si ferma", () => {
   m.build(true);
   assert.equal(m.metrics.height, still().metrics.height, 'a riposo coincide col modello fermo');
 });
+
+test('il portaspazzolino è all\'80% del dispenser, in altezza totale e in base', async () => {
+  const V = globalThis.VCore;
+  const { THREAD_STD } = await import('../public/js/design-spec.js');
+  for (const [tk, t] of Object.entries(THREAD_STD)) for (const [pk, pr] of Object.entries(PRESETS)){
+    const P = { ...defaultState().P, ...pr, thD:t.d, pitch:t.p, turns:t.t, amp:0 };
+    const d = V.makeExportCtx(V.piecePar(P, 'disp'), pr.profile, null, .8);
+    const o = V.makeExportCtx(V.piecePar(P, 'tooth'), pr.profile, null, .8);
+    assert.ok(Math.abs(o.Ht / d.Ht - .8) < .005, `${tk} ${pk}: altezza ${(o.Ht / d.Ht).toFixed(3)}`);
+    assert.ok(Math.abs(o.Bo[0] / d.Bo[0] - .8) < .005, `${tk} ${pk}: base ${(o.Bo[0] / d.Bo[0]).toFixed(3)}`);
+  }
+});

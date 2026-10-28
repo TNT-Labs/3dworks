@@ -254,7 +254,9 @@ test('lo spool di prova del filetto porta la stessa cucitura del pezzo vero', as
 });
 
 test('il set sul piatto porta a ogni pezzo la sua ricetta', async () => {
-  const r = await V.runExport({ kind:'plate', P: { ...PAR, w: 6 }, pieces:['disp','tooth'],
+  /* r 52: con il portaspazzolino all'80% il set Aureo pieno (r 62) non sta più
+     sul piatto da 220, e qui conta la ricetta, non l'ingombro */
+  const r = await V.runExport({ kind:'plate', P: { ...PAR, r: 52, w: 6 }, pieces:['disp','tooth'],
     profKey:'clessidra', format:'3mf', logo: LOGO });
   assert.equal(r.ok, true, r.error);
   const files = unzip(r.buffer);
