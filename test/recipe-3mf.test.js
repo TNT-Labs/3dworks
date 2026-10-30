@@ -254,7 +254,9 @@ test('lo spool di prova del filetto porta la stessa cucitura del pezzo vero', as
 });
 
 test('il set sul piatto porta a ogni pezzo la sua ricetta', async () => {
-  const r = await V.runExport({ kind:'plate', P: { ...PAR, w: 6 }, pieces:['disp','tooth'],
+  /* r 52: con il portaspazzolino all'80% il set Aureo pieno (r 62) non sta più
+     sul piatto da 220, e qui conta la ricetta, non l'ingombro */
+  const r = await V.runExport({ kind:'plate', P: { ...PAR, r: 52, w: 6 }, pieces:['disp','tooth'],
     profKey:'clessidra', format:'3mf', logo: LOGO });
   assert.equal(r.ok, true, r.error);
   const files = unzip(r.buffer);
@@ -343,4 +345,20 @@ test("l'STL non trasporta la ricetta: è una differenza da dichiarare", async ()
      non c'è alcun posto dove infilare impostazioni di stampa */
   const b = Buffer.from(r.buffer);
   assert.equal(b.length, 84 + b.readUInt32LE(80) * 50);
+});
+
+test('il set oltre il piatto si esporta lo stesso, in fila, due oggetti separati', async () => {
+  for (const format of ['3mf', 'stl']){
+    const r = await V.runExport({ kind:'plate', P: { ...PAR }, pieces:['disp','tooth'],
+      profKey:'clessidra', format, logo: LOGO });
+    assert.equal(r.ok, true, `${format}: ${r.error}`);
+    assert.equal(r.plate.fits, false, 'Aureo pieno non sta sul 220');
+    assert.ok(r.plate.why, 'il motivo resta per l\'avviso');
+    assert.ok(r.plate.W > 210 && Number.isFinite(r.plate.D), `${format}: ingombro ${r.plate.W}`);
+    if (format === '3mf'){
+      const model = unzip(r.buffer).get('3D/3dmodel.model');
+      assert.equal((model.match(/<object id=/g) || []).length, 2, 'due oggetti: lo slicer li separa');
+      assert.ok(!/NaN/.test(model), 'nessuna coordinata non valida');
+    }
+  }
 });

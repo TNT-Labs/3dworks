@@ -91,7 +91,7 @@ function captionFor(m){
   if (m.plate)
     return m.plate.fits
       ? `set · 2 pezzi ${m.plate.layout} · ${Math.ceil(m.plate.W)} × ${Math.ceil(m.plate.D)} mm`
-      : 'i due pezzi non entrano insieme sul piatto';
+      : `set · 2 pezzi ${Math.ceil(m.plate.W)} × ${Math.ceil(m.plate.D)} mm · da stampare separati`;
   return `Ø ${Math.round(m.diameter)} × ${Math.round(m.height)} mm · ≈${Math.round(m.capML)} ml · pareti ${m.tilt.toFixed(0)}°`;
 }
 

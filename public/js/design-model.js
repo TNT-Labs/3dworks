@@ -16,7 +16,7 @@ const V = globalThis.VCore;
 if (!V) throw new Error('VCore non caricato: includi /js/vcore.js prima di questo modulo');
 
 const {
-  PROFILES, PIECES, piecePar, platePlan, clamp, neckSpec, buildRows, clampProfile,
+  PROFILES, PIECES, pieceK, piecePar, platePlan, clamp, neckSpec, buildRows, clampProfile,
   targetR95, fillVessel, vesselTriCount, writeVesselIndex, PN, PE, discCounts, discSpec,
   r95Of, SIG_SPAN, SIG_SIGMA_MAX, sigRaw, smoothNorm, shapeAt, sigWeight, fitSignal,
   fitProfile, fitRing, ringTable, shapeCirc, normZero, baseCtx, firstInnerRow,
@@ -76,7 +76,7 @@ export class DesignModel {
     this.piece = d.piece === 'plate' ? 'disp' : d.piece;
     this.plateMode = d.piece === 'plate';
     /* il cambio pezzo è una transizione, non un salto: questi fattori sono animati */
-    this.pieceK = { h: PIECES[this.piece].hK, r: PIECES[this.piece].rK };
+    this.pieceK = pieceK(this.tgt, this.piece);
 
     this.sig = { ...d.sig };
     this.sigStore = { gpx:null, voce:null };   // ultimo dato per fonte: cambiare scheda non lo perde
@@ -174,7 +174,7 @@ export class DesignModel {
     if (!PIECES[key] || key === this.piece) return;
     this.plateMode = false;
     this.piece = key;
-    if (!animate){ this.pieceK.h = PIECES[key].hK; this.pieceK.r = PIECES[key].rK; }
+    if (!animate) this.pieceK = pieceK(this.tgt, key);
     this.#syncPieceP();
     this.rebuildLogoRaster();
   }
@@ -266,7 +266,7 @@ export class DesignModel {
     this.plateMode = s.piece === 'plate';
     if (piece !== this.piece){
       this.piece = piece;
-      if (!animate){ this.pieceK.h = PIECES[piece].hK; this.pieceK.r = PIECES[piece].rK; }
+      if (!animate) this.pieceK = pieceK(this.tgt, piece);
     }
 
     Object.assign(this.sig, s.sig);
@@ -284,8 +284,7 @@ export class DesignModel {
   settle(){
     for (const k of ANIM_KEYS) this.cur[k] = this.tgt[k];
     this.cur.petals = this.tgt.petals;
-    this.pieceK.h = PIECES[this.piece].hK;
-    this.pieceK.r = PIECES[this.piece].rK;
+    this.pieceK = pieceK(this.tgt, this.piece);
     this.profFrom = this.profTo = PROFILES[this.profKey];
     this.profBlend = 1;
     this.#syncPieceP();
@@ -301,8 +300,11 @@ export class DesignModel {
       else if (this.cur[k] !== this.tgt[k]){ this.cur[k] = this.tgt[k]; moved = true; }
     }
     if (this.cur.petals !== this.tgt.petals){ this.cur.petals = this.tgt.petals; moved = true; }
+    /* il traguardo si legge da tgt: il fattore sull'altezza dipende da h e dal
+       collo, e su cur varrebbe altro durante l'animazione d'ingresso */
+    const goal = pieceK(this.tgt, this.piece);
     for (const k of ['h', 'r']){
-      const t = PIECES[this.piece][k + 'K'], d = t - this.pieceK[k];
+      const t = goal[k], d = t - this.pieceK[k];
       if (Math.abs(d) > .002){ this.pieceK[k] += d * Math.min(1, dt * 7); moved = true; }
       else this.pieceK[k] = t;
     }
@@ -411,6 +413,10 @@ export class DesignModel {
     const seconds = printSeconds(matVol, q);
     const seal = this.engraved ? floorZ - this.logo.depth : floorZ;
     const pass = st.minRi * 2;
+    /* pezzo aperto: il passaggio è la bocca, e il minimo è quello garantito dal
+       profilo (mezzo millimetro di tolleranza per la risoluzione dell'anteprima) */
+    const mouth = PIECES[this.piece].mouth || 0;
+    const passMin = mouth ? mouth - .5 : PASS_MIN;
 
     /* Spessore reale del guscio, misurato sulla geometria invece che
        dichiarato: è ciò che decide se il pezzo tiene il liquido. */
@@ -424,7 +430,9 @@ export class DesignModel {
     if (overXY > 0) issues.push(`sfora il piatto di ${Math.ceil(overXY)} mm — riduci raggio o affilatura`);
     if (overZ > 0) issues.push(`supera i ${Z_MAX} mm di corsa Z di ${Math.ceil(overZ)} mm — riduci l'altezza o i giri del filetto`);
     if (tilt > TILT_MAX) issues.push(`pareti a ${tilt.toFixed(0)}° — ` + tiltHint(this.cur, st.maxWz, st.maxWall));
-    if (pass < PASS_MIN)
+    if (mouth && pass < passMin)
+      issues.push(`passaggio interno Ø ${pass.toFixed(0)} mm, sotto i ${mouth} — gli spazzolini non entrano: la torsione o l'affilatura delle costole, con questa parete, richiudono la cavità; riducile o assottiglia la parete`);
+    else if (pass < passMin)
       issues.push(`strozzatura interna Ø ${pass.toFixed(0)} mm — la cannuccia rischia di non arrivare al fondo; riduci l'intensità del segnale o la parete`);
     /* La cavità è la faccia esterna meno lo spessore voluto: su un pezzo
        piccolo una parete grossa la chiude del tutto, e dove si chiude resta la
@@ -479,7 +487,7 @@ export class DesignModel {
         discCounts(PE, this.engraved).K, discCounts(PE, this.engraved).nD),
       fitsBed: overXY <= 0 && overZ <= 0,
       tiltOk: tilt <= TILT_MAX,
-      passOk: pass >= PASS_MIN,
+      passOk: pass >= passMin,
       sealOk: seal >= 1.5,
       issues,
       ok: issues.length === 0,
