@@ -184,3 +184,33 @@ test('il set oltre il piatto resta visibile: entrambi i pezzi hanno una posizion
   }
   assert.ok(Math.abs(m.slots[0].place.x - m.slots[1].place.x) > 100, 'affiancati, non sovrapposti');
 });
+
+test('la bocca del portaspazzolino non scende sotto il minimo', () => {
+  const V = globalThis.VCore, mouth = V.PIECES.tooth.mouth;
+  /* fiamma e bulbo si stringono in cima: prima i preset davano Ø 23 mm */
+  for (const [k, pr] of Object.entries(PRESETS)){
+    const s = defaultState(); s.piece = 'tooth'; s.profile = pr.profile;
+    Object.assign(s.P, { h:pr.h, r:pr.r, petals:pr.petals, twist:pr.twist, sharp:pr.sharp });
+    const m = still(s).metrics;
+    assert.ok(m.passOk, `${k}: anteprima Ø ${m.pass.toFixed(1)}`);
+  }
+  /* export: la gamma ragionevole. Con r 30 e costole affilate il dispenser
+     stesso è troppo stretto, e il portaspazzolino non lo supera: lì vale la
+     segnalazione (test seguente) */
+  for (const prof of ['clessidra', 'fiamma', 'tornado', 'bulbo'])
+    for (const [r, sharp, w, twist, petals, h] of [[45, .6, 4, 120, 9, 120], [30, 0, 2, 0, 3, 235],
+                                                   [100, .3, 2.4, 60, 6, 185], [45, .6, 2.4, 90, 7, 150]]){
+      const P = V.piecePar({ ...defaultState().P, r, sharp, w, twist, petals, h, amp:0 }, 'tooth');
+      const ctx = V.makeExportCtx(P, prof, null, .8);
+      const st = V.fillVessel(new Float32Array(V.vesselVerts(ctx.zs.length, ctx.nTh, ctx.jB, ctx.K, ctx.nD) * 3), ctx);
+      assert.ok(st.minRi * 2 >= mouth, `${prof} r${r} sh${sharp} w${w} tw${twist}: Ø ${(st.minRi * 2).toFixed(1)}`);
+    }
+});
+
+test('la bocca irraggiungibile finisce nella scheda, non passa in silenzio', () => {
+  const s = defaultState(); s.piece = 'tooth';
+  Object.assign(s.P, { r:30, sharp:1, w:8, twist:360, petals:9, h:120 });
+  const m = still(s).metrics;
+  assert.equal(m.passOk, false);
+  assert.ok(m.issues.some(i => /spazzolini/.test(i)), m.issues.join(' | '));
+});

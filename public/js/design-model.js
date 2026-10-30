@@ -413,6 +413,10 @@ export class DesignModel {
     const seconds = printSeconds(matVol, q);
     const seal = this.engraved ? floorZ - this.logo.depth : floorZ;
     const pass = st.minRi * 2;
+    /* pezzo aperto: il passaggio è la bocca, e il minimo è quello garantito dal
+       profilo (mezzo millimetro di tolleranza per la risoluzione dell'anteprima) */
+    const mouth = PIECES[this.piece].mouth || 0;
+    const passMin = mouth ? mouth - .5 : PASS_MIN;
 
     /* Spessore reale del guscio, misurato sulla geometria invece che
        dichiarato: è ciò che decide se il pezzo tiene il liquido. */
@@ -426,7 +430,9 @@ export class DesignModel {
     if (overXY > 0) issues.push(`sfora il piatto di ${Math.ceil(overXY)} mm — riduci raggio o affilatura`);
     if (overZ > 0) issues.push(`supera i ${Z_MAX} mm di corsa Z di ${Math.ceil(overZ)} mm — riduci l'altezza o i giri del filetto`);
     if (tilt > TILT_MAX) issues.push(`pareti a ${tilt.toFixed(0)}° — ` + tiltHint(this.cur, st.maxWz, st.maxWall));
-    if (pass < PASS_MIN)
+    if (mouth && pass < passMin)
+      issues.push(`passaggio interno Ø ${pass.toFixed(0)} mm, sotto i ${mouth} — gli spazzolini non entrano: la torsione o l'affilatura delle costole, con questa parete, richiudono la cavità; riducile o assottiglia la parete`);
+    else if (pass < passMin)
       issues.push(`strozzatura interna Ø ${pass.toFixed(0)} mm — la cannuccia rischia di non arrivare al fondo; riduci l'intensità del segnale o la parete`);
     /* La cavità è la faccia esterna meno lo spessore voluto: su un pezzo
        piccolo una parete grossa la chiude del tutto, e dove si chiude resta la
@@ -481,7 +487,7 @@ export class DesignModel {
         discCounts(PE, this.engraved).K, discCounts(PE, this.engraved).nD),
       fitsBed: overXY <= 0 && overZ <= 0,
       tiltOk: tilt <= TILT_MAX,
-      passOk: pass >= PASS_MIN,
+      passOk: pass >= passMin,
       sealOk: seal >= 1.5,
       issues,
       ok: issues.length === 0,

@@ -284,9 +284,10 @@ test('il fondo segue la parete: non resta il punto debole del pezzo', () => {
 test('una parete che non entra nel pezzo viene detta, non stampata di nascosto', () => {
   /* su un pezzo piccolo la cavità si richiude e del guscio resta la scaglia del
      fondo scala: è l'unico caso in cui la rete di sicurezza entra in funzione,
-     e deve arrivare all'utente come problema con il rimedio giusto */
+     e deve arrivare all'utente come problema con il rimedio giusto. Sul
+     dispenser: il portaspazzolino ora si allarga per tenere la bocca minima */
   const s = defaultState();
-  s.piece = 'tooth'; s.profile = 'fiamma';
+  s.piece = 'disp'; s.profile = 'fiamma';
   s.P.h = 120; s.P.r = 30; s.P.sharp = 1; s.P.w = 8;
   const m = new DesignModel({ animate:false });
   m.applyState(s, false);

@@ -246,9 +246,13 @@ function logoDepth(raster, depth, x, y, r95){
    Il codice del design identifica il SET: entrambi i pezzi lo portano inciso. ---- */
 /* hK = altezza del pezzo come frazione dell'altezza TOTALE del dispenser, collo
    compreso (è quella che si vede sul lavabo); rK = raggio come frazione del suo */
+/* mouth = Ø interno minimo garantito dei pezzi aperti, su tutta l'altezza:
+   ci passano 3-4 spazzolini. Fiamma e Bulbo si stringono in cima (sul
+   dispenser serve a raccordarsi al collo) e senza questo minimo la bocca
+   del portaspazzolino scendeva a 20 mm, fino a chiudersi con costole marcate. */
 const PIECES = {
   disp:  { name:'Dispenser',       hK:1,  rK:1,  neck:true  },
-  tooth: { name:'Portaspazzolino', hK:.8, rK:.8, neck:false },
+  tooth: { name:'Portaspazzolino', hK:.8, rK:.8, neck:false, mouth:40 },
 };
 const pieceOf = P => PIECES[P && P.piece] || PIECES.disp;
 /* fattori effettivi su P.h e P.r: il collo del dispenser dipende dal filetto,
@@ -610,15 +614,48 @@ function clampProfile(P, n, prof, zs, Rc, Bo, Bi, vr, diag){
     const lBi = (CAP - B*f*f*fm*mp - 2*B*f*g*fmx) / (1 + f*f*fmx);
     return Math.max(.05, Math.min(lBo, lBi));
   };
-  let prev = Rc[0] = P.r * prof(0);
+  /* Pezzo aperto: raggio minimo del corpo perché la cavità tenga il Ø della
+     bocca (mouthFloor). Il minimo entra nel profilo PRIMA del limitatore: è
+     costante, quindi non aggiunge pendenze, e dove il profilo resta sopra non
+     cambia niente (STL identici al bit). Con la voce la valle scende ancora:
+     due soluzioni, senza e con la voce piena, pesate dalla fascia. */
+  const mouth = open ? pieceOf(P).mouth || 0 : 0;
+  /* tetto: il portaspazzolino può allargarsi fino al dispenser, non oltre. Se
+     non basta la bocca resta stretta, e la scheda lo dice */
+  let cap = 0;
+  if (mouth) for (let s = 0; s <= 64; s++) cap = Math.max(cap, P.r / (pieceOf(P).rK || 1) * prof(s / 64));
+  const fl0 = mouth > 0 ? Math.min(cap, mouthFloor(P, mouth, 0)) : 0;
+  const fl1 = mouth > 0 && VA ? Math.min(cap, mouthFloor(P, mouth, VA)) : fl0;
+  /* solo dove gli spazzolini passano: dalla vita della clessidra in su. Sotto
+     appoggiano soltanto, e un fondo stretto (tornado) resta il suo */
+  const floorAt = j => !mouth ? 0
+    : sstep((zs[j] / P.h - MOUTH_T0 + MOUTH_RAMP) / MOUTH_RAMP) * (VA ? fl0 + (fl1 - fl0) * wv[j] : fl0);
+  /* massimo raccordato: identico al profilo dove ne dista più di MOUTH_BLEND,
+     altrimenti un raccordo tondo invece dello spigolo del cilindro */
+  const smax = (a, b) => {
+    const h = Math.max(MOUTH_BLEND - Math.abs(a - b), 0) / MOUTH_BLEND;
+    return Math.max(a, b) + h * h * MOUTH_BLEND / 4;
+  };
+  let prev = Rc[0] = mouth ? smax(P.r * prof(0), floorAt(0)) : P.r * prof(0);
   for (let j = 1; j < rows; j++){
     const dz = Math.max(zs[j] - zs[j-1], 1e-6);
-    const raw = zs[j] <= P.h ? P.r * prof(zs[j] / P.h) : prev;
+    const raw0 = zs[j] <= P.h ? P.r * prof(zs[j] / P.h) : prev;
+    const raw = mouth ? smax(raw0, floorAt(j)) : raw0;
     let d = raw - prev;
     const lim = limAt(prev, j);
     if (d >  lim*dz) d =  lim*dz;
     if (d < -lim*dz) d = -lim*dz;
     prev = Rc[j] = prev + d;
+  }
+  /* Dove il minimo comincia, il limitatore in salita lo raggiunge solo più su:
+     si risale dall'alto e ogni riga si alza quanto serve perché quella sopra
+     resti entro il budget (svasatura ≤ 44°). Alzare non crea mai una discesa
+     troppo ripida, e il limite cresce con B più piccolo, quindi il passaggio
+     in avanti che segue (sweep) non cambia niente. */
+  if (mouth) for (let j = rows - 2; j >= 0; j--){
+    if (Rc[j+1] < floorAt(j+1)) Rc[j+1] = floorAt(j+1);
+    const need = Rc[j+1] - limAt(Rc[j+1], j+1) * Math.max(zs[j+1] - zs[j], 1e-6);
+    if (Rc[j] < need) Rc[j] = need;
   }
   for (let j = 0; j < rows; j++){
     const t = Math.min(1, zs[j] / P.h);
@@ -664,6 +701,45 @@ function clampProfile(P, n, prof, zs, Rc, Bo, Bi, vr, diag){
   }
 }
 
+
+/* Raggio minimo B del corpo perché la cavità di un pezzo aperto tenga il Ø
+   `mouth`. La cavità è il corpo eroso (erodeCavity): ogni raggio arretra di
+   w·√(1+Rz²), con il SUO Rz, dal contorno vicino — anche dal fondo della valle
+   accanto. Il cerchio inscritto non scende quindi sotto il raggio minimo del
+   contorno meno l'arretramento massimo. Il contorno è R = B·(1 + f(x)),
+   x = petali·(θ − torsione·z/h): sul fianco delle costole la torsione dà
+   Rz = B·f'(x)·petali·torsione/h, e il profilo vi aggiunge al più la pendenza
+   del limitatore. Il minimo cresce con B finché la torsione non vince: se
+   nemmeno a 6 volte il bersaglio basta, la bocca non è raggiungibile e resta
+   la stima senza torsione; il chiamante la limita comunque alla larghezza del
+   dispenser (la scheda segnala la bocca mancata).
+   extra = abbassamento della valle dovuto alla voce. */
+const MOUTH_MARGIN = .3;                     // il poligono a nTh lati sta dentro il cerchio
+const MOUTH_T0 = .35;                        // quota relativa da cui vale il minimo
+const MOUTH_RAMP = .2;                       // il minimo entra con una rampa morbida sotto MOUTH_T0
+const MOUTH_BLEND = 8;                       // mm: raggio del raccordo fra profilo e minimo
+function mouthFloor(P, mouth, extra){
+  const a = P.sharp * .42, b = -P.sharp * P.sharp * .10;
+  const k = P.petals * (P.twist * Math.PI / 180) / Math.max(1, P.h);
+  const target = mouth / 2 + MOUTH_MARGIN;
+  let fMin = Infinity, fpMax = 0;
+  for (let s = 0; s < 360; s++){
+    const x = s * TAU / 360;
+    fMin = Math.min(fMin, a * Math.cos(x) + b * Math.cos(2*x));
+    fpMax = Math.max(fpMax, Math.abs(a * Math.sin(x) + 2 * b * Math.sin(2*x)));
+  }
+  fMin -= extra;
+  const fMax = a - b;                        // colmo della costola, per la pendenza del profilo
+  const g = B => {
+    const rz = .97 * (1 + fMax) + B * fpMax * k;
+    return B * (1 + fMin) - P.w * Math.sqrt(1 + rz * rz);
+  };
+  const plain = (target + P.w) / Math.max(.2, 1 - a + b - extra);
+  let lo = target, hi = plain;
+  while (g(hi) < target){ if (hi > 6 * target) return plain; lo = hi; hi *= 1.25; }
+  for (let it = 0; it < 30; it++){ const mid = (lo + hi) / 2; if (g(mid) >= target) hi = mid; else lo = mid; }
+  return hi;
+}
 
 /* raggio di riferimento del fondo: 95% del minimo reale della riga 0 del guscio */
 /* CORRETTO: il raggio della riga 0 va preso DOPO clampProfile, che per rispettare
@@ -897,6 +973,9 @@ function fillVessel(pos, ctx){
   const DTH = TAU / nTh, snD = Math.sin(DTH);
   const pA = ctx.sA, pO = ctx.sM, pI = ctx.sI, qO = ctx.prevM, qI = ctx.prevI;
   const ridgeH = n.ridgeH, entry = n.entry, zTop = ctx.Ht - n.land;
+  /* nei pezzi aperti il passaggio conta da dove vale il minimo della bocca:
+     sotto gli spazzolini appoggiano, non passano */
+  const passZ = ctx.open && pieceOf(P).mouth ? MOUTH_T0 * P.h : -Infinity;
   let maxR = 0, maxW = 0, maxWz = 0, maxWall = 0, capV = 0, wallV = 0, solidV = 0, prevZ = zs[0], minRi = 1e9;
   let minWall = 1e9, floored = 0, pinched = 0; // spessore reale del guscio, e i due clamp che lo alterano
   /* spessore massimo locale: dentro una costola piena il guscio e' molto piu'
@@ -946,7 +1025,7 @@ function fillVessel(pos, ctx){
         if (wallHere < minWall) minWall = wallHere;
         if (ro0 - ri > thickMax) thickMax = ro0 - ri;
         pI[i] = ri;
-        if (j > jB && ri < minRi) minRi = ri;                  // cerchio inscritto minimo della cavità
+        if (j > jB && z >= passZ && ri < minRi) minRi = ri;    // cerchio inscritto minimo della cavità
         k = (rows * nTh + (j - jB) * nTh + i) * 3;
         pos[k] = ri * Math.cos(th); pos[k+1] = ri * Math.sin(th); pos[k+2] = z;
       }
